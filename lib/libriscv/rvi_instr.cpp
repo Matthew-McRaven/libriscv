@@ -586,6 +586,8 @@ namespace riscv
 		static std::array<const char*, 2> etype = {"ECALL", "EBREAK"};
 		if (instr.Itype.imm < 2 && instr.Itype.funct3 == 0) {
 			return snprintf(buffer, len, "SYS %s", etype.at(instr.Itype.imm));
+		} else if (instr.Itype.imm == 0x7ff && instr.Itype.funct3 == 0x0) {
+			return snprintf(buffer, len, "STOP");
 		} else if (instr.Itype.funct3 == 0x2) {
 			// CSRRS
 			switch (instr.Itype.imm) {

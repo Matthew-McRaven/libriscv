@@ -206,12 +206,15 @@ void CPU<W>::emit(std::string& code, const std::string& func, instr_pair* ip, co
 		case RV32I_JALR:
 			// jump to register + immediate
 			if (instr.Itype.rd != 0) {
-				add_code(code, from_reg(instr.Itype.rd) + " = " + PCRELS(4) + ";\n");
-			}
+				add_code(code, from_reg(instr.Itype.rd) + " = " + PCRELS(4) + ";");
+			} {
+			printf("Return address %zu 0x%X\n", i, (address_t) (tinfo.basepc + i * 4 + (4)));
+			const auto address = instr.Itype.signed_imm();
+			printf("Jump address 0x%X\n", (address_t) address);
 			add_code(code, "api.jump(cpu, " + from_reg(tinfo, instr.Itype.rs1)
 				+ " + " + from_imm(instr.Itype.signed_imm()) + " - 4, " + INSTRUCTION_COUNT(i) + ");",
 				"}\n");
-			return;
+			} return;
 		case RV32I_JAL: {
 			if (instr.Jtype.rd != 0) {
 				add_code(code, from_reg(instr.Jtype.rd) + " = " + PCRELS(4) + ";\n");
@@ -438,6 +441,7 @@ void CPU<W>::emit(std::string& code, const std::string& func, instr_pair* ip, co
 				ILLEGAL_AND_EXIT();
 			add_code(code,
 				from_reg(instr.Utype.rd) + " = " + PCRELS(instr.Utype.upper_imm()) + ";");
+			printf("AUIPC ra = 0x%X\n", PCRELA(instr.Utype.upper_imm()));
 			break;
 		case RV32I_FENCE:
 			break;
@@ -453,13 +457,10 @@ void CPU<W>::emit(std::string& code, const std::string& func, instr_pair* ip, co
 				} if (instr.Itype.imm == 0x7ff) {
 					code += "api.stop(cpu, " + INSTRUCTION_COUNT(i) + ");\n}\n";
 					return; // !!
-				} else {
-					code += "api.system(cpu, " + std::to_string(instr.whole) +");\n";
-					break;
 				}
-			} else {
+			}
 				code += "api.system(cpu, " + std::to_string(instr.whole) +");\n";
-			} break;
+				break;
 		case RV64I_OP_IMM32: {
 			if (UNLIKELY(instr.Itype.rd == 0))
 				ILLEGAL_AND_EXIT();
