@@ -16,46 +16,6 @@ namespace riscv
 		this->reset_stack_pointer();
 		// jumping causes some extra calculations
 		this->jump(machine().memory.start_address());
-		// reset the page cache
-		this->m_cache = {};
-	}
-
-	template <int W> __attribute__((noinline))
-	typename CPU<W>::format_t CPU<W>::read_next_instruction_slowpath()
-	{
-		// Fallback: Read directly from page memory
-		const auto pageno = this->pc() >> Page::SHIFT;
-		// Page cache
-		auto& entry = this->m_cache;
-		if (entry.pageno != pageno || entry.page == nullptr) {
-			auto e = decltype(m_cache){pageno, &machine().memory.get_exec_pageno(pageno)};
-			if (!e.page->attr.exec) {
-				trigger_exception(EXECUTION_SPACE_PROTECTION_FAULT, this->pc());
-			}
-			// delay setting entry until we know it's good!
-			entry = e;
-		}
-		const auto& page = *entry.page;
-		const auto offset = this->pc() & (Page::size()-1);
-		format_t instruction;
-
-		if (LIKELY(offset <= Page::size()-4)) {
-			instruction.whole = *(uint32_t*) (page.data() + offset);
-			return instruction;
-		}
-		// It's not possible to jump to a misaligned address,
-		// so there is necessarily 16-bit left of the page now.
-		instruction.whole = *(uint16_t*) (page.data() + offset);
-
-		// If it's a 32-bit instruction at a page border, we need
-		// to get the next page, and then read the upper half
-		if (UNLIKELY(instruction.is_long()))
-		{
-			const auto& page = machine().memory.get_exec_pageno(pageno+1);
-			instruction.half[1] = *(uint16_t*) page.data();
-		}
-
-		return instruction;
 	}
 
 	template <int W>
@@ -65,7 +25,10 @@ namespace riscv
 			return format_t { *(uint32_t*) &m_exec_data[this->pc()] };
 		}
 
-		return read_next_instruction_slowpath();
+		format_t instruction;
+		instruction.whole = *(uint32_t*)
+			machine().memory.main_memory().ro_at(this->pc(), 4);
+		return instruction;
 	}
 
 	template<int W>

@@ -139,7 +139,7 @@ namespace riscv
 		argv.push_back(0x0);
 
 		// Auxiliary vector
-		push_aux<W>(argv, {AT_PAGESZ, Page::size()});
+		push_aux<W>(argv, {AT_PAGESZ, 4096});
 		push_aux<W>(argv, {AT_CLKTCK, 100});
 
 		// ELF related

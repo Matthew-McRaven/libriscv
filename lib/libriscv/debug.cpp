@@ -213,7 +213,7 @@ void Machine<W>::print_and_pause()
     // CPU registers
     printf("%s", cpu.registers().to_string().c_str());
     // Memory subsystem
-    printf("[MEM PAGES     %8zu]\n", memory.pages_active());
+    printf("[MEM %9zx]\n", memory.main_memory().size());
 	// Floating-point registers
 	if (this->verbose_fp_registers) {
 		printf("%s", cpu.registers().flp_to_string().c_str());

@@ -7,19 +7,23 @@
 
 namespace riscv
 {
+	static const size_t PAGE_SIZE = 4096;
+	inline size_t page_number(uint64_t addr) {
+		return addr >> 12;
+	}
 
 #ifdef RISCV_INSTR_CACHE
 	template <int W>
 	void Memory<W>::generate_decoder_cache(const MachineOptions<W>& options,
 		address_t pbase, address_t addr, size_t len)
 	{
-		constexpr address_t PMASK = Page::size()-1;
+		constexpr address_t PMASK = PAGE_SIZE-1;
 		const size_t prelen  = addr - pbase;
 		const size_t midlen  = len + prelen;
 		const size_t plen =
-			(PMASK & midlen) ? ((midlen + Page::size()) & ~PMASK) : midlen;
+			(PMASK & midlen) ? ((midlen + PAGE_SIZE) & ~PMASK) : midlen;
 
-		const size_t n_pages = plen / Page::size();
+		const size_t n_pages = plen / PAGE_SIZE;
 		auto* decoder_array = new DecoderCache<W> [n_pages];
 		this->m_exec_decoder =
 			decoder_array[0].get_base() - pbase / decoder_array->DIVISOR;
@@ -35,7 +39,7 @@ namespace riscv
 		for (address_t dst = pbase; dst < pbase + plen;)
 		{
 			const size_t cacheno = page_number(dst - pbase);
-			const address_t offset = dst & (Page::size()-1);
+			const address_t offset = dst & (PAGE_SIZE-1);
 			auto& cache = decoder_array[cacheno];
 			auto& entry = cache.get(offset / cache.DIVISOR);
 

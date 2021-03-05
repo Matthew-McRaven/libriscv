@@ -3,356 +3,58 @@
 template <int W>
 void Memory<W>::memset(address_t dst, uint8_t value, size_t len)
 {
-	while (len > 0)
-	{
-		const size_t offset = dst & (Page::size()-1); // offset within page
-		const size_t size = std::min(Page::size() - offset, len);
-		auto& page = this->create_page(dst >> Page::SHIFT);
-		if (UNLIKELY(!page.attr.write))
-			protection_fault(dst);
-
-		__builtin_memset(page.data() + offset, value, size);
-
-		dst += size;
-		len -= size;
-	}
+	__builtin_memset(m_main_memory.rw_at(dst, len), value, len);
 }
 
 template <int W>
-void Memory<W>::memcpy(address_t dst, const void* vsrc, size_t len)
+void Memory<W>::memcpy(address_t dst, const void* src, size_t len)
 {
-	auto* src = (uint8_t*) vsrc;
-	while (len != 0)
-	{
-		const size_t offset = dst & (Page::size()-1); // offset within page
-		const size_t size = std::min(Page::size() - offset, len);
-		auto& page = this->create_page(dst >> Page::SHIFT);
-		if (UNLIKELY(!page.attr.write))
-			protection_fault(dst);
-
-		std::copy(src, src + size, page.data() + offset);
-
-		dst += size;
-		src += size;
-		len -= size;
-	}
+	__builtin_memcpy(m_main_memory.rw_at(dst, len), src, len);
+}
+template <int W>
+void Memory<W>::memcpy(address_t dst, Machine<W>& srcm, address_t src, address_t len)
+{
+	const char* srcp = srcm.memory.m_main_memory.ro_at(src, len);
+	this->memcpy(dst, srcp, len);
 }
 
 template <int W>
-void Memory<W>::memcpy_out(void* vdst, address_t src, size_t len) const
+void Memory<W>::memcpy_out(void* dst, address_t src, size_t len) const
 {
-	auto* dst = (uint8_t*) vdst;
-	while (len != 0)
-	{
-		const size_t offset = src & (Page::size()-1);
-		const size_t size = std::min(Page::size() - offset, len);
-		const auto& page = this->get_page(src);
-		if (UNLIKELY(!page.attr.read))
-			protection_fault(src);
-
-		std::copy(page.data() + offset, page.data() + offset + size, dst);
-
-		dst += size;
-		src += size;
-		len -= size;
-	}
+	__builtin_memcpy(dst, m_main_memory.ro_at(src, len), len);
 }
 
 template <int W>
-template <typename T>
-inline void Memory<W>::foreach_helper(T& mem, address_t addr, size_t len,
-	Function<void(T&, address_t, const uint8_t*, size_t)> callback)
+std::string_view Memory<W>::memview(address_t addr, size_t len) const
 {
-	address_t boff = 0;
-	while (len != 0)
-	{
-		const size_t offset = addr & (Page::size()-1);
-		const size_t size = std::min(Page::size() - offset, len);
-		const auto& page = mem.get_page(addr);
-		if (page.attr.read) {
-			callback(mem, boff, page.data() + offset, size);
-		} else {
-			protection_fault(addr);
-		}
-
-		addr += size;
-		boff += size;
-		len  -= size;
-	}
-}
-template <int W>
-template <typename T>
-inline void Memory<W>::memview_helper(T& mem, address_t addr, size_t len,
-	Function<void(T&, const uint8_t*, size_t)> callback)
-{
-	const size_t offset = addr & (Page::size()-1);
-	// fast-path
-	if (LIKELY(offset + len <= Page::size()))
-	{
-		const auto& page = mem.get_page(addr);
-		if (page.attr.read) {
-			callback(mem, page.data() + offset, len);
-		} else {
-			protection_fault(addr);
-		}
-		return;
-	}
-	// slow path
-	uint8_t* buffer = (uint8_t*) __builtin_alloca(len);
-	mem.memcpy_out(buffer, addr, len);
-	callback(mem, buffer, len);
-}
-
-template <int W>
-void Memory<W>::foreach(address_t addr, size_t len,
-	Function<void(const Memory<W>&, address_t, const uint8_t*, size_t)> callback) const
-{
-	foreach_helper(*this, addr, len, std::move(callback));
-}
-template <int W>
-void Memory<W>::foreach(address_t addr, size_t len,
-	Function<void(Memory<W>&, address_t, const uint8_t*, size_t)> callback)
-{
-	foreach_helper(*this, addr, len, std::move(callback));
-}
-template <int W>
-void Memory<W>::memview(address_t addr, size_t len,
-	Function<void(const Memory<W>&, const uint8_t*, size_t)> callback) const
-{
-	memview_helper(*this, addr, len, std::move(callback));
-}
-template <int W>
-void Memory<W>::memview(address_t addr, size_t len,
-	Function<void(Memory<W>&, const uint8_t*, size_t)> callback)
-{
-	memview_helper(*this, addr, len, std::move(callback));
-}
-template <int W>
-template <typename T>
-void Memory<W>::memview(address_t addr,
-	Function<void(const T&)> callback) const
-{
-	static_assert(std::is_trivial_v<T>, "Type T must be Plain-Old-Data");
-	const size_t offset = addr & (Page::size()-1);
-	// fast-path
-	if (LIKELY(offset + sizeof(T) <= Page::size()))
-	{
-		const auto& page = this->get_page(addr);
-		if (page.attr.read) {
-			callback(*(const T*) &page.data()[offset]);
-		} else {
-			protection_fault(addr);
-		}
-		return;
-	}
-	// slow path
-	T object;
-	memcpy_out(&object, addr, sizeof(object));
-	callback(object);
+	return {m_main_memory.ro_at(addr, len), len};
 }
 
 template <int W>
 std::string Memory<W>::memstring(address_t addr, const size_t max_len) const
 {
-	std::string result;
-	size_t pageno = page_number(addr);
-	// fast-path
-	{
-		address_t offset = addr & (Page::size()-1);
-		const Page& page = this->get_pageno(pageno);
-		if (UNLIKELY(!page.attr.read))
-			protection_fault(addr);
-
-		const char* start = (const char*) &page.data()[offset];
-		const char* pgend = (const char*) &page.data()[std::min(Page::size(), offset + max_len)];
-		//
-		const char* reader = start + strnlen(start, pgend - start);
-		result.append(start, reader);
-		// early exit
-		if (LIKELY(reader < pgend)) {
-			return result;
-		}
-	}
-	// slow-path: cross page-boundary
-	while (result.size() < max_len)
-	{
-		const size_t max_bytes = std::min(Page::size(), max_len - result.size());
-		pageno ++;
-		const Page& page = this->get_pageno(pageno);
-		if (UNLIKELY(!page.attr.read))
-			protection_fault(addr);
-
-		const char* start = (const char*) page.data();
-		const char* endptr = (const char*) &page.data()[max_bytes];
-
-		const char* reader = start + strnlen(start, max_bytes);
-		result.append(start, reader);
-		// if we didn't stop at the page border, we must be done
-		if (reader < endptr)
-			return result;
-	}
-	return result;
+	const size_t len = strlen(addr, max_len);
+	return std::string {m_main_memory.ro_at(addr, len), len};
 }
 
 template <int W>
-riscv::Buffer Memory<W>::rvbuffer(address_t addr,
-	const size_t datalen, const size_t maxlen) const
+size_t Memory<W>::strlen(address_t addr, size_t max_len) const
 {
-	if (UNLIKELY(datalen + 1 >= maxlen))
-		protection_fault(addr);
-
-	size_t pageno = page_number(addr);
-	const Page& page = this->get_pageno(pageno);
-	if (UNLIKELY(!page.attr.read))
-		protection_fault(addr);
-
-	const address_t offset = addr & (Page::size()-1);
-	auto* start = (const char*) &page.data()[offset];
-	const size_t max_bytes = std::min(Page::size() - offset, datalen);
-
-	riscv::Buffer result;
-	result.append_page(start, max_bytes);
-	// slow-path: cross page-boundary
-	while (result.size() < datalen)
-	{
-		const size_t max_bytes = std::min(Page::size(), datalen - result.size());
-		pageno ++;
-		const Page& page = this->get_pageno(pageno);
-		if (UNLIKELY(!page.attr.read))
-			protection_fault(addr);
-
-		result.append_page((const char*) page.data(), max_bytes);
-	}
-	return result;
+	max_len = std::min(m_main_memory.max_length(addr), max_len);
+	const char* src = m_main_memory.ro_at(addr, max_len);
+	return strnlen(src, max_len);
 }
 
 template <int W>
-size_t Memory<W>::strlen(address_t addr, size_t maxlen) const
+int Memory<W>::memcmp(address_t a1, address_t a2, size_t len) const
 {
-	size_t len = 0;
-
-	do {
-		const address_t offset = addr & (Page::size()-1);
-		size_t pageno = page_number(addr);
-		const Page& page = this->get_pageno(pageno);
-		if (UNLIKELY(!page.attr.read))
-			protection_fault(addr);
-
-		const char* start = (const char*) &page.data()[offset];
-		const size_t max_bytes = Page::size() - offset;
-		const size_t thislen = strnlen(start, max_bytes);
-		len += thislen;
-		if (thislen != max_bytes) break;
-		addr += len;
-	} while (len < maxlen);
-
-	if (len <= maxlen)
-		return len;
-	return maxlen;
-}
-
-template <int W>
-int Memory<W>::memcmp(address_t p1, address_t p2, size_t len) const
-{
-	// NOTE: fast implementation if no pointer crosses page boundary
-	const auto pageno1 = this->page_number(p1);
-	const auto pageno2 = this->page_number(p2);
-	if (pageno1 == ((p1 + len-1) >> Page::SHIFT) &&
-		pageno2 == ((p2 + len-1) >> Page::SHIFT)) {
-		auto& page1 = this->get_pageno(pageno1);
-		auto& page2 = this->get_pageno(pageno2);
-		if (UNLIKELY(!page1.attr.read || !page2.attr.read))
-			protection_fault(p1);
-
-		const uint8_t* s1 = page1.data() + p1 % Page::SIZE;
-		const uint8_t* s2 = page2.data() + p2 % Page::SIZE;
-		return __builtin_memcmp(s1, s2, len);
-	}
-	else // slow path (optimizable)
-	{
-		uint8_t v1 = 0;
-		uint8_t v2 = 0;
-		while (len > 0) {
-			const auto pageno1 = this->page_number(p1);
-			const auto pageno2 = this->page_number(p2);
-			auto& page1 = this->get_pageno(pageno1);
-			auto& page2 = this->get_pageno(pageno2);
-			if (UNLIKELY(!page1.has_data() || !page2.has_data() || !page1.attr.read || !page2.attr.read))
-				protection_fault(p1);
-
-			v1 = page1.data()[p1 % Page::SIZE];
-			v2 = page2.data()[p2 % Page::SIZE];
-			if (v1 != v2) break;
-			p1++;
-			p2++;
-			len--;
-		}
-		return len == 0 ? 0 : (v1 - v2);
-	}
+	const char* m1 = m_main_memory.ro_at(a1, len);
+	const char* m2 = m_main_memory.ro_at(a2, len);
+	return __builtin_memcmp(m1, m2, len);
 }
 template <int W>
-int Memory<W>::memcmp(const void* ptr1, address_t p2, size_t len) const
+int Memory<W>::memcmp(const void* src, address_t a2, size_t len) const
 {
-	const char* s1 = (const char*) ptr1;
-	// NOTE: fast implementation if no pointer crosses page boundary
-	const auto pageno2 = this->page_number(p2);
-	if (pageno2 == ((p2 + len-1) >> Page::SHIFT)) {
-		auto& page2 = this->get_pageno(pageno2);
-		if (UNLIKELY(!page2.attr.read))
-			protection_fault(p2);
-
-		const uint8_t* s2 = page2.data() + p2 % Page::SIZE;
-		return __builtin_memcmp(s1, s2, len);
-	}
-	else // slow path (optimizable)
-	{
-		uint8_t v2 = 0;
-		while (len > 0) {
-			const auto pageno2 = this->page_number(p2);
-			auto& page2 = this->get_pageno(pageno2);
-			if (UNLIKELY(!page2.attr.read))
-				protection_fault(p2);
-
-			v2 = page2.data()[p2 % Page::SIZE];
-			if (*s1 != v2) break;
-			s1++;
-			p2++;
-			len--;
-		}
-		return len == 0 ? 0 : (*s1 - v2);
-	}
-}
-
-template <int W>
-void Memory<W>::memcpy(
-	address_t dst, Machine<W>& srcm, address_t src, address_t len)
-{
-	if ((dst & (W-1)) == (src & (W-1))) {
-		while ((src & (W-1)) != 0 && len > 0) {
-			this->template write<uint8_t> (dst++,
-				srcm.memory.template read<uint8_t> (src++));
-			len --;
-		}
-		while (len >= 16) {
-			this->template write<uint32_t> (dst + 0,
-				srcm.memory.template read<uint32_t> (src + 0));
-			this->template write<uint32_t> (dst + 1*W,
-				srcm.memory.template read<uint32_t> (src + 1*W));
-			this->template write<uint32_t> (dst + 2*W,
-				srcm.memory.template read<uint32_t> (src + 2*W));
-			this->template write<uint32_t> (dst + 3*W,
-				srcm.memory.template read<uint32_t> (src + 3*W));
-			dst += 16; src += 16; len -= 16;
-		}
-		while (len >= W) {
-			this->template write<uint32_t> (dst,
-				srcm.memory.template read<uint32_t> (src));
-			dst += W; src += W; len -= W;
-		}
-	}
-	while (len > 0) {
-		this->template write<uint8_t> (dst++,
-			srcm.memory.template read<uint8_t> (src++));
-		len --;
-	}
+	const char* m2 = m_main_memory.ro_at(a2, len);
+	return __builtin_memcmp(src, m2, len);
 }

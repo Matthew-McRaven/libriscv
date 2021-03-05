@@ -4,6 +4,7 @@
 #ifdef __GNUG__
 #include "decoder_cache.cpp"
 #endif
+#include <sys/mman.h>
 
 extern "C" char *
 __cxa_demangle(const char *name, char *buf, size_t *n, int *status);
@@ -14,41 +15,12 @@ namespace riscv
 	Memory<W>::Memory(Machine<W>& mach, std::string_view bin,
 					MachineOptions<W> options)
 		: m_machine{mach},
+		  m_main_memory{options.memory_max},
 		  m_binary{bin},
-		  m_load_program     {options.load_program},
-		  m_protect_segments {options.protect_segments},
-		  m_verbose_loader   {options.verbose_loader},
 		  m_original_machine {options.owning_machine == nullptr}
 	{
-		if (options.page_fault_handler != nullptr)
-		{
-			this->m_page_fault_handler = std::move(options.page_fault_handler);
-		}
-		else if (options.memory_max != 0)
-		{
-			const address_t pages_max = options.memory_max >> Page::SHIFT;
-			assert(pages_max >= 1);
-			this->m_page_fault_handler =
-				[pages_max] (auto& mem, const size_t page) -> Page&
-				{
-					// create page on-demand
-					if (mem.pages_active() < pages_max)
-					{
-						return mem.allocate_page(page);
-					}
-					throw MachineException(OUT_OF_MEMORY, "Out of memory", pages_max);
-				};
-		} else {
-			this->m_page_fault_handler =
-				[] (auto& mem, const size_t page) -> Page&
-				{
-					return mem.allocate_page(page);
-				};
-		}
 		// when an owning machine is passed, its state will be used instead
 		if (options.owning_machine == nullptr) {
-			// initialize paging (which clears all pages) before loading binary
-			this->initial_paging();
 			// load ELF binary into virtual memory
 			if (!m_binary.empty())
 				this->binary_loader(options);
@@ -60,13 +32,6 @@ namespace riscv
 	template <int W>
 	Memory<W>::~Memory()
 	{
-		this->clear_all_pages();
-#ifdef RISCV_RODATA_SEGMENT_IS_SHARED
-		// only the original machine owns rodata range
-		if (!this->m_original_machine) {
-			m_ropages.pages.release();
-		}
-#endif
 #ifdef RISCV_INSTR_CACHE
 		delete[] m_decoder_cache;
 #endif
@@ -81,23 +46,6 @@ namespace riscv
 	{
 		// Hard to support because of things like
 		// serialization, machine options and machine forks
-	}
-
-	template <int W>
-	void Memory<W>::clear_all_pages()
-	{
-		this->m_pages.clear();
-		this->m_rd_cache = {};
-		this->m_wr_cache = {};
-	}
-
-	template <int W>
-	void Memory<W>::initial_paging()
-	{
-		if (m_pages.find(0) == m_pages.end()) {
-			// add a guard page to catch zero-page accesses
-			install_shared_page(0, Page::guard_page());
-		}
 	}
 
 	template <int W>
@@ -117,30 +65,31 @@ namespace riscv
 			throw std::runtime_error("Bogus ELF segment virtual base");
 		}
 
-		if (this->m_verbose_loader) {
+		if (options.verbose_loader) {
 		printf("* Loading program of size %zu from %p to virtual %p\n",
 				len, src, (void*) (uintptr_t) hdr->p_vaddr);
 		}
 		// segment permissions
-		const PageAttributes attr {
-			 .read  = (hdr->p_flags & PF_R) != 0,
-			 .write = (hdr->p_flags & PF_W) != 0,
-			 .exec  = (hdr->p_flags & PF_X) != 0
+		const struct {
+			bool read, write, exec;
+		} attr {
+			.read  = (hdr->p_flags & PF_R) != 0,
+			.write = (hdr->p_flags & PF_W) != 0,
+			.exec  = (hdr->p_flags & PF_X) != 0
 		};
-		if (this->m_verbose_loader) {
+		if (options.verbose_loader) {
 		printf("* Program segment readable: %d writable: %d  executable: %d\n",
 				attr.read, attr.write, attr.exec);
 		}
 
 		if (attr.exec && machine().cpu.exec_seg_data() == nullptr)
 		{
-			constexpr address_t PMASK = Page::size()-1;
+			constexpr address_t PMASK = 4096-1;
 			const address_t pbase = (hdr->p_vaddr - 0x4) & ~(address_t) PMASK;
 			const size_t prelen  = hdr->p_vaddr - pbase;
 			// The last 4 bytes of the range is zeroed out (illegal instruction)
 			const size_t midlen  = len + prelen + 0x4;
-			const size_t plen =
-				(PMASK & midlen) ? ((midlen + Page::size()) & ~PMASK) : midlen;
+			const size_t plen = midlen;
 			const size_t postlen = plen - midlen;
 			//printf("Addr 0x%X Len %zx becomes 0x%X->0x%X PRE %zx MIDDLE %zu POST %zu TOTAL %zu\n",
 			//	hdr->p_vaddr, len, pbase, pbase + plen, prelen, len, postlen, plen);
@@ -175,64 +124,16 @@ namespace riscv
 			throw std::runtime_error("Insecure ELF has writable machine code");
 		}
 
-#ifdef RISCV_RODATA_SEGMENT_IS_SHARED
-		if (attr.read && !attr.write && m_ropages.end == 0) {
-			serialize_pages(m_ropages, hdr->p_vaddr, src, len, attr);
-			return;
+		if (attr.write) {
+			if (m_main_memory.rwbase == 0 || m_main_memory.rwbase > hdr->p_vaddr)
+				m_main_memory.rwbase = hdr->p_vaddr;
 		}
-#endif
-
-		// Load into virtual memory
-		this->memcpy(hdr->p_vaddr, src, len);
-
-		if (this->m_protect_segments) {
-			this->set_page_attr(hdr->p_vaddr, len, attr);
+		if (attr.read) {
+			if (m_main_memory.robase == 0 || m_main_memory.robase > hdr->p_vaddr)
+				m_main_memory.robase = hdr->p_vaddr;
 		}
-		else {
-			// this might help execute simplistic barebones programs
-			this->set_page_attr(hdr->p_vaddr, len, {
-				 .read = true, .write = true, .exec = true
-			});
-		}
-	}
 
-	template <int W>
-	void Memory<W>::serialize_pages(MemoryArea& area,
-		address_t addr, const char* src, size_t size, PageAttributes attr)
-	{
-#ifdef RISCV_RODATA_SEGMENT_IS_SHARED
-		constexpr address_t PMASK = Page::size()-1;
-		const address_t pbase = addr & ~(address_t) PMASK;
-		const size_t prelen  = addr - pbase;
-		const size_t midlen  = size + prelen;
-		const size_t plen =
-			(PMASK & midlen) ? ((midlen + Page::size()) & ~PMASK) : midlen;
-		const size_t postlen = plen - midlen;
-		// Detect bogus values
-		if (UNLIKELY(prelen > plen || prelen + size > plen)) {
-			throw std::runtime_error("Segment virtual base was bogus");
-		}
-		assert(plen % Page::size() == 0);
-		// Create the whole memory range
-		auto* pagedata = new uint8_t[plen];
-		std::memset(&pagedata[0],      0,     prelen);
-		std::memcpy(&pagedata[prelen], src,   size);
-		std::memset(&pagedata[prelen + size], 0,   postlen);
-		area.data.reset(pagedata);
-
-		const size_t npages = plen / Page::size();
-		area.pages.reset(new Page[npages]);
-		// Create share-able range
-		area.begin = addr / Page::size();
-		area.end   = area.begin + npages;
-
-		for (size_t i = 0; i < npages; i++) {
-			area.pages[i].attr = attr;
-			// None of the pages own this memory
-			area.pages[i].attr.non_owning = true;
-			area.pages[i].m_page.reset((PageData*) &pagedata[i * Page::size()]);
-		}
-#endif
+		std::memcpy(main_memory().unsafe_at(hdr->p_vaddr, len), src, len);
 	}
 
 	// ELF32 and ELF64 loader
@@ -263,9 +164,7 @@ namespace riscv
 		}
 
 		const auto* phdr = (Phdr*) (m_binary.data() + elf->e_phoff);
-		const auto program_begin = phdr->p_vaddr;
 		this->m_start_address = elf->e_entry;
-		this->m_stack_address = program_begin;
 
 		int seg = 0;
 		for (const auto* hdr = phdr; hdr < phdr + program_headers; hdr++)
@@ -285,7 +184,7 @@ namespace riscv
 			{
 				case PT_LOAD:
 					// loadable program segments
-					if (this->m_load_program) {
+					if (options.load_program) {
 						binary_load_ph(options, hdr);
 					}
 					seg++;
@@ -299,22 +198,19 @@ namespace riscv
 					//	"Dynamically linked ELF binaries are not supported");
 					break;
 			}
+			if (m_program_end < hdr->p_vaddr + hdr->p_memsz)
+				this->m_program_end = hdr->p_vaddr + hdr->p_memsz;
 		}
 
 		//this->relocate_section(".rela.dyn", ".symtab");
 
-		// NOTE: if the stack is very low, some stack pointer value could
-		// become 0x0 which could alter the behavior of the program,
-		// even though the address might be legitimate. To solve this, we move
-		// the stack at that time to a safer location.
-		if (this->m_stack_address < 0x100000) {
-			this->m_stack_address = 0x40000000;
-		}
+		// Stack down towards program_end, usually 1mb in size
+		this->m_stack_address = m_program_end + options.stack_size;
 
 		// the default exit function is simply 'exit'
 		this->m_exit_address = resolve_address("exit");
 
-		if (this->m_verbose_loader) {
+		if (options.verbose_loader) {
 		printf("* Entry is at %p\n", (void*) (uintptr_t) this->start_address());
 		}
 	}
@@ -322,32 +218,33 @@ namespace riscv
 	template <int W>
 	void Memory<W>::machine_loader(const Machine<W>& master)
 	{
-		for (const auto& it : master.memory.pages())
+		auto& mmem = master.memory;
+		if (m_main_memory.size() < mmem.m_main_memory.size())
 		{
-			const auto& page = it.second;
-			// skip pages marked as don't fork
-			if (page.attr.dont_fork) continue;
-			// just make every page CoW and non-owning
-			auto attr = page.attr;
-			attr.is_cow = true;
-			attr.non_owning = true;
-			m_pages.try_emplace(it.first, attr, (PageData*) page.data());
+			/* Prevent all sorts of weird problems */
+			throw MachineException(OUT_OF_MEMORY,
+				"Destination machine has less memory than master",
+				m_main_memory.size());
 		}
-		this->set_exit_address(master.memory.exit_address());
+
+		// copy the whole memory of the master machine
+		const auto len = mmem.m_main_memory.max_length(0x0);
+		auto* src = mmem.m_main_memory.unsafe_at(0x0, len);
+		auto* dst = m_main_memory.unsafe_at(0x0, len);
+		__builtin_memcpy(dst, src, len);
+
+		m_main_memory.robase = mmem.m_main_memory.robase;
+		m_main_memory.rwbase = mmem.m_main_memory.rwbase;
+
+		this->set_exit_address(mmem.exit_address());
 		// base address, size and PC-relative data pointer for instructions
-		this->m_exec_pagedata_base = master.memory.m_exec_pagedata_base;
-		this->m_exec_pagedata_size = master.memory.m_exec_pagedata_size;
+		this->m_exec_pagedata_base = mmem.m_exec_pagedata_base;
+		this->m_exec_pagedata_size = mmem.m_exec_pagedata_size;
 		this->machine().cpu.initialize_exec_segs(
-			master.memory.m_exec_pagedata.get() - m_exec_pagedata_base,
+			mmem.m_exec_pagedata.get() - m_exec_pagedata_base,
 			m_exec_pagedata_base, m_exec_pagedata_base + m_exec_pagedata_size);
 #ifdef RISCV_INSTR_CACHE
-		this->m_exec_decoder = master.memory.m_exec_decoder;
-#endif
-
-#ifdef RISCV_RODATA_SEGMENT_IS_SHARED
-		this->m_ropages.begin = master.memory.m_ropages.begin;
-		this->m_ropages.end   = master.memory.m_ropages.end;
-		this->m_ropages.pages.reset(master.memory.m_ropages.pages.get());
+		this->m_exec_decoder = mmem.m_exec_decoder;
 #endif
 	}
 
@@ -438,21 +335,6 @@ namespace riscv
 	}
 
 	template <int W>
-	std::string Memory<W>::get_page_info(address_t addr) const
-	{
-		char buffer[1024];
-		int len;
-		if constexpr (W == 4) {
-			len = snprintf(buffer, sizeof(buffer),
-				"[0x%08X] %s", addr, get_page(addr).to_string().c_str());
-		} else {
-			len = snprintf(buffer, sizeof(buffer),
-				"[0x%016lX] %s", addr, get_page(addr).to_string().c_str());
-		}
-		return std::string(buffer, len);
-	}
-
-	template <int W>
 	typename Memory<W>::Callsite Memory<W>::lookup(address_t address) const
 	{
 		const auto* sym_hdr = section_by_name(".symtab");
@@ -537,15 +419,4 @@ namespace riscv
 
 	template struct Memory<4>;
 	template struct Memory<8>;
-}
-
-__attribute__((weak))
-void* operator new[](size_t size, const char*, int, unsigned, const char*, int)
-{
-	return ::operator new[] (size);
-}
-__attribute__((weak))
-void* operator new[](size_t size, size_t, size_t, const char*, int, unsigned, const char*, int)
-{
-	return ::operator new[] (size);
 }

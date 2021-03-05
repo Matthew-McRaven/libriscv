@@ -154,10 +154,7 @@ void setup_native_memory_syscalls(Machine<W>& machine, bool /*trusted*/)
 		auto [dst, src, len] =
 			m.template sysargs<address_type<W>, address_type<W>, address_type<W>> ();
 		MPRINT("SYSCALL memcpy(%#X, %#X, %u)\n", dst, src, len);
-		m.memory.foreach(src, len,
-			[dst = dst] (auto& m, address_type<W> off, const uint8_t* data, size_t len) {
-				m.memcpy(dst + off, data, len);
-			});
+		m.memory.memcpy(dst, m, src, len);
 		m.increment_counter(2 * len);
 		m.set_result(dst);
 	}}, {NATIVE_SYSCALLS_BASE+6, [] (auto& m) {
@@ -198,7 +195,7 @@ void setup_native_memory_syscalls(Machine<W>& machine, bool /*trusted*/)
 	}}, {NATIVE_SYSCALLS_BASE+10, [] (auto& m) {
 		// Strlen n+10
 		auto [addr] = m.template sysargs<address_type<W>> ();
-		uint32_t len = m.memory.strlen(addr, 4096);
+		uint32_t len = m.memory.strlen(addr);
 		m.increment_counter(2 * len);
 		m.set_result(len);
 		MPRINT("SYSCALL strlen(%#lX) = %lu\n",

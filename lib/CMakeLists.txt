@@ -19,10 +19,8 @@ set (SOURCES
 		libriscv/decoder_cache.cpp
 		libriscv/machine.cpp
 		libriscv/memory.cpp
-		libriscv/memory_rw.cpp
 		libriscv/rv32i.cpp
 		libriscv/rv64i.cpp
-		libriscv/serialize.cpp
 		libriscv/util/crc32c.cpp
 	)
 if (RISCV_DEBUG)

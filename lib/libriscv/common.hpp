@@ -94,6 +94,7 @@ namespace riscv
 	struct MachineOptions
 	{
 		uint64_t memory_max = 16ull << 20; // 16mb
+		uint64_t stack_size = 1ull << 20; // 1mb
 		bool load_program = true;
 		bool protect_segments = true;
 		bool verbose_loader = false;

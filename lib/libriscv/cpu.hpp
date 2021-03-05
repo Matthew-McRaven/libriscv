@@ -1,6 +1,5 @@
 #pragma once
 #include "common.hpp"
-#include "page.hpp"
 #include "registers.hpp"
 #ifdef RISCV_EXT_ATOMICS
 #include "rva.hpp"
@@ -80,7 +79,6 @@ namespace riscv
 		Machine<W>&  m_machine;
 
 		format_t read_next_instruction();
-		format_t read_next_instruction_slowpath() COLD_PATH();
 		void execute(format_t);
 		void emit(std::string& code, const std::string& symb, instr_pair* blk, const TransInfo<W>&) const;
 
@@ -88,9 +86,6 @@ namespace riscv
 		const uint8_t* m_exec_data = nullptr;
 		address_t m_exec_begin = 0;
 		address_t m_exec_end   = 0;
-
-		// Page cache for execution on virtual memory
-		CachedPage<W, const Page> m_cache;
 
 #ifdef RISCV_DEBUG
 		// instruction step & breakpoints
