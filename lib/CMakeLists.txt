@@ -8,7 +8,6 @@ option(RISCV_EXT_A  "Enable RISC-V atomic instructions" ON)
 option(RISCV_EXT_C  "Enable RISC-V compressed instructions" ON)
 option(RISCV_EXT_F  "Enable RISC-V floating-point instructions" ON)
 option(RISCV_EXPERIMENTAL  "Enable experimental features" OFF)
-option(RISCV_SHARED_PT "Enable shared page tables (performance penalty)" OFF)
 if (RISCV_EXPERIMENTAL)
 	option(RISCV_BINARY_TRANSLATION  "Enable binary translation" OFF)
 endif()
@@ -42,6 +41,8 @@ set_target_properties(riscv PROPERTIES CXX_STANDARD 17)
 target_include_directories(riscv PUBLIC .)
 target_compile_options(riscv PRIVATE -Wall -Wextra)
 target_compile_options(riscv PUBLIC -Wno-deprecated-copy)
+target_link_libraries(riscv PUBLIC rt)
+
 if (RISCV_DEBUG)
 	target_compile_definitions(riscv PUBLIC RISCV_DEBUG=1)
 endif()
@@ -65,12 +66,7 @@ if (RISCV_BINARY_TRANSLATION)
 	target_compile_definitions(riscv PUBLIC
 		RISCV_BINARY_TRANSLATION=1
 		RISCV_TRANSLATION_CACHE=1)
-	target_link_libraries(riscv dl)
-endif()
-if (RISCV_SHARED_PT)
-	target_compile_definitions(riscv PUBLIC
-		RISCV_SHARED_PAGETABLES=1
-	)
+	target_link_libraries(riscv PUBLIC dl)
 endif()
 
 if (RISCV_USE_EASTL)

@@ -87,9 +87,6 @@ namespace riscv
 
 namespace riscv
 {
-	template <int W> struct Machine;
-	template <int W> struct Memory;
-
 	template <int W>
 	struct MachineOptions
 	{
@@ -98,10 +95,6 @@ namespace riscv
 		bool load_program = true;
 		bool protect_segments = true;
 		bool verbose_loader = false;
-
-		// machine who owns all the execute- and read-only memory
-		const Machine<W>* owning_machine = nullptr;
-		Function<struct Page&(Memory<W>&, size_t)> page_fault_handler = nullptr;
 
 #ifdef RISCV_BINARY_TRANSLATION
 		unsigned block_size_treshold = 8;

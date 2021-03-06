@@ -67,7 +67,7 @@ namespace riscv
 		#endif
 #  ifndef RISCV_INBOUND_JUMPS_ONLY
 		} else {
-			instruction = read_next_instruction_slowpath();
+			instruction = read_next_instruction();
 			// decode & execute instruction directly
 			this->execute(instruction);
 		}

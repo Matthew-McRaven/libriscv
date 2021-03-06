@@ -4,6 +4,7 @@
 #include "main_memory.hpp"
 #include <cassert>
 #include <cstring>
+#include <memory>
 #include "util/function.hpp"
 
 namespace riscv
@@ -85,6 +86,7 @@ namespace riscv
 		void deserialize_from(const std::vector<uint8_t>&, const SerializedMachine<W>&);
 
 		Memory(Machine<W>&, std::string_view, MachineOptions<W>);
+		Memory(Machine<W>&, const Machine<W>& other, MachineOptions<W>);
 		~Memory();
 	private:
 		// ELF stuff
@@ -109,7 +111,7 @@ namespace riscv
 		void binary_loader(const MachineOptions<W>& options);
 		void binary_load_ph(const MachineOptions<W>&, const Phdr*);
 		// machine cloning
-		void machine_loader(const Machine<W>&);
+		void machine_loader(const Machine<W>&, const MachineOptions<W>&);
 		void protection_fault(address_t);
 
 		Machine<W>& m_machine;

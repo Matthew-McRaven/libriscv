@@ -4,7 +4,9 @@
 #ifdef __GNUG__
 #include "decoder_cache.cpp"
 #endif
+#include <fcntl.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 extern "C" char *
 __cxa_demangle(const char *name, char *buf, size_t *n, int *status);
@@ -12,22 +14,70 @@ __cxa_demangle(const char *name, char *buf, size_t *n, int *status);
 namespace riscv
 {
 	template <int W>
+	MainMemory<W>::MainMemory(size_t size)
+		: physbase(0), physend(size)
+	{
+		if (size == 0) return;
+		// create temporary filename
+		char namebuffer[64];
+		strncpy(namebuffer, "/tmp/rvmemory-XXXXXX", sizeof(namebuffer));
+		// open a temporary file with owner privs
+		this->fd = mkstemp(namebuffer);
+		if (this->fd < 0)
+			throw std::runtime_error("Shared memory allocation failed");
+		unlink(namebuffer);
+		if (ftruncate(fd, size) < 0) {
+			throw std::runtime_error("Shared memory resize failed");
+		}
+
+		this->mem = (char*) mmap(nullptr, size,
+			PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+		if (this->mem == MAP_FAILED)
+			throw std::runtime_error("Memory allocation failed");
+	}
+	template <int W>
+	MainMemory<W>::MainMemory(const MainMemory& other)
+	: physbase {other.physbase},
+	  physend  {other.physend},
+	  robase   {other.robase},
+	  rwbase   {other.rwbase}
+	{
+
+		// Copy-on-write the other machines memory
+		this->mem = (char*) mmap(nullptr, this->size(),
+			PROT_READ | PROT_WRITE, MAP_PRIVATE, other.fd, 0);
+		if (this->mem == MAP_FAILED)
+			throw std::runtime_error("Memory allocation failed");
+	}
+	template <int W>
+	MainMemory<W>::~MainMemory()
+	{
+		if (fd != 0)
+			close(fd);
+		munmap(this->mem, physend - physbase);
+	}
+
+	template <int W>
 	Memory<W>::Memory(Machine<W>& mach, std::string_view bin,
 					MachineOptions<W> options)
 		: m_machine{mach},
 		  m_main_memory{options.memory_max},
 		  m_binary{bin},
-		  m_original_machine {options.owning_machine == nullptr}
+		  m_original_machine {true}
 	{
-		// when an owning machine is passed, its state will be used instead
-		if (options.owning_machine == nullptr) {
-			// load ELF binary into virtual memory
-			if (!m_binary.empty())
-				this->binary_loader(options);
-		}
-		else {
-			this->machine_loader(*options.owning_machine);
-		}
+		// load ELF binary into virtual memory
+		if (!m_binary.empty())
+			this->binary_loader(options);
+	}
+	template <int W>
+	Memory<W>::Memory(Machine<W>& machine,
+		const Machine<W>& other, MachineOptions<W> options)
+	: m_machine{machine},
+	  m_main_memory{0},
+	  m_binary{other.memory.binary()},
+	  m_original_machine {false}
+	{
+		this->machine_loader(other, options);
 	}
 	template <int W>
 	Memory<W>::~Memory()
@@ -216,25 +266,10 @@ namespace riscv
 	}
 
 	template <int W>
-	void Memory<W>::machine_loader(const Machine<W>& master)
+	void Memory<W>::machine_loader(const Machine<W>& master, const MachineOptions<W>&)
 	{
 		auto& mmem = master.memory;
-		if (m_main_memory.size() < mmem.m_main_memory.size())
-		{
-			/* Prevent all sorts of weird problems */
-			throw MachineException(OUT_OF_MEMORY,
-				"Destination machine has less memory than master",
-				m_main_memory.size());
-		}
-
-		// copy the whole memory of the master machine
-		const auto len = mmem.m_main_memory.max_length(0x0);
-		auto* src = mmem.m_main_memory.unsafe_at(0x0, len);
-		auto* dst = m_main_memory.unsafe_at(0x0, len);
-		__builtin_memcpy(dst, src, len);
-
-		m_main_memory.robase = mmem.m_main_memory.robase;
-		m_main_memory.rwbase = mmem.m_main_memory.rwbase;
+		new (&m_main_memory) MainMemory(mmem.main_memory());
 
 		this->set_exit_address(mmem.exit_address());
 		// base address, size and PC-relative data pointer for instructions
@@ -419,4 +454,6 @@ namespace riscv
 
 	template struct Memory<4>;
 	template struct Memory<8>;
+	template struct MainMemory<4>;
+	template struct MainMemory<8>;
 }
