@@ -7,9 +7,6 @@ namespace riscv
 	template<int W>
 	struct MainMemory {
 		using address_t = address_type<W>;
-		MainMemory(size_t size);
-		MainMemory(const MainMemory& other);
-		~MainMemory();
 
 		address_t size() const noexcept { return physend - physbase; }
 
@@ -20,12 +17,12 @@ namespace riscv
 			return (addr >= rwbase) && (addr + asize <= this->physend);
 		}
 		const char* ro_at(address_t addr, size_t asize) const {
-			if (within_ro(addr, asize))
+			if (LIKELY(within_ro(addr, asize)))
 				return &mem[addr - physbase];
 			throw MachineException(PROTECTION_FAULT, "MainMemory::ro_at() invalid address", addr);
 		}
 		char* rw_at(address_t addr, size_t asize) {
-			if (within_rw(addr, asize))
+			if (LIKELY(within_rw(addr, asize)))
 				return &mem[addr - physbase];
 			throw MachineException(PROTECTION_FAULT, "MainMemory::rw_at() invalid address", addr);
 		}
@@ -34,21 +31,25 @@ namespace riscv
 			return (addr >= physbase) && (addr + asize <= this->physend);
 		}
 		char* unsafe_at(address_t addr, size_t asize) {
-			if (unsafe_within(addr, asize))
+			if (LIKELY(unsafe_within(addr, asize)))
 				return &mem[addr - physbase];
 			throw MachineException(PROTECTION_FAULT, "MainMemory::unsafe_at() invalid address", addr);
 		}
 		const char* unsafe_at(address_t addr, size_t asize) const {
-			if (unsafe_within(addr, asize))
+			if (LIKELY(unsafe_within(addr, asize)))
 				return &mem[addr - physbase];
 			throw MachineException(PROTECTION_FAULT, "MainMemory::unsafe_at() invalid address", addr);
 		}
 
 		size_t max_length(address_t addr) const noexcept {
-			if (addr >= physbase && addr < physend)
+			if (LIKELY(addr >= physbase && addr < physend))
 				return physend - addr;
 			return 0;
 		}
+
+		MainMemory(size_t size);
+		MainMemory(const MainMemory& other);
+		~MainMemory();
 
 		char* mem = nullptr;
 		const address_t physbase;

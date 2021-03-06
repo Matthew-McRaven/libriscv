@@ -8,7 +8,7 @@
 #define PCRELA(x) ((address_t) (tinfo.basepc + i * 4 + (x)))
 #define PCRELS(x) std::to_string(PCRELA(x))
 #define INSTRUCTION_COUNT(i) ((tinfo.has_branch ? "c + " : "") + std::to_string(i))
-#define ILLEGAL_AND_EXIT() { code += "api.exception(cpu, ILLEGAL_OPCODE);\n}\n"; return; }
+#define ILLEGAL_AND_EXIT() { code += "api.exception(cpu, ILLEGAL_OPCODE, 0);\n}\n"; return; }
 
 namespace riscv {
 static constexpr int LOOP_INSTRUCTIONS_MAX = 4096;
@@ -104,52 +104,52 @@ void CPU<W>::emit(std::string& code, const std::string& func, instr_pair* ip, co
 			case 0x0: // I8
 				if (instr.Itype.rd == 0) {
 					add_code(code,
-					"api.mem_ld8(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+					"read8(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				} else {
 					add_code(code,
-					from_reg(instr.Itype.rd) + " = (saddr_t)(int8_t)api.mem_ld8(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+					from_reg(instr.Itype.rd) + " = (saddr_t)(int8_t)read8(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				} break;
 			case 0x1: // I16
 				if (instr.Itype.rd == 0) {
 					add_code(code,
-					"api.mem_ld16(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+					"read16(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				} else {
 					add_code(code,
-					from_reg(instr.Itype.rd) + " = (saddr_t)(int16_t)api.mem_ld16(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+					from_reg(instr.Itype.rd) + " = (saddr_t)(int16_t)read16(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				} break;
 			case 0x2: // I32
 				if (instr.Itype.rd == 0) {
 					add_code(code,
-					"api.mem_ld32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+					"read32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				} else {
 					if constexpr (W == 4) {
 						add_code(code,
-							from_reg(instr.Itype.rd) + " = api.mem_ld32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+							from_reg(instr.Itype.rd) + " = read32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 					} else {
 						add_code(code,
-							from_reg(instr.Itype.rd) + " = (saddr_t)(int32_t)api.mem_ld32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+							from_reg(instr.Itype.rd) + " = (saddr_t)(int32_t)read32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 					}
 				} break;
 			case 0x3: // I64
 				if (instr.Itype.rd == 0) {
 					add_code(code,
-					"api.mem_ld64(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+					"read64(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				} else {
 					add_code(code,
-					from_reg(instr.Itype.rd) + " = api.mem_ld64(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+					from_reg(instr.Itype.rd) + " = read64(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				}
 				break;
 			case 0x4: // U8
 				add_code(code,
-				from_reg(instr.Itype.rd) + " = api.mem_ld8(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+				from_reg(instr.Itype.rd) + " = read8(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				break;
 			case 0x5: // U16
 				add_code(code,
-				from_reg(instr.Itype.rd) + " = api.mem_ld16(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+				from_reg(instr.Itype.rd) + " = read16(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				break;
 			case 0x6: // U32
 				add_code(code,
-				from_reg(instr.Itype.rd) + " = api.mem_ld32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
+				from_reg(instr.Itype.rd) + " = read32(cpu, " + from_reg(tinfo, instr.Itype.rs1) + " + " + from_imm(instr.Itype.signed_imm()) + ");");
 				break;
 			default:
 				ILLEGAL_AND_EXIT();
@@ -158,19 +158,19 @@ void CPU<W>::emit(std::string& code, const std::string& func, instr_pair* ip, co
 			switch (instr.Stype.funct3) {
 			case 0x0: // I8
 				add_code(code,
-					"api.mem_st8(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", " + from_reg(tinfo, instr.Stype.rs2) + ");");
+					"*GETMEM(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", int8_t) = " + from_reg(tinfo, instr.Stype.rs2) + ";");
 				break;
 			case 0x1: // I16
 				add_code(code,
-					"api.mem_st16(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", " + from_reg(tinfo, instr.Stype.rs2) + ");");
+					"*GETMEM(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", int16_t) = " + from_reg(tinfo, instr.Stype.rs2) + ";");
 				break;
 			case 0x2: // I32
 				add_code(code,
-					"api.mem_st32(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", " + from_reg(tinfo, instr.Stype.rs2) + ");");
+					"*GETMEM(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", int32_t) = " + from_reg(tinfo, instr.Stype.rs2) + ";");
 				break;
 			case 0x3: // I64
 				add_code(code,
-					"api.mem_st64(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", " + from_reg(tinfo, instr.Stype.rs2) + ");");
+					"*GETMEM(cpu, " + from_reg(tinfo, instr.Stype.rs1) + " + " + from_imm(instr.Stype.signed_imm()) + ", int64_t) = " + from_reg(tinfo, instr.Stype.rs2) + ";");
 				break;
 			default:
 				ILLEGAL_AND_EXIT();

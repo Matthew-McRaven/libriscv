@@ -5,7 +5,8 @@ extern const std::string bintr_code =
 R"123(#include <stdint.h>
 #define LIKELY(x) __builtin_expect((x), 1)
 #define UNLIKELY(x) __builtin_expect((x), 0)
-#define ILLEGAL_OPCODE  0
+#define ILLEGAL_OPCODE    0
+#define PROTECTION_FAULT  2
 
 #if RISCV_TRANSLATION_DYLIB == 4
 	typedef uint32_t addr_t;
@@ -51,20 +52,14 @@ typedef struct {
 } CPU;
 
 static struct CallbackTable {
-	uint8_t  (*mem_ld8)(CPU*, addr_t);
-	uint16_t (*mem_ld16)(CPU*, addr_t);
 	uint32_t (*mem_ld32)(CPU*, addr_t);
 	uint64_t (*mem_ld64)(CPU*, addr_t);
-	void (*mem_st8) (CPU*, addr_t, uint8_t);
-	void (*mem_st16)(CPU*, addr_t, uint16_t);
-	void (*mem_st32)(CPU*, addr_t, uint32_t);
-	void (*mem_st64)(CPU*, addr_t, uint64_t);
 	void (*jump)(CPU*, addr_t, uint64_t);
 	int  (*syscall)(CPU*, addr_t, uint64_t);
 	void (*stop)(CPU*, uint64_t);
 	void (*ebreak)(CPU*, uint64_t);
 	void (*system)(CPU*, uint32_t);
-	void (*exception)(CPU*, int);
+	void (*exception)(CPU*, int, addr_t);
 	float  (*sqrtf32)(float);
 	double (*sqrtf64)(double);
 } api;
@@ -104,8 +99,48 @@ static inline uint64_t MUL128(
 	return (middle << 32) | (uint32_t)p00;
 }
 
-extern void init(struct CallbackTable* table) {
-	api = *table;
+static struct Memory {
+	char *const mem;
+	const addr_t physbase;
+	const addr_t physend;
+	const addr_t robase;
+	const addr_t rwbase;
+} *mem;
+
+static inline int within(addr_t addr, addr_t asize, addr_t base) {
+	return (addr >= base && addr + asize < mem->physend);
+}
+static inline uint8_t read8(CPU* cpu, addr_t addr) {
+	if (UNLIKELY(!within(addr, 1, mem->robase)))
+		api.exception(cpu, PROTECTION_FAULT, addr);
+	return *(uint8_t *)&mem->mem[addr];
+}
+static inline uint16_t read16(CPU* cpu, addr_t addr) {
+	if (UNLIKELY(!within(addr, 2, mem->robase)))
+		api.exception(cpu, PROTECTION_FAULT, addr);
+	return *(uint16_t *)&mem->mem[addr];
+}
+static inline uint32_t read32(CPU* cpu, addr_t addr) {
+	if (UNLIKELY(!within(addr, 4, mem->robase)))
+		api.exception(cpu, PROTECTION_FAULT, addr);
+	return *(uint32_t *)&mem->mem[addr];
+}
+static inline uint64_t read64(CPU* cpu, addr_t addr) {
+	if (UNLIKELY(!within(addr, 8, mem->robase)))
+		api.exception(cpu, PROTECTION_FAULT, addr);
+	return *(uint64_t *)&mem->mem[addr];
+}
+
+static char *getmem(CPU* cpu, addr_t addr, addr_t asize) {
+	if (UNLIKELY(!within(addr, asize, mem->rwbase)))
+		api.exception(cpu, PROTECTION_FAULT, addr);
+	return &mem->mem[addr];
+}
+#define GETMEM(cpu, a, t) (t *)getmem(cpu, a, sizeof(t))
+
+extern void init(struct CallbackTable* pcall, struct Memory* pmem) {
+	api = *pcall;
+	mem = pmem;
 };
 )123";
 }

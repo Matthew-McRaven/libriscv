@@ -42,7 +42,6 @@ namespace riscv
 	  robase   {other.robase},
 	  rwbase   {other.rwbase}
 	{
-
 		// Copy-on-write the other machines memory
 		this->mem = (char*) mmap(nullptr, this->size(),
 			PROT_READ | PROT_WRITE, MAP_PRIVATE, other.fd, 0);

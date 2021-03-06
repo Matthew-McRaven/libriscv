@@ -272,31 +272,13 @@ if constexpr (LOOP_OFFSET_MAX > 0) {
 		dlclose(dylib);
 		return;
 	}
-	auto func = (void (*)(const CallbackTable<W>&)) ptr;
+	auto func = (void (*)(const CallbackTable<W>&, const MainMemory<W>*)) ptr;
 	func(CallbackTable<W>{
-		.mem_read8 = [] (CPU<W>& cpu, address_type<W> addr) -> uint8_t {
-			return cpu.machine().memory.template read<uint8_t> (addr);
-		},
-		.mem_read16 = [] (CPU<W>& cpu, address_type<W> addr) -> uint16_t {
-			return cpu.machine().memory.template read<uint16_t> (addr);
-		},
 		.mem_read32 = [] (CPU<W>& cpu, address_type<W> addr) -> uint32_t {
 			return cpu.machine().memory.template read<uint32_t> (addr);
 		},
 		.mem_read64 = [] (CPU<W>& cpu, address_type<W> addr) -> uint64_t {
 			return cpu.machine().memory.template read<uint64_t> (addr);
-		},
-		.mem_write8 = [] (CPU<W>& cpu, address_type<W> addr, uint8_t val) {
-			cpu.machine().memory.template write<uint8_t> (addr, val);
-		},
-		.mem_write16 = [] (CPU<W>& cpu, address_type<W> addr, uint16_t val) {
-			cpu.machine().memory.template write<uint16_t> (addr, val);
-		},
-		.mem_write32 = [] (CPU<W>& cpu, address_type<W> addr, uint32_t val) {
-			cpu.machine().memory.template write<uint32_t> (addr, val);
-		},
-		.mem_write64 = [] (CPU<W>& cpu, address_type<W> addr, uint64_t val) {
-			cpu.machine().memory.template write<uint64_t> (addr, val);
 		},
 		.jump = [] (CPU<W>& cpu, address_type<W> addr, uint64_t val) {
 			cpu.jump(addr);
@@ -328,8 +310,8 @@ if constexpr (LOOP_OFFSET_MAX > 0) {
 		.system = [] (CPU<W>& cpu, uint32_t instr) {
 			cpu.machine().system(rv32i_instruction{instr});
 		},
-		.trigger_exception = [] (CPU<W>& cpu, int e) {
-			cpu.trigger_exception(e);
+		.trigger_exception = [] (CPU<W>& cpu, int e, address_t addr) {
+			cpu.trigger_exception(e, addr);
 		},
 		.sqrtf32 = [] (float f) -> float {
 			return std::sqrt(f);
@@ -337,7 +319,7 @@ if constexpr (LOOP_OFFSET_MAX > 0) {
 		.sqrtf64 = [] (double d) -> double {
 			return std::sqrt(d);
 		},
-	});
+	}, &machine().memory.main_memory());
 
 	// map all the functions
 	for (auto& mapping : dlmappings) {
