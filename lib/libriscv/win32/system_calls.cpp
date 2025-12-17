@@ -1,6 +1,7 @@
 #include <libriscv/machine.hpp>
 
 #include <libriscv/threads.hpp>
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <io.h>
@@ -813,7 +814,7 @@ static void syscall_getrandom(Machine<W>& machine)
 		machine.set_result(-1);
 		return;
 	}
-	const size_t need = std::min((size_t)g_len, buffer.size());
+	const size_t need = std::min<size_t>(g_len, buffer.size());
 	for (size_t i = 0; i < need; ++i) {
 		buffer[i] ^= rand() & 0xFF; // XXX: Not secure
 	}
