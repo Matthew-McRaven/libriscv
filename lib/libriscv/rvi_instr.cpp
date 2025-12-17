@@ -395,8 +395,7 @@ static inline uint64_t MUL128(
 		}
 	}, DECODED_INSTR(JAL).printer);
 
-	INSTRUCTION(OP_IMM,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
+  const auto OP_IMM_first = 	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
 	{
 		auto& dst = cpu.reg(instr.Itype.rd);
 		const auto src = cpu.reg(instr.Itype.rs1);
@@ -505,7 +504,9 @@ static inline uint64_t MUL128(
 			return;
 		}
 		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
-	},
+	};
+	INSTRUCTION(OP_IMM,
+  OP_IMM_first,
 	[] (char* buffer, size_t len, auto& cpu, rv32i_instruction instr) RVPRINTR_ATTR
 	{
 		if (instr.Itype.imm == 0)
@@ -1018,9 +1019,8 @@ static inline uint64_t MUL128(
 		// SLLI.UW: Shift-left Unsigned Word (Immediate)
 		dst = RVREGTYPE(cpu)(src) << instr.Itype.shift_imm();
 	}, DECODED_INSTR(OP_IMM32_ADDIW).printer);
-
-	INSTRUCTION(OP_IMM32,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR {
+	
+	const auto OP_IMM32_first = [] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR {
 		auto& dst = cpu.reg(instr.Itype.rd);
 		const uint32_t src = cpu.reg(instr.Itype.rs1);
 
@@ -1060,7 +1060,10 @@ static inline uint64_t MUL128(
 			break;
 		}
 		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
-	}, DECODED_INSTR(OP_IMM32_ADDIW).printer);
+	};
+	INSTRUCTION(OP_IMM32,
+	OP_IMM32_first,
+	DECODED_INSTR(OP_IMM32_ADDIW).printer);
 
 	INSTRUCTION(OP32,
 	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR {
