@@ -4,7 +4,6 @@
 #include "internal_common.hpp"
 #include "rvc.hpp"
 #include "safe_instr_loader.hpp"
-#include "threaded_rewriter.cpp"
 #include "threaded_bytecodes.hpp"
 #include "util/crc32.hpp"
 #include <inttypes.h>
