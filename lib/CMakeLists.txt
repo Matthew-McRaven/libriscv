@@ -93,6 +93,11 @@ if (RISCV_32I)
 	list(APPEND SOURCES
 		${CMAKE_CURRENT_LIST_DIR}/libriscv/rv32i.cpp
 	)
+	# C1605 (compiler limit: object file size cannot exceed 4 GB) occurs frequently in MSVC release builds.
+	# These TUs explode, so we deoptimize them for now.
+	if(MSVC)
+		set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/libriscv/rv32i.cpp PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:/Od;/Ob0>")
+	endif()
 endif()
 if (RISCV_64I)
 	list(APPEND SOURCES
