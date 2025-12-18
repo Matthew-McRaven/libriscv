@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+#include <catch.hpp>
 #include <libriscv/machine.hpp>
 extern std::vector<uint8_t> load_file(const std::string& filename);
 static const uint64_t MAX_MEMORY = 680ul << 20; /* 680MB */

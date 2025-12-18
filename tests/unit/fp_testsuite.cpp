@@ -1,4 +1,4 @@
-#include <catch2/catch_test_macros.hpp>
+#include <catch.hpp>
 #include <libriscv/machine.hpp>
 extern std::vector<uint8_t> build_and_load(const std::string& code,
 	const std::string& args = "-O2 -static", bool cpp = false);

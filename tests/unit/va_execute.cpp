@@ -1,8 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
-
-#include <libriscv/machine.hpp>
+#include <catch.hpp>
 #include <libriscv/debug.hpp>
+#include <libriscv/machine.hpp>
 extern std::vector<uint8_t> build_and_load(const std::string& code,
 	const std::string& args = "-O2 -static", bool cpp = false);
 static const uint64_t MAX_MEMORY = 8ul << 20; /* 8MB */

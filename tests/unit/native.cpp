@@ -1,5 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
+#include <catch.hpp>
+
 
 #include <libriscv/machine.hpp>
 #include <libriscv/native_heap.hpp>
