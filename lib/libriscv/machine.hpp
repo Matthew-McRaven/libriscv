@@ -20,7 +20,7 @@
  **/
 extern "C" {
 #ifdef _WIN32
-int write(int fd, const void *buf, unsigned count);
+#include <io.h>
 #else
 ssize_t write(int fd, const void *buf, size_t count);
 #endif
