@@ -87,7 +87,7 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
         }
         [[fallthrough]];
       case 0x4: [[fallthrough]];
-      default: [[fallthrough]];
+      default:; // fallthrough
       }
       if constexpr (W == 4) return instr32i_ILLEGAL;
       else return instr64i_ILLEGAL;
