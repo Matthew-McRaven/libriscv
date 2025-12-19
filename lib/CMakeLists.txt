@@ -49,7 +49,7 @@ set(SOURCES
     libriscv/decoder_cache.cpp
     libriscv/machine_defaults.cpp
     libriscv/memory.cpp
-    libriscv/native_threads.cpp
+    
     libriscv/posix/minimal.cpp
     libriscv/posix/signals.cpp
     libriscv/posix/threads.cpp
