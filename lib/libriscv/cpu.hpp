@@ -1,5 +1,6 @@
 #pragma once
 #include "common.hpp"
+#include "instructions/instr_decoder.hpp"
 #include "instructions/instruction_list.hpp"
 #include "instructions/rv32i_instr.hpp"
 #include "instructions/rvc.hpp"
@@ -946,7 +947,9 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
 } // computed_index_for()
 
 // rv32i/rv64i.cpp
-template <int W> RISCV_INTERNAL const CPU<W>::instruction_t &CPU<W>::decode(const format_t instruction) {}
+template <int W> RISCV_INTERNAL const CPU<W>::instruction_t &CPU<W>::decode(const format_t instruction) {
+  return decode_one<W>(instruction);
+}
 
 template <int W> RISCV_INTERNAL void CPU<W>::execute(const format_t instruction) {
   auto dec = decode(instruction);

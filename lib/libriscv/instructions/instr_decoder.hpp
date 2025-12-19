@@ -17,7 +17,7 @@
 #endif
 
 namespace riscv {
-template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction_format instruction) {
+template <int W> const riscv::Instruction<W> &decode_one(const riscv::instruction_format instruction) {
   // -*-C++-*-
   using address_t = riscv::address_type<W>;
   using namespace riscv;
@@ -568,7 +568,7 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
     case CI_CODE(0b001, 0b01): // C.ADDIW / C.JAL
       if constexpr (sizeof(address_t) == 8) {
         if (ci.CI.rd != 0) return instr64i_C1_ADDIW;
-        return instr32i_NOP;
+        return instr64i_NOP;
       } else return instr32i_C1_JAL;
 
     case CI_CODE(0b010, 0b01):

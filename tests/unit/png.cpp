@@ -10,7 +10,6 @@ using namespace riscv;
 // Must be before mandelbrot
 #include "png.hpp"
 
-#include "libriscv/rv32i.cpp"
 #include "libriscv/util/crc32.hpp"
 #include "mandelbrot.cpp"
 static constexpr size_t COUNTER = 4;

@@ -1,7 +1,6 @@
 #include <catch.hpp>
 
 #include <libriscv/machine.hpp>
-#include <libriscv/rv32i.cpp>
 extern std::vector<uint8_t> build_and_load(const std::string& code,
 	const std::string& args = "-O2 -static", bool cpp = false);
 static const uint64_t MAX_MEMORY = 8ul << 20; /* 8MB */
