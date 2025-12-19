@@ -30,8 +30,6 @@ namespace riscv
 namespace riscv
 {
 	INSTANTIATE_32_IF_ENABLED(CPU);
-#ifndef RISCV_ASM_DISPATCH
 	INSTANTIATE_64_IF_ENABLED(CPU);
-#endif
 	INSTANTIATE_128_IF_ENABLED(CPU);
 } // riscv
