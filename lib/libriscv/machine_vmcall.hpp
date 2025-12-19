@@ -1,9 +1,9 @@
-template <int W>
-template <typename... Args> constexpr
-inline void Machine<W>::setup_call(Args&&... args)
-{
-	cpu.reg(REG_RA) = memory.exit_address();
-	[[maybe_unused]] int iarg = REG_ARG0;
+#include "machine.hpp"
+
+namespace riscv {
+template <int W> template <typename... Args> constexpr inline void Machine<W>::setup_call(Args &&...args) {
+  cpu.reg(REG_RA) = memory.exit_address();
+  [[maybe_unused]] int iarg = REG_ARG0;
 	[[maybe_unused]] int farg = REG_FA0;
 	([&] {
 		if constexpr (std::is_integral_v<remove_cvref<Args>>) {
@@ -90,3 +90,5 @@ address_type<W> Machine<W>::preempt(uint64_t max_instr, const char* funcname, Ar
 	address_t call_addr = memory.resolve_address(funcname);
 	return preempt<Throw, StoreRegs>(max_instr, call_addr, std::forward<Args>(args)...);
 }
+
+} // namespace riscv

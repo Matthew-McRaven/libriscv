@@ -1,4 +1,4 @@
-#include "decoder_cache.hpp"
+#include "decoder_cache_impl.hpp"
 #include "instruction_counter.hpp"
 #include "instructions/rv32i_instr.hpp"
 #include "instructions/rvfd.hpp"

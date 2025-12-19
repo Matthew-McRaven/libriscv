@@ -1,4 +1,4 @@
-#include "decoder_cache.hpp"
+#include "decoder_cache_impl.hpp"
 // #define ENABLE_TIMINGS
 
 namespace riscv

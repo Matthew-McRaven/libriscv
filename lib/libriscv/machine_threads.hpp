@@ -1,6 +1,10 @@
+#pragma once
+#include "machine.hpp"
+#include "threads.hpp"
 
 /** Implementation **/
 
+namespace riscv {
 template <int W> inline MultiThreading<W>::MultiThreading(Machine<W> &mach) : machine(mach) {
   // Best guess for default stack boundries
   const address_t base = 0x1000;
@@ -385,3 +389,4 @@ template <int W> void Machine<W>::setup_native_threads(const size_t syscall_base
     machine.set_result(retval);
   });
 }
+} // namespace riscv
