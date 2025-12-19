@@ -85,28 +85,6 @@ const auto C0_REG_FSW_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_A
   cpu.machine().memory.template write<uint32_t>(address, value);
 };
 
-#ifdef RISCV_32I
-static const CPU<4>::instruction_t instr32i_C0_ADDI4SPN{C0_ADDI4SPN_handler, C0_ADDI4SPN_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_FLD{C0_REG_FLD_handler, C0_REG_FLD_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_LW{C0_REG_LW_handler, C0_REG_FLD_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_LD{C0_REG_LD_handler, C0_REG_FLD_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_FLW{C0_REG_FLW_handler, C0_REG_FLD_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_FSD{C0_REG_FSD_handler, C0_REG_FSD_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_SW{C0_REG_SW_handler, C0_REG_FSD_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_SD{C0_REG_SD_handler, C0_REG_FSD_printer};
-static const CPU<4>::instruction_t instr32i_C0_REG_FSW{C0_REG_FSW_handler, C0_REG_FSD_printer};
-
-static const CPU<8>::instruction_t instr64i_C0_ADDI4SPN{C0_ADDI4SPN_handler, C0_ADDI4SPN_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_FLD{C0_REG_FLD_handler, C0_REG_FLD_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_LW{C0_REG_LW_handler, C0_REG_FLD_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_LD{C0_REG_LD_handler, C0_REG_FLD_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_FLW{C0_REG_FLW_handler, C0_REG_FLD_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_FSD{C0_REG_FSD_handler, C0_REG_FSD_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_SW{C0_REG_SW_handler, C0_REG_FSD_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_SD{C0_REG_SD_handler, C0_REG_FSD_printer};
-static const CPU<8>::instruction_t instr64i_C0_REG_FSW{C0_REG_FSW_handler, C0_REG_FSD_printer};
-#endif
-
 const auto C1_ADDI_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
   const rv32c_instruction ci{instr};
   // C.ADDI (non-hint, not NOP)
@@ -286,30 +264,6 @@ const auto C1_BNEZ_printer = [](char *buffer, size_t len, auto &cpu, rv32i_instr
                   ci.CB.signed_imm(), uint64_t(cpu.pc() + ci.CB.signed_imm()));
 };
 
-#ifdef RISCV_32I
-static const CPU<4>::instruction_t instr32i_C1_ADDI{C1_ADDI_handler, C1_ADDI_printer};
-static const CPU<4>::instruction_t instr32i_C1_JAL{C1_JAL_handler, C1_JAL_printer};
-static const CPU<4>::instruction_t instr32i_C1_ADDIW{C1_ADDIW_handler, C1_ADDIW_printer};
-static const CPU<4>::instruction_t instr32i_C1_LI{C1_LI_handler, C1_LI_printer};
-static const CPU<4>::instruction_t instr32i_C1_ADDI16SP{C1_ADDI16SP_handler, C1_ADDI16SP_printer};
-static const CPU<4>::instruction_t instr32i_C1_LUI{C1_LUI_handler, C1_ADDI16SP_printer};
-static const CPU<4>::instruction_t instr32i_C1_ALU_OPS{C1_ALU_OPS_handler, C1_ALU_OPS_printer};
-static const CPU<4>::instruction_t instr32i_C1_JUMP{C1_JUMP_handler, C1_JUMP_printer};
-static const CPU<4>::instruction_t instr32i_C1_BEQZ{C1_BEQZ_handler, C1_BEQZ_printer};
-static const CPU<4>::instruction_t instr32i_C1_BNEZ{C1_BNEZ_handler, C1_BNEZ_printer};
-
-static const CPU<8>::instruction_t instr64i_C1_ADDI{C1_ADDI_handler, C1_ADDI_printer};
-static const CPU<8>::instruction_t instr64i_C1_JAL{C1_JAL_handler, C1_JAL_printer};
-static const CPU<8>::instruction_t instr64i_C1_ADDIW{C1_ADDIW_handler, C1_ADDIW_printer};
-static const CPU<8>::instruction_t instr64i_C1_LI{C1_LI_handler, C1_LI_printer};
-static const CPU<8>::instruction_t instr64i_C1_ADDI16SP{C1_ADDI16SP_handler, C1_ADDI16SP_printer};
-static const CPU<8>::instruction_t instr64i_C1_LUI{C1_LUI_handler, C1_ADDI16SP_printer};
-static const CPU<8>::instruction_t instr64i_C1_ALU_OPS{C1_ALU_OPS_handler, C1_ALU_OPS_printer};
-static const CPU<8>::instruction_t instr64i_C1_JUMP{C1_JUMP_handler, C1_JUMP_printer};
-static const CPU<8>::instruction_t instr64i_C1_BEQZ{C1_BEQZ_handler, C1_BEQZ_printer};
-static const CPU<8>::instruction_t instr64i_C1_BNEZ{C1_BNEZ_handler, C1_BNEZ_printer};
-#endif
-
 // C.SLLI, LWSP, LDSP, LQSP, FLWSP, FLDSP
 const auto C2_SLLI_printer = [](char *buffer, size_t len, auto &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
   const rv32c_instruction ci{instr};
@@ -437,36 +391,74 @@ const auto C2_ADD_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR 
 };
 const auto C2_EBREAK_handler = [](auto &cpu, rv32i_instruction) RVINSTR_COLDATTR { cpu.machine().ebreak(); };
 
-#ifdef RISCV_32I
-static const CPU<4>::instruction_t instr32i_C2_SLLI{C2_SLLI_handler, C2_SLLI_printer};
-static const CPU<4>::instruction_t instr32i_C2_FLDSP{C2_FLDSP_handler, C2_SLLI_printer};
-static const CPU<4>::instruction_t instr32i_C2_LWSP{C2_LWSP_handler, C2_SLLI_printer};
-static const CPU<4>::instruction_t instr32i_C2_LDSP{C2_LDSP_handler, C2_SLLI_printer};
-static const CPU<4>::instruction_t instr32i_C2_FLWSP{C2_FLWSP_handler, C2_SLLI_printer};
-static const CPU<4>::instruction_t instr32i_C2_FSDSP{C2_FSDSP_handler, C2_FSDSP_printer};
-static const CPU<4>::instruction_t instr32i_C2_SWSP{C2_SWSP_handler, C2_FSDSP_printer};
-static const CPU<4>::instruction_t instr32i_C2_SDSP{C2_SDSP_handler, C2_SDSP_printer};
-static const CPU<4>::instruction_t instr32i_C2_FSWSP{C2_FSWSP_handler, C2_FSDSP_printer};
-static const CPU<4>::instruction_t instr32i_C2_JR{C2_JR_handler, C2_JR_printer};
-static const CPU<4>::instruction_t instr32i_C2_JALR{C2_JALR_handler, C2_JR_printer};
-static const CPU<4>::instruction_t instr32i_C2_MV{C2_MV_handler, C2_JR_printer};
-static const CPU<4>::instruction_t instr32i_C2_ADD{C2_ADD_handler, C2_JR_printer};
-static const CPU<4>::instruction_t instr32i_C2_EBREAK{C2_EBREAK_handler, C2_JR_printer};
-
-static const CPU<8>::instruction_t instr64i_C2_SLLI{C2_SLLI_handler, C2_SLLI_printer};
-static const CPU<8>::instruction_t instr64i_C2_FLDSP{C2_FLDSP_handler, C2_SLLI_printer};
-static const CPU<8>::instruction_t instr64i_C2_LWSP{C2_LWSP_handler, C2_SLLI_printer};
-static const CPU<8>::instruction_t instr64i_C2_LDSP{C2_LDSP_handler, C2_SLLI_printer};
-static const CPU<8>::instruction_t instr64i_C2_FLWSP{C2_FLWSP_handler, C2_SLLI_printer};
-static const CPU<8>::instruction_t instr64i_C2_FSDSP{C2_FSDSP_handler, C2_FSDSP_printer};
-static const CPU<8>::instruction_t instr64i_C2_SWSP{C2_SWSP_handler, C2_FSDSP_printer};
-static const CPU<8>::instruction_t instr64i_C2_SDSP{C2_SDSP_handler, C2_SDSP_printer};
-static const CPU<8>::instruction_t instr64i_C2_FSWSP{C2_FSWSP_handler, C2_FSDSP_printer};
-static const CPU<8>::instruction_t instr64i_C2_JR{C2_JR_handler, C2_JR_printer};
-static const CPU<8>::instruction_t instr64i_C2_JALR{C2_JALR_handler, C2_JR_printer};
-static const CPU<8>::instruction_t instr64i_C2_MV{C2_MV_handler, C2_JR_printer};
-static const CPU<8>::instruction_t instr64i_C2_ADD{C2_ADD_handler, C2_JR_printer};
-static const CPU<8>::instruction_t instr64i_C2_EBREAK{C2_EBREAK_handler, C2_JR_printer};
-#endif
-
 } // namespace riscv
+
+#ifdef RISCV_32I
+const riscv::Instruction<4> instr32i_C0_ADDI4SPN{riscv::C0_ADDI4SPN_handler, riscv::C0_ADDI4SPN_printer};
+const riscv::Instruction<4> instr32i_C0_REG_FLD{riscv::C0_REG_FLD_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<4> instr32i_C0_REG_LW{riscv::C0_REG_LW_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<4> instr32i_C0_REG_LD{riscv::C0_REG_LD_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<4> instr32i_C0_REG_FLW{riscv::C0_REG_FLW_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<4> instr32i_C0_REG_FSD{riscv::C0_REG_FSD_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<4> instr32i_C0_REG_SW{riscv::C0_REG_SW_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<4> instr32i_C0_REG_SD{riscv::C0_REG_SD_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<4> instr32i_C0_REG_FSW{riscv::C0_REG_FSW_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<4> instr32i_C1_ADDI{riscv::C1_ADDI_handler, riscv::C1_ADDI_printer};
+const riscv::Instruction<4> instr32i_C1_JAL{riscv::C1_JAL_handler, riscv::C1_JAL_printer};
+const riscv::Instruction<4> instr32i_C1_ADDIW{riscv::C1_ADDIW_handler, riscv::C1_ADDIW_printer};
+const riscv::Instruction<4> instr32i_C1_LI{riscv::C1_LI_handler, riscv::C1_LI_printer};
+const riscv::Instruction<4> instr32i_C1_ADDI16SP{riscv::C1_ADDI16SP_handler, riscv::C1_ADDI16SP_printer};
+const riscv::Instruction<4> instr32i_C1_LUI{riscv::C1_LUI_handler, riscv::C1_ADDI16SP_printer};
+const riscv::Instruction<4> instr32i_C1_ALU_OPS{riscv::C1_ALU_OPS_handler, riscv::C1_ALU_OPS_printer};
+const riscv::Instruction<4> instr32i_C1_JUMP{riscv::C1_JUMP_handler, riscv::C1_JUMP_printer};
+const riscv::Instruction<4> instr32i_C1_BEQZ{riscv::C1_BEQZ_handler, riscv::C1_BEQZ_printer};
+const riscv::Instruction<4> instr32i_C1_BNEZ{riscv::C1_BNEZ_handler, riscv::C1_BNEZ_printer};
+const riscv::Instruction<4> instr32i_C2_SLLI{riscv::C2_SLLI_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<4> instr32i_C2_FLDSP{riscv::C2_FLDSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<4> instr32i_C2_LWSP{riscv::C2_LWSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<4> instr32i_C2_LDSP{riscv::C2_LDSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<4> instr32i_C2_FLWSP{riscv::C2_FLWSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<4> instr32i_C2_FSDSP{riscv::C2_FSDSP_handler, riscv::C2_FSDSP_printer};
+const riscv::Instruction<4> instr32i_C2_SWSP{riscv::C2_SWSP_handler, riscv::C2_FSDSP_printer};
+const riscv::Instruction<4> instr32i_C2_SDSP{riscv::C2_SDSP_handler, riscv::C2_SDSP_printer};
+const riscv::Instruction<4> instr32i_C2_FSWSP{riscv::C2_FSWSP_handler, riscv::C2_FSDSP_printer};
+const riscv::Instruction<4> instr32i_C2_JR{riscv::C2_JR_handler, riscv::C2_JR_printer};
+const riscv::Instruction<4> instr32i_C2_JALR{riscv::C2_JALR_handler, riscv::C2_JR_printer};
+const riscv::Instruction<4> instr32i_C2_MV{riscv::C2_MV_handler, riscv::C2_JR_printer};
+const riscv::Instruction<4> instr32i_C2_ADD{riscv::C2_ADD_handler, riscv::C2_JR_printer};
+const riscv::Instruction<4> instr32i_C2_EBREAK{riscv::C2_EBREAK_handler, riscv::C2_JR_printer};
+
+const riscv::Instruction<8> instr64i_C0_ADDI4SPN{riscv::C0_ADDI4SPN_handler, riscv::C0_ADDI4SPN_printer};
+const riscv::Instruction<8> instr64i_C0_REG_FLD{riscv::C0_REG_FLD_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<8> instr64i_C0_REG_LW{riscv::C0_REG_LW_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<8> instr64i_C0_REG_LD{riscv::C0_REG_LD_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<8> instr64i_C0_REG_FLW{riscv::C0_REG_FLW_handler, riscv::C0_REG_FLD_printer};
+const riscv::Instruction<8> instr64i_C0_REG_FSD{riscv::C0_REG_FSD_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<8> instr64i_C0_REG_SW{riscv::C0_REG_SW_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<8> instr64i_C0_REG_SD{riscv::C0_REG_SD_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<8> instr64i_C0_REG_FSW{riscv::C0_REG_FSW_handler, riscv::C0_REG_FSD_printer};
+const riscv::Instruction<8> instr64i_C1_ADDI{riscv::C1_ADDI_handler, riscv::C1_ADDI_printer};
+const riscv::Instruction<8> instr64i_C1_JAL{riscv::C1_JAL_handler, riscv::C1_JAL_printer};
+const riscv::Instruction<8> instr64i_C1_ADDIW{riscv::C1_ADDIW_handler, riscv::C1_ADDIW_printer};
+const riscv::Instruction<8> instr64i_C1_LI{riscv::C1_LI_handler, riscv::C1_LI_printer};
+const riscv::Instruction<8> instr64i_C1_ADDI16SP{riscv::C1_ADDI16SP_handler, riscv::C1_ADDI16SP_printer};
+const riscv::Instruction<8> instr64i_C1_LUI{riscv::C1_LUI_handler, riscv::C1_ADDI16SP_printer};
+const riscv::Instruction<8> instr64i_C1_ALU_OPS{riscv::C1_ALU_OPS_handler, riscv::C1_ALU_OPS_printer};
+const riscv::Instruction<8> instr64i_C1_JUMP{riscv::C1_JUMP_handler, riscv::C1_JUMP_printer};
+const riscv::Instruction<8> instr64i_C1_BEQZ{riscv::C1_BEQZ_handler, riscv::C1_BEQZ_printer};
+const riscv::Instruction<8> instr64i_C1_BNEZ{riscv::C1_BNEZ_handler, riscv::C1_BNEZ_printer};
+const riscv::Instruction<8> instr64i_C2_SLLI{riscv::C2_SLLI_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<8> instr64i_C2_FLDSP{riscv::C2_FLDSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<8> instr64i_C2_LWSP{riscv::C2_LWSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<8> instr64i_C2_LDSP{riscv::C2_LDSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<8> instr64i_C2_FLWSP{riscv::C2_FLWSP_handler, riscv::C2_SLLI_printer};
+const riscv::Instruction<8> instr64i_C2_FSDSP{riscv::C2_FSDSP_handler, riscv::C2_FSDSP_printer};
+const riscv::Instruction<8> instr64i_C2_SWSP{riscv::C2_SWSP_handler, riscv::C2_FSDSP_printer};
+const riscv::Instruction<8> instr64i_C2_SDSP{riscv::C2_SDSP_handler, riscv::C2_SDSP_printer};
+const riscv::Instruction<8> instr64i_C2_FSWSP{riscv::C2_FSWSP_handler, riscv::C2_FSDSP_printer};
+const riscv::Instruction<8> instr64i_C2_JR{riscv::C2_JR_handler, riscv::C2_JR_printer};
+const riscv::Instruction<8> instr64i_C2_JALR{riscv::C2_JALR_handler, riscv::C2_JR_printer};
+const riscv::Instruction<8> instr64i_C2_MV{riscv::C2_MV_handler, riscv::C2_JR_printer};
+const riscv::Instruction<8> instr64i_C2_ADD{riscv::C2_ADD_handler, riscv::C2_JR_printer};
+const riscv::Instruction<8> instr64i_C2_EBREAK{riscv::C2_EBREAK_handler, riscv::C2_JR_printer};
+#endif

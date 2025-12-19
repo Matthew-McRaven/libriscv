@@ -5,6 +5,7 @@
 #include "instr_helpers.hpp"
 #include "machine.hpp"
 #include "rvc.hpp"
+
 #if __has_include(<bit>)
 # include <bit>
 # if defined(__cpp_lib_bitops)
@@ -65,10 +66,6 @@ const auto NOP_handler = [](auto & /* cpu */, rv32i_instruction /* instr */) RVI
 const auto NOP_printer = [](char *buffer, size_t len, auto &, rv32i_instruction)
                              RVPRINTR_ATTR { return snprintf(buffer, len, "NOP"); };
 
-const auto UNIMPLEMENTED_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_COLDATTR {
-  if (instr.length() == 4) cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
-  else cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.half[0]);
-};
 const auto UNIMPLEMENTED_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
   if (instr.length() == 4) {
     return snprintf(buffer, len, "UNIMPLEMENTED: 4-byte 0x%X (0x%X)", instr.opcode(), instr.whole);
@@ -77,7 +74,10 @@ const auto UNIMPLEMENTED_printer = [](char *buffer, size_t len, auto &, rv32i_in
                     rv32c_instruction{instr}.funct3(), instr.half[0]);
   }
 };
-
+const auto UNIMPLEMENTED_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_COLDATTR {
+  if (instr.length() == 4) cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
+  else cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.half[0]);
+};
 const auto ILLEGAL_handler = [](auto &cpu, rv32i_instruction /* instr */)
                                  RVINSTR_COLDATTR { cpu.trigger_exception(ILLEGAL_OPCODE); };
 
@@ -107,7 +107,6 @@ const auto LOAD_I64_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATT
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (int64_t)cpu.machine().memory.template read<uint64_t>(addr);
 };
-
 const auto LOAD_U8_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
@@ -310,64 +309,6 @@ const auto JMPI_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
   }
 };
 
-#ifdef RISCV_32I
-static const CPU<4>::instruction_t instr32i_NOP{NOP_handler, NOP_printer};
-static const CPU<4>::instruction_t instr32i_UNIMPLEMENTED{UNIMPLEMENTED_handler, UNIMPLEMENTED_printer};
-static const CPU<4>::instruction_t instr32i_ILLEGAL{ILLEGAL_handler, UNIMPLEMENTED_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_I8{LOAD_I8_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_I16{LOAD_I16_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_I32{LOAD_I32_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_I64{LOAD_I64_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_U8{LOAD_U8_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_U16{LOAD_U16_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_U32{LOAD_U32_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_U64{LOAD_U64_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_LOAD_X_DUMMY{LOAD_X_DUMMY_handler, LOAD_I8_printer};
-static const CPU<4>::instruction_t instr32i_STORE_I8_IMM{STORE_I8_IMM_handler, STORE_printer};
-static const CPU<4>::instruction_t instr32i_STORE_I8{STORE_I8_handler, STORE_printer};
-static const CPU<4>::instruction_t instr32i_STORE_I16_IMM{STORE_I16_IMM_handler, STORE_printer};
-static const CPU<4>::instruction_t instr32i_STORE_I32_IMM{STORE_I32_IMM_handler, STORE_printer};
-static const CPU<4>::instruction_t instr32i_STORE_I64_IMM{STORE_I64_IMM_handler, STORE_printer};
-static const CPU<4>::instruction_t instr32i_STORE_I128_IMM{STORE_I128_IMM_handler, STORE_printer};
-static const CPU<4>::instruction_t instr32i_BRANCH_EQ{BRANCH_EQ_handler, BRANCH_printer};
-static const CPU<4>::instruction_t instr32i_BRANCH_NE{BRANCH_NE_handler, BRANCH_printer};
-static const CPU<4>::instruction_t instr32i_BRANCH_LT{BRANCH_LT_handler, BRANCH_printer};
-static const CPU<4>::instruction_t instr32i_BRANCH_GE{BRANCH_GE_handler, BRANCH_printer};
-static const CPU<4>::instruction_t instr32i_BRANCH_LTU{BRANCH_LTU_handler, BRANCH_printer};
-static const CPU<4>::instruction_t instr32i_BRANCH_GEU{BRANCH_GEU_handler, BRANCH_printer};
-static const CPU<4>::instruction_t instr32i_JALR{JALR_handler, JALR_printer};
-static const CPU<4>::instruction_t instr32i_JAL{JAL_handler, JAL_printer};
-static const CPU<4>::instruction_t instr32i_JMPI{JMPI_handler, JAL_printer};
-
-static const CPU<8>::instruction_t instr64i_NOP{NOP_handler, NOP_printer};
-static const CPU<8>::instruction_t instr64i_UNIMPLEMENTED{UNIMPLEMENTED_handler, UNIMPLEMENTED_printer};
-static const CPU<8>::instruction_t instr64i_ILLEGAL{ILLEGAL_handler, UNIMPLEMENTED_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_I8{LOAD_I8_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_I16{LOAD_I16_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_I32{LOAD_I32_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_I64{LOAD_I64_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_U8{LOAD_U8_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_U16{LOAD_U16_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_U32{LOAD_U32_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_U64{LOAD_U64_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_LOAD_X_DUMMY{LOAD_X_DUMMY_handler, LOAD_I8_printer};
-static const CPU<8>::instruction_t instr64i_STORE_I8_IMM{STORE_I8_IMM_handler, STORE_printer};
-static const CPU<8>::instruction_t instr64i_STORE_I8{STORE_I8_handler, STORE_printer};
-static const CPU<8>::instruction_t instr64i_STORE_I16_IMM{STORE_I16_IMM_handler, STORE_printer};
-static const CPU<8>::instruction_t instr64i_STORE_I32_IMM{STORE_I32_IMM_handler, STORE_printer};
-static const CPU<8>::instruction_t instr64i_STORE_I64_IMM{STORE_I64_IMM_handler, STORE_printer};
-static const CPU<8>::instruction_t instr64i_STORE_I128_IMM{STORE_I128_IMM_handler, STORE_printer};
-static const CPU<8>::instruction_t instr64i_BRANCH_EQ{BRANCH_EQ_handler, BRANCH_printer};
-static const CPU<8>::instruction_t instr64i_BRANCH_NE{BRANCH_NE_handler, BRANCH_printer};
-static const CPU<8>::instruction_t instr64i_BRANCH_LT{BRANCH_LT_handler, BRANCH_printer};
-static const CPU<8>::instruction_t instr64i_BRANCH_GE{BRANCH_GE_handler, BRANCH_printer};
-static const CPU<8>::instruction_t instr64i_BRANCH_LTU{BRANCH_LTU_handler, BRANCH_printer};
-static const CPU<8>::instruction_t instr64i_BRANCH_GEU{BRANCH_GEU_handler, BRANCH_printer};
-static const CPU<8>::instruction_t instr64i_JALR{JALR_handler, JALR_printer};
-static const CPU<8>::instruction_t instr64i_JAL{JAL_handler, JAL_printer};
-static const CPU<8>::instruction_t instr64i_JMPI{JMPI_handler, JAL_printer};
-#endif
-
 const auto OP_IMM_printer = [](char *buffer, size_t len, auto &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
   if (instr.Itype.imm == 0) {
     // this is the official NOP instruction (ADDI x0, x0, 0)
@@ -401,7 +342,6 @@ const auto OP_IMM_printer = [](char *buffer, size_t len, auto &cpu, rv32i_instru
   return snprintf(buffer, len, "%s %s, %d (0x%X)", func3[instr.Itype.funct3], RISCV::regname(instr.Itype.rd),
                   instr.Itype.signed_imm(), instr.Itype.signed_imm());
 };
-
 const auto OP_IMM_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
   auto &dst = cpu.reg(instr.Itype.rd);
   const auto src = cpu.reg(instr.Itype.rs1);
@@ -814,39 +754,6 @@ const auto AUIPC_printer = [](char *buffer, size_t len, auto &cpu, rv32i_instruc
   return snprintf(buffer, len, "AUIPC %s, PC+0x%X (0x%" PRIX64 ")", RISCV::regname(instr.Utype.rd),
                   instr.Utype.upper_imm(), uint64_t(cpu.pc() + instr.Utype.upper_imm()));
 };
-#ifdef RISCV_32I
-static const CPU<4>::instruction_t instr32i_OP_IMM{OP_IMM_handler, OP_IMM_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM_ADDI{OP_IMM_ADDI_handler, OP_IMM_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM_LI{OP_IMM_LI_handler, OP_IMM_printer};
-static const CPU<4>::instruction_t instr32i_OP_MV{OP_MV_handler, OP_IMM_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM_SLLI{OP_IMM_SLLI_handler, OP_IMM_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM_SRLI{OP_IMM_SRLI_handler, OP_IMM_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM_ANDI{OP_IMM_ANDI_handler, OP_IMM_printer};
-static const CPU<4>::instruction_t instr32i_OP{OP_handler, OP_printer};
-static const CPU<4>::instruction_t instr32i_OP_ADD{OP_ADD_handler, OP_printer};
-static const CPU<4>::instruction_t instr32i_OP_SUB{OP_SUB_handler, OP_printer};
-static const CPU<4>::instruction_t instr32i_SYSTEM{SYSTEM_handler, SYSTEM_printer};
-static const CPU<4>::instruction_t instr32i_SYSCALL{SYSCALL_handler, SYSTEM_printer};
-static const CPU<4>::instruction_t instr32i_WFI{WFI_handler, SYSTEM_printer};
-static const CPU<4>::instruction_t instr32i_LUI{LUI_handler, LUI_printer};
-static const CPU<4>::instruction_t instr32i_AUIPC{AUIPC_handler, AUIPC_printer};
-
-static const CPU<8>::instruction_t instr64i_OP_IMM{OP_IMM_handler, OP_IMM_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM_ADDI{OP_IMM_ADDI_handler, OP_IMM_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM_LI{OP_IMM_LI_handler, OP_IMM_printer};
-static const CPU<8>::instruction_t instr64i_OP_MV{OP_MV_handler, OP_IMM_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM_SLLI{OP_IMM_SLLI_handler, OP_IMM_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM_SRLI{OP_IMM_SRLI_handler, OP_IMM_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM_ANDI{OP_IMM_ANDI_handler, OP_IMM_printer};
-static const CPU<8>::instruction_t instr64i_OP{OP_handler, OP_printer};
-static const CPU<8>::instruction_t instr64i_OP_ADD{OP_ADD_handler, OP_printer};
-static const CPU<8>::instruction_t instr64i_OP_SUB{OP_SUB_handler, OP_printer};
-static const CPU<8>::instruction_t instr64i_SYSTEM{SYSTEM_handler, SYSTEM_printer};
-static const CPU<8>::instruction_t instr64i_SYSCALL{SYSCALL_handler, SYSTEM_printer};
-static const CPU<8>::instruction_t instr64i_WFI{WFI_handler, SYSTEM_printer};
-static const CPU<8>::instruction_t instr64i_LUI{LUI_handler, LUI_printer};
-static const CPU<8>::instruction_t instr64i_AUIPC{AUIPC_handler, AUIPC_printer};
-#endif
 
 const auto OP_IMM32_ADDIW_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
   auto &dst = cpu.reg(instr.Itype.rd);
@@ -1080,24 +987,114 @@ const auto FENCE_printer = [](char *buffer, size_t len, auto &, rv32i_instructio
   // printer
   return snprintf(buffer, len, "FENCE");
 };
-#ifdef RISCV_32I
-static const CPU<4>::instruction_t instr32i_OP_IMM32_ADDIW{OP_IMM32_ADDIW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM32_SLLIW{OP_IMM32_SLLIW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM32_SRLIW{OP_IMM32_SRLIW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM32_SRAIW{OP_IMM32_SRAIW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM32_SLLI_UW{OP_IMM32_SLLI_UW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<4>::instruction_t instr32i_OP_IMM32{OP_IMM32_handler, OP_IMM32_ADDIW_printer};
-static const CPU<4>::instruction_t instr32i_OP32{OP32_handler, OP32_printer};
-static const CPU<4>::instruction_t instr32i_OP32_ADDW{OP32_ADDW_handler, OP32_printer};
-static const CPU<4>::instruction_t instr32i_FENCE{FENCE_handler, FENCE_printer};
 
-static const CPU<8>::instruction_t instr64i_OP_IMM32_ADDIW{OP_IMM32_ADDIW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM32_SLLIW{OP_IMM32_SLLIW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM32_SRLIW{OP_IMM32_SRLIW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM32_SLLI_UW{OP_IMM32_SLLI_UW_handler, OP_IMM32_ADDIW_printer};
-static const CPU<8>::instruction_t instr64i_OP_IMM32{OP_IMM32_handler, OP_IMM32_ADDIW_printer};
-static const CPU<8>::instruction_t instr64i_OP32{OP32_handler, OP32_printer};
-static const CPU<8>::instruction_t instr64i_OP32_ADDW{OP32_ADDW_handler, OP32_printer};
-static const CPU<8>::instruction_t instr64i_FENCE{FENCE_handler, FENCE_printer};
+} // namespace riscv
+
+#ifdef RISCV_32I
+
 #endif
-}
+
+#ifdef RISCV_32I
+const riscv::Instruction<4> instr32i_NOP{riscv::NOP_handler, riscv::NOP_printer};
+const riscv::Instruction<4> instr32i_UNIMPLEMENTED{riscv::UNIMPLEMENTED_handler, riscv::UNIMPLEMENTED_printer};
+const riscv::Instruction<4> instr32i_ILLEGAL{riscv::ILLEGAL_handler, riscv::UNIMPLEMENTED_printer};
+const riscv::Instruction<4> instr32i_LOAD_I8{riscv::LOAD_I8_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_I16{riscv::LOAD_I16_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_I32{riscv::LOAD_I32_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_I64{riscv::LOAD_I64_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_U8{riscv::LOAD_U8_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_U16{riscv::LOAD_U16_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_U32{riscv::LOAD_U32_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_U64{riscv::LOAD_U64_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_LOAD_X_DUMMY{riscv::LOAD_X_DUMMY_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<4> instr32i_STORE_I8_IMM{riscv::STORE_I8_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<4> instr32i_STORE_I8{riscv::STORE_I8_handler, riscv::STORE_printer};
+const riscv::Instruction<4> instr32i_STORE_I16_IMM{riscv::STORE_I16_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<4> instr32i_STORE_I32_IMM{riscv::STORE_I32_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<4> instr32i_STORE_I64_IMM{riscv::STORE_I64_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<4> instr32i_STORE_I128_IMM{riscv::STORE_I128_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<4> instr32i_BRANCH_EQ{riscv::BRANCH_EQ_handler, riscv::BRANCH_printer};
+const riscv::Instruction<4> instr32i_BRANCH_NE{riscv::BRANCH_NE_handler, riscv::BRANCH_printer};
+const riscv::Instruction<4> instr32i_BRANCH_LT{riscv::BRANCH_LT_handler, riscv::BRANCH_printer};
+const riscv::Instruction<4> instr32i_BRANCH_GE{riscv::BRANCH_GE_handler, riscv::BRANCH_printer};
+const riscv::Instruction<4> instr32i_BRANCH_LTU{riscv::BRANCH_LTU_handler, riscv::BRANCH_printer};
+const riscv::Instruction<4> instr32i_BRANCH_GEU{riscv::BRANCH_GEU_handler, riscv::BRANCH_printer};
+const riscv::Instruction<4> instr32i_JALR{riscv::JALR_handler, riscv::JALR_printer};
+const riscv::Instruction<4> instr32i_JAL{riscv::JAL_handler, riscv::JAL_printer};
+const riscv::Instruction<4> instr32i_JMPI{riscv::JMPI_handler, riscv::JAL_printer};
+const riscv::Instruction<4> instr32i_OP_IMM{riscv::OP_IMM_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<4> instr32i_OP_IMM_ADDI{riscv::OP_IMM_ADDI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<4> instr32i_OP_IMM_LI{riscv::OP_IMM_LI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<4> instr32i_OP_MV{riscv::OP_MV_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<4> instr32i_OP_IMM_SLLI{riscv::OP_IMM_SLLI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<4> instr32i_OP_IMM_SRLI{riscv::OP_IMM_SRLI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<4> instr32i_OP_IMM_ANDI{riscv::OP_IMM_ANDI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<4> instr32i_OP{riscv::OP_handler, riscv::OP_printer};
+const riscv::Instruction<4> instr32i_OP_ADD{riscv::OP_ADD_handler, riscv::OP_printer};
+const riscv::Instruction<4> instr32i_OP_SUB{riscv::OP_SUB_handler, riscv::OP_printer};
+const riscv::Instruction<4> instr32i_SYSTEM{riscv::SYSTEM_handler, riscv::SYSTEM_printer};
+const riscv::Instruction<4> instr32i_SYSCALL{riscv::SYSCALL_handler, riscv::SYSTEM_printer};
+const riscv::Instruction<4> instr32i_WFI{riscv::WFI_handler, riscv::SYSTEM_printer};
+const riscv::Instruction<4> instr32i_LUI{riscv::LUI_handler, riscv::LUI_printer};
+const riscv::Instruction<4> instr32i_AUIPC{riscv::AUIPC_handler, riscv::AUIPC_printer};
+const riscv::Instruction<4> instr32i_OP_IMM32_ADDIW{riscv::OP_IMM32_ADDIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<4> instr32i_OP_IMM32_SLLIW{riscv::OP_IMM32_SLLIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<4> instr32i_OP_IMM32_SRLIW{riscv::OP_IMM32_SRLIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<4> instr32i_OP_IMM32_SRAIW{riscv::OP_IMM32_SRAIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<4> instr32i_OP_IMM32_SLLI_UW{riscv::OP_IMM32_SLLI_UW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<4> instr32i_OP_IMM32{riscv::OP_IMM32_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<4> instr32i_OP32{riscv::OP32_handler, riscv::OP32_printer};
+const riscv::Instruction<4> instr32i_OP32_ADDW{riscv::OP32_ADDW_handler, riscv::OP32_printer};
+const riscv::Instruction<4> instr32i_FENCE{riscv::FENCE_handler, riscv::FENCE_printer};
+
+const riscv::Instruction<8> instr64i_NOP{riscv::NOP_handler, riscv::NOP_printer};
+const riscv::Instruction<8> instr64i_UNIMPLEMENTED{riscv::UNIMPLEMENTED_handler, riscv::UNIMPLEMENTED_printer};
+const riscv::Instruction<8> instr64i_ILLEGAL{riscv::ILLEGAL_handler, riscv::UNIMPLEMENTED_printer};
+const riscv::Instruction<8> instr64i_LOAD_I8{riscv::LOAD_I8_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_I16{riscv::LOAD_I16_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_I32{riscv::LOAD_I32_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_I64{riscv::LOAD_I64_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_U8{riscv::LOAD_U8_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_U16{riscv::LOAD_U16_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_U32{riscv::LOAD_U32_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_U64{riscv::LOAD_U64_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_LOAD_X_DUMMY{riscv::LOAD_X_DUMMY_handler, riscv::LOAD_I8_printer};
+const riscv::Instruction<8> instr64i_STORE_I8_IMM{riscv::STORE_I8_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<8> instr64i_STORE_I8{riscv::STORE_I8_handler, riscv::STORE_printer};
+const riscv::Instruction<8> instr64i_STORE_I16_IMM{riscv::STORE_I16_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<8> instr64i_STORE_I32_IMM{riscv::STORE_I32_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<8> instr64i_STORE_I64_IMM{riscv::STORE_I64_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<8> instr64i_STORE_I128_IMM{riscv::STORE_I128_IMM_handler, riscv::STORE_printer};
+const riscv::Instruction<8> instr64i_BRANCH_EQ{riscv::BRANCH_EQ_handler, riscv::BRANCH_printer};
+const riscv::Instruction<8> instr64i_BRANCH_NE{riscv::BRANCH_NE_handler, riscv::BRANCH_printer};
+const riscv::Instruction<8> instr64i_BRANCH_LT{riscv::BRANCH_LT_handler, riscv::BRANCH_printer};
+const riscv::Instruction<8> instr64i_BRANCH_GE{riscv::BRANCH_GE_handler, riscv::BRANCH_printer};
+const riscv::Instruction<8> instr64i_BRANCH_LTU{riscv::BRANCH_LTU_handler, riscv::BRANCH_printer};
+const riscv::Instruction<8> instr64i_BRANCH_GEU{riscv::BRANCH_GEU_handler, riscv::BRANCH_printer};
+const riscv::Instruction<8> instr64i_JALR{riscv::JALR_handler, riscv::JALR_printer};
+const riscv::Instruction<8> instr64i_JAL{riscv::JAL_handler, riscv::JAL_printer};
+const riscv::Instruction<8> instr64i_JMPI{riscv::JMPI_handler, riscv::JAL_printer};
+const riscv::Instruction<8> instr64i_OP_IMM{riscv::OP_IMM_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<8> instr64i_OP_IMM_ADDI{riscv::OP_IMM_ADDI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<8> instr64i_OP_IMM_LI{riscv::OP_IMM_LI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<8> instr64i_OP_MV{riscv::OP_MV_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<8> instr64i_OP_IMM_SLLI{riscv::OP_IMM_SLLI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<8> instr64i_OP_IMM_SRLI{riscv::OP_IMM_SRLI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<8> instr64i_OP_IMM_ANDI{riscv::OP_IMM_ANDI_handler, riscv::OP_IMM_printer};
+const riscv::Instruction<8> instr64i_OP{riscv::OP_handler, riscv::OP_printer};
+const riscv::Instruction<8> instr64i_OP_ADD{riscv::OP_ADD_handler, riscv::OP_printer};
+const riscv::Instruction<8> instr64i_OP_SUB{riscv::OP_SUB_handler, riscv::OP_printer};
+const riscv::Instruction<8> instr64i_SYSTEM{riscv::SYSTEM_handler, riscv::SYSTEM_printer};
+const riscv::Instruction<8> instr64i_SYSCALL{riscv::SYSCALL_handler, riscv::SYSTEM_printer};
+const riscv::Instruction<8> instr64i_WFI{riscv::WFI_handler, riscv::SYSTEM_printer};
+const riscv::Instruction<8> instr64i_LUI{riscv::LUI_handler, riscv::LUI_printer};
+const riscv::Instruction<8> instr64i_AUIPC{riscv::AUIPC_handler, riscv::AUIPC_printer};
+const riscv::Instruction<8> instr64i_OP_IMM32_ADDIW{riscv::OP_IMM32_ADDIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<8> instr64i_OP_IMM32_SLLIW{riscv::OP_IMM32_SLLIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<8> instr64i_OP_IMM32_SRLIW{riscv::OP_IMM32_SRLIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<8> instr64i_OP_IMM32_SLLI_UW{riscv::OP_IMM32_SLLI_UW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<8> instr64i_OP_IMM32{riscv::OP_IMM32_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<8> instr64i_OP32{riscv::OP32_handler, riscv::OP32_printer};
+const riscv::Instruction<8> instr64i_OP32_ADDW{riscv::OP32_ADDW_handler, riscv::OP32_printer};
+const riscv::Instruction<8> instr64i_FENCE{riscv::FENCE_handler, riscv::FENCE_printer};
+#endif
