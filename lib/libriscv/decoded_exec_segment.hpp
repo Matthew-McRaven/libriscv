@@ -67,44 +67,8 @@ namespace riscv
 		uint32_t crc32c_hash() const noexcept { return m_crc32c_hash; }
 		void set_crc32c_hash(uint32_t hash) { m_crc32c_hash = hash; }
 
-#ifdef RISCV_BINARY_TRANSLATION
-		bool is_binary_translated() const noexcept { return !m_translator_mappings.empty(); }
-		bool is_libtcc() const noexcept { return m_is_libtcc; }
-		void* binary_translation_so() const { return m_bintr_dl; }
-		void set_binary_translated(void* dl, bool is_libtcc) const { m_bintr_dl = dl; m_is_libtcc = is_libtcc; }
-		uint32_t translation_hash() const { return m_bintr_hash; }
-		void set_translation_hash(uint32_t hash) { m_bintr_hash = hash; }
-		auto& create_mappings(size_t mappings) { m_translator_mappings.resize(mappings); return m_translator_mappings; }
-		void set_mapping(unsigned i, bintr_block_func<W> handler) { m_translator_mappings.at(i) = handler; }
-		bintr_block_func<W> mapping_at(unsigned i) const { return m_translator_mappings.at(i); }
-		bintr_block_func<W> unchecked_mapping_at(unsigned i) const { return m_translator_mappings[i]; }
-		size_t translator_mappings() const noexcept { return m_translator_mappings.size(); }
-		auto* patched_decoder_cache() noexcept { return m_patched_exec_decoder; }
-		void set_patched_decoder_cache(std::unique_ptr<DecoderCache<W>[]> cache, DecoderData<W>* dec)
-			{ m_patched_decoder_cache = std::move(cache); m_patched_exec_decoder = dec; }
-
-		void set_record_slowpaths(bool do_record) { m_do_record_slowpaths = do_record; }
-		bool is_recording_slowpaths() const noexcept { return m_do_record_slowpaths; }
-		void wait_for_compilation_complete() {
-			std::unique_lock<std::mutex> lock(m_background_compilation_mutex);
-			m_background_compilation_cv.wait(lock, [this]{ return !m_is_background_compiling; });
-		}
-		bool is_background_compiling() const noexcept { return m_is_background_compiling; }
-		void set_background_compiling(bool is_bg) {
-			std::lock_guard<std::mutex> lock(m_background_compilation_mutex);
-			if (m_is_background_compiling && !is_bg) {
-				m_background_compilation_cv.notify_all();
-			}
-			m_is_background_compiling = is_bg;
-		}
-#ifdef RISCV_DEBUG
-		void insert_slowpath_address(address_t addr) { m_slowpath_addresses.insert(addr); }
-		auto& slowpath_addresses() const noexcept { return m_slowpath_addresses; }
-#endif
-#else
-		bool is_binary_translated() const noexcept { return false; }
+    bool is_binary_translated() const noexcept { return false; }
 		bool is_libtcc() const noexcept { return false; }
-#endif
 
 		bool is_execute_only() const noexcept { return m_is_execute_only; }
 		void set_execute_only(bool is_xo) { m_is_execute_only = is_xo; }
@@ -132,25 +96,8 @@ namespace riscv
 		size_t          m_decoder_cache_size = 0;
 		std::unique_ptr<DecoderCache<W>[]> m_decoder_cache = nullptr;
 
-#ifdef RISCV_BINARY_TRANSLATION
-		std::vector<bintr_block_func<W>> m_translator_mappings;
-		std::unique_ptr<DecoderCache<W>[]> m_patched_decoder_cache = nullptr;
-		DecoderData<W>* m_patched_exec_decoder = nullptr;
-		mutable void* m_bintr_dl = nullptr;
-#ifdef RISCV_DEBUG
-		std::unordered_set<address_t> m_slowpath_addresses;
-#endif
-		uint32_t m_bintr_hash = 0x0; // CRC32-C of the execute segment + compiler options
-#endif
 		uint32_t m_crc32c_hash = 0x0; // CRC32-C of the execute segment
 		bool m_is_execute_only = false;
-#ifdef RISCV_BINARY_TRANSLATION
-		bool m_do_record_slowpaths = false;
-		mutable bool m_is_libtcc = false;
-		bool m_is_background_compiling = false;
-		mutable std::mutex m_background_compilation_mutex;
-		std::condition_variable m_background_compilation_cv;
-#endif
 		// High-memory execute segments are likely to be JIT'd, and needs to
 		// be nuked when attempting to re-use the segment
 		bool m_is_likely_jit = false;
@@ -182,30 +129,9 @@ namespace riscv
 
 		m_decoder_cache_size = other.m_decoder_cache_size;
 		m_decoder_cache = std::move(other.m_decoder_cache);
-
-#ifdef RISCV_BINARY_TRANSLATION
-		m_translator_mappings = std::move(other.m_translator_mappings);
-		m_bintr_dl = other.m_bintr_dl;
-		other.m_bintr_dl = nullptr;
-		m_bintr_hash = other.m_bintr_hash;
-		m_is_libtcc = other.m_is_libtcc;
-		m_patched_decoder_cache = std::move(other.m_patched_decoder_cache);
-		m_patched_exec_decoder = other.m_patched_exec_decoder;
-#endif
 	}
 
-	template <int W>
-	inline DecodedExecuteSegment<W>::~DecodedExecuteSegment()
-	{
-#ifdef RISCV_BINARY_TRANSLATION
-		extern void  dylib_close(void* dylib, bool is_libtcc);
-		if (m_bintr_dl)
-			dylib_close(m_bintr_dl, m_is_libtcc);
-		m_bintr_dl = nullptr;
-		// Wait for any background compilation to finish
-		wait_for_compilation_complete();
-#endif
-	}
+  template <int W> inline DecodedExecuteSegment<W>::~DecodedExecuteSegment() {}
 
   template <int W>
   RISCV_INTERNAL size_t DecodedExecuteSegment<W>::threaded_rewrite(size_t bytecode, [[maybe_unused]] address_t pc,

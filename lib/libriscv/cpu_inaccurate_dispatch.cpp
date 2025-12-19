@@ -97,13 +97,6 @@ namespace riscv
 		if (UNLIKELY(!(pc >= exec->exec_begin() && pc < exec->exec_end())))
 			goto new_execute_segment;
 
-#ifdef RISCV_BINARY_TRANSLATION
-		// There's a very high chance that the (first) instruction is a translated function
-		decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
-		if (LIKELY(decoder->get_bytecode() == RV32I_BC_TRANSLATOR))
-			goto retry_translated_function;
-#endif
-
 	continue_segment:
 		decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
 
@@ -151,39 +144,6 @@ INSTRUCTION(RV32I_BC_SYSTEM, rv32i_system)
 	// Overflow-check, next block
 	NEXT_BLOCK(4, true);
 }
-
-#ifdef RISCV_BINARY_TRANSLATION
-INSTRUCTION(RV32I_BC_TRANSLATOR, translated_function)
-{
-retry_translated_function:
-	// Invoke translated code
-	auto bintr_results =
-		exec->unchecked_mapping_at(decoder->instr)(*this, 0, ~0ULL, pc);
-	if (bintr_results.max_counter == 0) {
-#ifdef RISCV_LIBTCC
-		// We need to check if we have a current exception
-		if (UNLIKELY(CPU().has_current_exception()))
-			goto handle_rethrow_exception;
-#endif
-		return;
-	}
-
-	pc = REGISTERS().pc;
-	if (LIKELY(bintr_results.max_counter != 0 && (pc - exec->exec_begin() < exec->exec_end() - exec->exec_begin())))
-	{
-		decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
-		if (decoder->get_bytecode() == RV32I_BC_TRANSLATOR) {
-			goto retry_translated_function;
-		}
-#ifdef RISCV_DEBUG
-		if (exec->is_recording_slowpaths())
-			exec->insert_slowpath_address(pc);
-#endif
-		goto continue_segment;
-	} else
-		goto check_jump;
-}
-#endif // RISCV_BINARY_TRANSLATION
 
 INSTRUCTION(RV32I_BC_SYSCALL, rv32i_syscall)
 {
@@ -248,15 +208,6 @@ INSTRUCTION(RV32I_BC_STOP, rv32i_stop)
 		} catch (...) {}
 		registers().pc = pc;
 		trigger_exception(ILLEGAL_OPCODE, decoder->instr);
-
-#if defined(RISCV_BINARY_TRANSLATION) && defined(RISCV_LIBTCC)
-	handle_rethrow_exception:
-		// We have an exception, so we need to rethrow it
-		const auto except = CPU().current_exception();
-		CPU().clear_current_exception();
-		std::rethrow_exception(except);
-#endif
-
 	} // CPU::simulate_inaccurate()
 
 } // riscv

@@ -528,17 +528,10 @@ namespace riscv
   }
 
   template <int W> void Machine<W>::register_clobbering_syscall(size_t sysnum) {
-#ifdef RISCV_BINARY_TRANSLATION
-    clobbering_syscalls.insert(sysnum);
-#endif
   }
 
   template <int W> bool Machine<W>::is_clobbering_syscall(size_t sysnum) noexcept {
-#ifdef RISCV_BINARY_TRANSLATION
-    return clobbering_syscalls.count(sysnum) > 0;
-#else
     return false; // No clobbering syscalls in non-binary translation mode
-#endif
   }
 
   template <int W> void Machine<W>::set_result_or_error(int result) {
@@ -609,9 +602,6 @@ namespace riscv
     static std::random_device rd("/dev/urandom");
 #else
     static std::random_device rd{};
-#endif
-#ifdef RISCV_BINARY_TRANSLATION
-    static std::unordered_set<size_t> clobbering_syscalls;
 #endif
     // start installing at near-end of address space, leaving room on both sides
     // stack below and installation above

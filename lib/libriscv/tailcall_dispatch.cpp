@@ -159,29 +159,6 @@ namespace riscv
 		NEXT_BLOCK(4, true);
 	}
 
-#ifdef RISCV_BINARY_TRANSLATION
-	INSTRUCTION(RV32I_BC_TRANSLATOR, translated_function) {
-		VIEW_INSTR();
-		auto new_values = 
-			exec->mapping_at(instr.whole)(CPU(), counter.value()-1, counter.max(), pc);
-		counter.set_counters(new_values.counter, new_values.max_counter);
-		if (new_values.max_counter == 0) {
-#ifdef RISCV_LIBTCC
-			// We need to check if we have a current exception
-			if (UNLIKELY(CPU().has_current_exception())) {
-				const auto except = CPU().current_exception();
-				CPU().clear_current_exception();
-				std::rethrow_exception(except);
-			}
-#endif
-			return RETURN_VALUES();
-		}
-		pc = REGISTERS().pc;
-		OVERFLOW_CHECK();
-		UNCHECKED_JUMP();
-	}
-#endif
-
 	INSTRUCTION(RV32I_BC_SYSTEM, rv32i_system) {
 		VIEW_INSTR();
 		// Make the current PC visible
@@ -362,9 +339,6 @@ namespace riscv
 #endif
 		[RV32I_BC_FUNCTION] = execute_decoded_function,
 		[RV32I_BC_FUNCBLOCK] = execute_function_block,
-#ifdef RISCV_BINARY_TRANSLATION
-		[RV32I_BC_TRANSLATOR] = translated_function,
-#endif
 		[RV32I_BC_LIVEPATCH] = execute_livepatch,
 		[RV32I_BC_SYSTEM]  = rv32i_system,
 		};

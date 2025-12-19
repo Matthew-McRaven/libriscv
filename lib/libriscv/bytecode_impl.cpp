@@ -805,26 +805,9 @@ INSTRUCTION(RV32V_BC_VFMUL_VF, rv32v_vfmul_vf) {
 INSTRUCTION(RV32I_BC_LIVEPATCH, execute_livepatch) {
 	switch (DECODER().m_handler) {
 	case 0: { // Live-patch binary translation
-#ifdef RISCV_BINARY_TRANSLATION
-		// Special bytecode that does not read any decoder data
-		// 1. Wind back PC to the current decoder position
-		pc = pc - DECODER().block_bytes();
-#  ifdef DISPATCH_MODE_TAILCALL
-		// 2. Find the correct decoder pointer in the patched decoder cache
-		auto* patched = &exec->patched_decoder_cache()[pc / DecoderCache<W>::DIVISOR];
-		d = patched;
-#  else
-		// 2. Find the correct decoder pointer in the patched decoder cache
-		exec_decoder = exec->patched_decoder_cache();
-		decoder = &exec_decoder[pc / DecoderCache<W>::DIVISOR];
-#  endif
-		// 3. Execute the instruction
-		EXECUTE_CURRENT();
-#else
 		// Invalid handler
 		DECODER().set_bytecode(RV32I_BC_INVALID);
 		DECODER().set_invalid_handler();
-#endif
 	}	break;
 	case 1: { // Live-patch JALR -> STOP
 		// Check if RA == memory exit address

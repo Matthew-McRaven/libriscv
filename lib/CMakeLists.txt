@@ -21,9 +21,6 @@ option(RISCV_EXPERIMENTAL "Enable experimental features" OFF)
 # MEMORY_TRAPS allows you to trap writes to uncacheable pages in memory. Cached
 # pages can only be trapped once.
 option(RISCV_MEMORY_TRAPS "Enable memory page traps" ON)
-# BINARY_TRANSLATION will make libriscv generate portable C-code, and invoke a
-# system compiler to execute a program much faster.
-option(RISCV_BINARY_TRANSLATION "Enable exp. binary translation" ON)
 # FLAT_RW_ARENA simplifies the program arena, making the heap area always
 # read-write. Memory before the heap and outside of the arena behaves like
 # before.
@@ -63,10 +60,6 @@ if(RISCV_EXPERIMENTAL)
 else()
   unset(RISCV_ENCOMPASSING_ARENA CACHE)
   unset(RISCV_ENCOMPASSING_ARENA_BITS CACHE)
-endif()
-if(RISCV_BINARY_TRANSLATION)
-  # LIBTCC will embed the TCC compiler library, using it for binary translation.
-  option(RISCV_LIBTCC "Enable binary translation with libtcc" ON)
 endif()
 
 # Version information from git tags
@@ -147,18 +140,6 @@ else()
   message(STATUS "libriscv: Switch-based dispatch enabled")
   list(APPEND SOURCES libriscv/bytecode_dispatch.cpp)
 endif()
-if(RISCV_BINARY_TRANSLATION)
-  list(APPEND SOURCES libriscv/tr_api.cpp libriscv/tr_emit.cpp
-       libriscv/tr_translate.cpp)
-  if(MSVC)
-    list(APPEND SOURCES libriscv/win32/tr_msvc.cpp)
-  else()
-    list(APPEND SOURCES libriscv/tr_compiler.cpp)
-    if(RISCV_LIBTCC)
-      list(APPEND SOURCES libriscv/tr_tcc.cpp)
-    endif()
-  endif()
-endif()
 
 # Generate the settings header RISCV_VERSION_MAJOR and RISCV_VERSION_MINOR are
 # required by libriscv_settings.h.in
@@ -203,60 +184,6 @@ endif()
 
 if(WIN32 OR MINGW_TOOLCHAIN)
   target_link_libraries(riscv PUBLIC wsock32 ws2_32)
-  if(RISCV_BINARY_TRANSLATION)
-    target_sources(riscv PRIVATE libriscv/win32/dlfcn.cpp)
-  endif()
-elseif(RISCV_BINARY_TRANSLATION)
-  target_link_libraries(riscv PUBLIC dl)
-endif()
-
-if(RISCV_BINARY_TRANSLATION AND RISCV_LIBTCC)
-  enable_language(C)
-  include(FetchContent)
-  FetchContent_Declare(
-    tinycc
-    GIT_REPOSITORY https://github.com/fwsGonzo/tinycc.git
-    GIT_TAG mob)
-  FetchContent_MakeAvailable(tinycc)
-
-  set(TINYCC_LOCATION "${CMAKE_BINARY_DIR}/_deps/tinycc-src")
-  set(CONFIG_H_LOCATION "${TINYCC_LOCATION}/config.h")
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CONFIG_H_LOCATION})
-  set_source_files_properties(${CONFIG_H_LOCATION} PROPERTIES GENERATED TRUE)
-  file(COPY "${TINYCC_LOCATION}/libtcc.h"
-       DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-  file(COPY "${TINYCC_LOCATION}/libtcc1.h"
-       DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-  file(COPY "${TINYCC_LOCATION}/lib-arm64.h"
-       DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-
-  target_sources(
-    riscv PRIVATE ${tinycc_SOURCE_DIR}/libtcc.c ${tinycc_SOURCE_DIR}/libtcc.h
-                  ${CONFIG_H_LOCATION})
-  target_compile_definitions(
-    riscv PRIVATE CONFIG_TCC_PREDEFS=1 TCC_VERSION="0.9.27" TCC_IS_NATIVE=1
-                  CONFIG_TCC_BACKTRACE=0 CONFIG_TCC_BCHECK=0)
-  # We support: Windows, Linux, macOS and Android
-  if(ANDROID_TOOLCHAIN)
-    target_compile_definitions(riscv PRIVATE TARGETOS_ANDROID=1
-                                             TCC_TARGET_ARM64=1)
-  elseif(CMAKE_HOST_APPLE OR APPLE)
-    target_compile_definitions(
-      riscv PRIVATE TARGETOS_Darwin=1 TCC_TARGET_MACHO=1 TCC_TARGET_ARM64=1)
-  elseif(CMAKE_HOST_WIN32 OR MINGW_TOOLCHAIN)
-    target_compile_definitions(riscv PRIVATE TARGETOS_Windows=1 TCC_TARGET_PE=1
-                                             TCC_TARGET_X86_64=1)
-  elseif(CMAKE_SYSTEM_NAME STREQUAL FreeBSD)
-    target_compile_definitions(riscv PRIVATE TARGETOS_FreeBSD=1
-                                             TCC_TARGET_X86_64=1)
-  elseif(RISCV_TOOLCHAIN)
-    target_compile_definitions(riscv PRIVATE TARGETOS_Linux=1
-                                             TCC_TARGET_RISCV64=1)
-  elseif(CMAKE_HOST_UNIX)
-    target_compile_definitions(riscv PRIVATE TARGETOS_Linux=1
-                                             TCC_TARGET_X86_64=1)
-  endif()
-  target_include_directories(riscv PUBLIC "${CMAKE_CURRENT_BINARY_DIR}")
 endif()
 
 if(${CMAKE_PROJECT_NAME} STREQUAL "libriscv")

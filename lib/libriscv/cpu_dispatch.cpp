@@ -98,13 +98,6 @@ bool CPU<W>::simulate(address_t pc, uint64_t inscounter, uint64_t maxcounter)
 	if (UNLIKELY(!(pc >= current_begin && pc < current_end)))
 		goto new_execute_segment;
 
-#  ifdef RISCV_BINARY_TRANSLATION
-	// There's a very high chance that the (first) instruction is a translated function
-	decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
-	if (LIKELY(decoder->get_bytecode() == RV32I_BC_TRANSLATOR))
-		goto begin_translated_function;
-#  endif
-
 continue_segment:
 	decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
 
@@ -153,32 +146,6 @@ INSTRUCTION(RV32I_BC_SYSTEM, rv32i_system) {
 	NEXT_BLOCK(4, true);
 }
 
-#ifdef RISCV_BINARY_TRANSLATION
-INSTRUCTION(RV32I_BC_TRANSLATOR, translated_function) {
-	counter.increment_counter(-1);
-begin_translated_function:
-	auto max = counter.max();
-	auto cnt = counter.value();
-retry_translated_function:
-	// Invoke translated code
-	auto bintr_results = 
-		exec->unchecked_mapping_at(decoder->instr)(*this, cnt, max, pc);
-	pc = REGISTERS().pc;
-	cnt = bintr_results.counter;
-	max = bintr_results.max_counter;
-	if (LIKELY(cnt < max && (pc - current_begin < current_end - current_begin))) {
-		decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
-		if (decoder->get_bytecode() == RV32I_BC_TRANSLATOR) {
-			goto retry_translated_function;
-		}
-		counter.set_counters(cnt, max);
-		goto continue_segment;
-	}
-	counter.set_counters(cnt, max);
-	goto check_jump;
-}
-#endif // RISCV_BINARY_TRANSLATION
-
 INSTRUCTION(RV32I_BC_SYSCALL, rv32i_syscall) {
 	// Make the current PC visible
 	REGISTERS().pc = pc;
@@ -226,12 +193,6 @@ check_jump:
 		goto new_execute_segment;
 
 counter_overflow:
-#ifdef RISCV_LIBTCC
-	// We need to check if we have a current exception
-	if (UNLIKELY(CPU().has_current_exception()))
-		goto handle_rethrow_exception;
-#endif
-
 	registers().pc = pc;
 	MACHINE().set_instruction_counter(counter.value());
 

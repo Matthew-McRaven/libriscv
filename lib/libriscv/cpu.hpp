@@ -207,14 +207,6 @@ template <int W> struct alignas(32) CPU {
 		override_execute_segment_t m_override_exec = [] (auto&) -> DecodedExecuteSegment<W>& {
 			return *empty_execute_segment();
 		};
-
-#ifdef RISCV_BINARY_TRANSLATION
-		static std::vector<TransMapping<W>> emit(std::string& code, const TransInfo<W>&);
-		void binary_translate(const MachineOptions<W>&, DecodedExecuteSegment<W>&, TransOutput<W>&) const;
-		static void activate_dylib(const MachineOptions<W>&, DecodedExecuteSegment<W>&, void*, const Machine<W>&, bool, bool) RISCV_INTERNAL;
-		static bool initialize_translated_segment(DecodedExecuteSegment<W>&, void*, const Machine<W>&, bool) RISCV_INTERNAL;
-		static void produce_embeddable_code(const MachineOptions<W>&, DecodedExecuteSegment<W>&, const TransOutput<W>&, const MachineTranslationEmbeddableCodeOptions&) RISCV_INTERNAL;
-#endif
 		static_assert((W == 4 || W == 8 || W == 16), "Must be either 32-bit, 64-bit or 128-bit ISA");
 };
 

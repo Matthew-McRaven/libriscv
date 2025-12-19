@@ -95,26 +95,4 @@ namespace riscv
     uint16_t data[2];
     operator uint32_t() { return data[0] | uint32_t(data[1]) << 16; }
   };
-
-#ifdef RISCV_BINARY_TRANSLATION
-	template <int W>
-	struct TransInfo;
-
-	template <int W>
-	struct TransOutput;
-
-	template <int W>
-	struct TransMapping {
-		address_type<W> addr;
-		std::string     symbol;
-	};
-
-	template <int W>
-	struct bintr_block_returns {
-		uint64_t counter;
-		uint64_t max_counter;
-	};
-	template <int W>
-	using bintr_block_func = bintr_block_returns<W> (*)(CPU<W>&, uint64_t, uint64_t, address_type<W>);
-#endif
 }

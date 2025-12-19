@@ -145,119 +145,6 @@ namespace riscv
 		/// @brief Call ebreak for each of the addresses in the vector.
 		/// @details This is useful for debugging and live-patching programs.
 		std::vector<std::variant<address_type<W>, std::string>> ebreak_locations {};
-
-#ifdef RISCV_BINARY_TRANSLATION
-		/// @brief Enable the binary translator.
-		bool translate_enabled = true;
-		/// @brief Enable loading of embedded binary translated programs.
-		/// @details This will allow the machine to load and execute *embedded*
-		/// binary translated programs. They auto-register themselves.
-		bool translate_enable_embedded = true;
-		/// @brief Translate not just the initial execute segments of the ELF program,
-		/// but also any future shared objects or JIT-produced segments.
-		bool translate_future_segments = true;
-		/// @brief Enable compiling execute segment on-demand during emulation.
-		/// @details Not available on most Windows systems.
-#if defined(_WIN32) && !defined(RISCV_LIBTCC)
-		bool translate_invoke_compiler = false;
-#else
-		bool translate_invoke_compiler = true;
-#endif
-		/// @brief Enable tracing during emulation of the binary translated parts of the program.
-		bool translate_trace  = false;
-		/// @brief Enable verbose timing information for the binary translator.
-		bool translate_timing = false;
-		/// @brief Enable the translation cache for the binary translator.
-		/// Translated shared objects will be stored in a file and can be re-used later.
-		/// @details When TCC is enabled, the translation cache will be disabled.
-		bool translation_cache = true;
-		/// @brief Enable the use of the memory arena for the binary translator.
-		/// @details If disabled, remote machines will be able to make remote
-		/// calls to this machine. In most cases, this is not needed.
-		bool translation_use_arena = true;
-		/// @brief Allow the program to run forever, ignoring the instruction counter limit.
-		/// @details This is useful when there are other ways of interrupting and cancelling the program.
-		/// @note This option is only available when the binary translator is enabled. The main dispatch
-		/// will always check the instruction counter limit.
-		/// It is completely fine to enable this option when running from the command line,
-		/// as a simple Ctrl+C will stop the program.
-		bool translate_ignore_instruction_limit = false;
-		/// @brief Enable the use of register caching for the binary translator. Always enabled
-		/// when binary translation with libtcc is enabled.
-		/// @details Enable this when compiling with -O0 or when using simple compilers like TCC.
-#ifdef RISCV_LIBTCC
-		bool translate_use_register_caching = true;
-#else
-		bool translate_use_register_caching = false;
-#endif
-		bool translate_use_syscall_clobbering_optimization = false;
-		/// @brief Enable automatic n-bit address space for the binary translator by rounding down to the nearest power of 2.
-		/// @details This will allow the binary translator to use and-masked addresses
-		/// for all memory accesses, which can drastically improve performance.
-		bool translate_automatic_nbit_address_space = false;
-		/// @brief Enable unsafe removal of checks in the binary translator.
-		/// @details This will remove checks that prevent the program from crashing, such
-		/// as memory access checks, and other checks that sandboxes normally provide.
-		bool translate_unsafe_remove_checks = false;
-		/// @brief Enable recording of slowpaths to jump hints for the binary translator.
-		/// @note This option is only available when RISCV_DEBUG and the binary translator is enabled.
-		/// @details This will record slowpaths to the MachineOptions jump hints vector.
-		/// From there the CLI can save the jump hints to a file after the program has run.
-		bool record_slowpaths_to_jump_hints = false;
-		/// @brief Enable live-patching a running instruction stream after background compilation.
-		/// @details This will allow the binary translator to patch the running instruction stream
-		/// with the newly compiled code, which allows it to switch to the newly compiled code
-		/// without stopping the program.
-		/// @warning This is an experimental feature and may not work correctly in all cases.
-		/// @note Disabling this option will not disable background compilation, it will just
-		/// not hot-reload the execution with the new binary translation when the emulator is running.
-		bool translate_live_patching = true;
-		/// @brief Prefix for the translation output file.
-		std::string translation_prefix = "/tmp/rvbintr-";
-		/// @brief Suffix for the translation output file. Eg. .dll or .so
-		std::string translation_suffix = "";
-		/// @brief Limits placed on the binary translator.
-		/// @details The binary translator will stop translating after reaching
-		/// either of these limits. The limits are per shared object.
-		unsigned translate_blocks_max = 1024;
-		unsigned translate_instr_max = 500'000;
-		/// @brief Jump location hints for the binary translator.
-		/// @details These hints can improve performance of the binary translation.
-		std::vector<address_type<W>> translator_jump_hints {};
-		/// @brief Enable background compilation of shared objects. The compilation step
-		/// will be executed from a user-provided callback, and will be applied to the machine
-		/// when ready. Applying the translation is thread-safe and will take effect on all
-		/// machines using the translated execute segment, even while they are executing.
-		/// For short-lived programs, this feature should be disabled, as it often takes more
-		/// time to translate and compile than to execute the program.
-		std::function<void(std::function<void()>& compilation_step)> translate_background_callback = nullptr;
-		/// @brief Allow the production of a secondary dependency-free DLL that can be
-		/// transferred to and loaded on Windows (or other) machines. It will be used
-		/// to greatly accelerate the emulation of the RISC-V program.
-		std::vector<MachineTranslationOptions> cross_compile {};
-
-		/// @brief Produce the translation output filename from the prefix, hash and suffix.
-		/// @param prefix A prefix for the filename.
-		/// @param hash   A hash to include in the filename, retrieved from the execute segment.
-		/// @param suffix A suffix for the filename.
-		/// @return A filename string.
-		/// @details The filename will be constructed as follows:
-		/// @code
-		/// const uint32_t hash = machine.current_execute_segment().translation_hash();
-		/// char buffer[256];
-		/// const int len = snprintf(buffer, sizeof(buffer), "%s%08x%s",
-		/// 	prefix.c_str(), hash, suffix.c_str());
-		/// return std::string(buffer, len);
-		/// @endcode
-		/// @note The hash is a CRC32-C of the execute segment + emulator settings.
-		/// @note The hash can be found with machine.current_execute_segment().translation_hash()
-		static std::string translation_filename(const std::string& prefix, uint32_t hash, const std::string& suffix);
-
-#ifdef RISCV_LIBTCC
-		/// @brief Provide a custom libtcc1 location for the binary translator.
-		std::string libtcc1_location {};
-#endif
-#endif
 	};
 
 	static constexpr int SYSCALL_EBREAK = RISCV_SYSCALL_EBREAK_NR;
@@ -322,11 +209,7 @@ namespace riscv
 #else
 	static constexpr bool fcsr_emulation = false;
 #endif
-#ifdef RISCV_BINARY_TRANSLATION
-	static constexpr bool binary_translation_enabled = true;
-#else
 	static constexpr bool binary_translation_enabled = false;
-#endif
 #ifdef RISCV_FLAT_RW_ARENA
 	static constexpr bool flat_readwrite_arena = true;
 #else
@@ -339,11 +222,7 @@ namespace riscv
 	static constexpr int encompassing_Nbit_arena = 0;
 	static constexpr uint64_t encompassing_arena_mask = 0;
 #endif
-#ifdef RISCV_LIBTCC
-	static constexpr bool libtcc_enabled = true;
-#else
 	static constexpr bool libtcc_enabled = false;
-#endif
 
 
 	template <int W> struct MultiThreading;

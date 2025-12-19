@@ -414,10 +414,6 @@ static inline void fill_entries(const std::array<DecoderEntryAndCount<W>, 256> &
 template <int W>
 static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, const uint8_t *exec_segment,
                             DecoderData<W> *exec_decoder) {
-#ifdef RISCV_BINARY_TRANSLATION
-  const auto translator_op = RV32I_BC_TRANSLATOR;
-#endif
-
   if constexpr (compressed_enabled) {
     if (UNLIKELY(base_pc >= last_pc)) throw MachineException(INVALID_PROGRAM, "The execute segment has an overflow");
     if (UNLIKELY(base_pc & 0x1)) throw MachineException(INVALID_PROGRAM, "The execute segment is misaligned");
@@ -465,9 +461,6 @@ static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, co
           const unsigned opcode = iptr->opcode();
           if (opcode == RV32I_BRANCH || opcode == RV32I_SYSTEM || opcode == RV32I_JAL || opcode == RV32I_JALR) break;
         }
-#ifdef RISCV_BINARY_TRANSLATION
-        if (entry->get_bytecode() == translator_op) break;
-#endif
 
         // A last test for the last instruction, which should have been a block-ending
         // instruction. Since it wasn't we must force-end the block here.
@@ -518,9 +511,6 @@ static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, co
 
       // All opcodes that can modify PC and stop the machine
       if (opcode == RV32I_BRANCH || opcode == RV32I_SYSTEM || opcode == RV32I_JAL || opcode == RV32I_JALR) idxend = 0;
-#ifdef RISCV_BINARY_TRANSLATION
-      if (entry.get_bytecode() == translator_op) idxend = 0;
-#endif
       if (UNLIKELY(idxend == 65535)) {
         // It's a long sequence of instructions, so end block here.
         entry.set_bytecode(RV32I_BC_FUNCBLOCK);
@@ -552,25 +542,6 @@ template <int W> RISCV_INTERNAL size_t DecoderData<W>::handler_index_for(Handler
   handler_cache.emplace(new_handler, idx);
   return idx;
 }
-
-#ifdef RISCV_BINARY_TRANSLATION
-template <int W> std::vector<address_type<W>> Memory<W>::gather_jump_hints() const {
-  std::vector<address_t> result;
-#ifdef RISCV_DEBUG
-  std::unordered_set<address_type<W>> addresses;
-  for (auto addr : machine().options().translator_jump_hints) addresses.insert(addr);
-  for (auto &segment : m_exec) {
-    if (segment) {
-      if (segment->is_recording_slowpaths()) {
-        for (auto addr : segment->slowpath_addresses()) addresses.insert(addr);
-      }
-    }
-  }
-  for (auto addr : addresses) result.push_back(addr);
-#endif // RISCV_DEBUG
-  return result;
-}
-#endif
 
 template <int W> void Memory<W>::evict_execute_segments() {
   // destructor could throw, so let's invalidate early
@@ -695,9 +666,6 @@ Memory<W>::create_execute_segment(const MachineOptions<W> &options, const void *
   } else {
     free_slot = std::move(current_exec);
     free_slot->set_likely_jit(is_likely_jit);
-#if defined(RISCV_BINARY_TRANSLATION) && defined(RISCV_DEBUG)
-    free_slot->set_record_slowpaths(options.record_slowpaths_to_jump_hints && !is_likely_jit);
-#endif
     // Store the hash in the decoder cache
     free_slot->set_crc32c_hash(hash);
 
@@ -781,22 +749,6 @@ RISCV_INTERNAL void Memory<W>::generate_decoder_cache([[maybe_unused]] const Mac
   auto *exec_segment = exec.exec_data();
   TIME_POINT(t1);
 
-#ifdef RISCV_BINARY_TRANSLATION
-  // We do not support binary translation for RV128I
-  // Also, avoid binary translation for execute segments that are likely JIT-compiled
-  const bool allow_translation = is_initial || options.translate_future_segments;
-  if (allow_translation && !exec.is_likely_jit()) {
-    // Attempt to load binary translation
-    // Also, fill out the binary translation SO filename for later
-    std::string bintr_filename;
-    int result = machine().cpu.load_translation(options, &bintr_filename, exec);
-    const bool must_translate = result > 0;
-    if (must_translate) {
-      machine().cpu.try_translate(options, bintr_filename, shared_segment);
-    }
-  }
-#endif
-
   // When compressed instructions are enabled, many decoder
   // entries are illegal because they are between instructions.
   bool was_full_instruction = true;
@@ -815,23 +767,6 @@ RISCV_INTERNAL void Memory<W>::generate_decoder_cache([[maybe_unused]] const Mac
     // Load unaligned instruction from execute segment
     const auto instruction = read_instruction(exec_segment, dst, end_addr);
     rv32i_instruction rewritten = instruction;
-
-#ifdef RISCV_BINARY_TRANSLATION
-    // Translator activation uses a special bytecode
-    // but we must still validate the mapping index.
-    if (entry.get_bytecode() == RV32I_BC_TRANSLATOR && entry.is_invalid_handler() &&
-        entry.instr < exec.translator_mappings()) {
-      if constexpr (compressed_enabled) {
-        dst += 2;
-        if (was_full_instruction) {
-          was_full_instruction = (instruction.length() == 2);
-        } else {
-          was_full_instruction = true;
-        }
-      } else dst += 4;
-      continue;
-    }
-#endif // RISCV_BINARY_TRANSLATION
 
     if (!compressed_enabled || was_full_instruction) {
       // Cache the (modified) instruction bits
