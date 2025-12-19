@@ -1,6 +1,13 @@
 #pragma once
+
+#include "common.hpp"
+
 #include <cstdint>
 #include "types.hpp"
+
+#define AMOSIZE_W 0x2
+#define AMOSIZE_D 0x3
+#define AMOSIZE_Q 0x4
 
 namespace riscv
 {
@@ -39,3 +46,47 @@ namespace riscv
 		address_t m_reservation = 0x0;
 	};
 }
+
+#ifdef RISCV_32I
+extern const riscv::Instruction<4> instr32i_AMOADD_W;
+extern const riscv::Instruction<4> instr32i_AMOXOR_W;
+extern const riscv::Instruction<4> instr32i_AMOOR_W;
+extern const riscv::Instruction<4> instr32i_AMOAND_W;
+extern const riscv::Instruction<4> instr32i_AMOMAX_W;
+extern const riscv::Instruction<4> instr32i_AMOMIN_W;
+extern const riscv::Instruction<4> instr32i_AMOMAXU_W;
+extern const riscv::Instruction<4> instr32i_AMOMINU_W;
+extern const riscv::Instruction<4> instr32i_AMOADD_D;
+extern const riscv::Instruction<4> instr32i_AMOXOR_D;
+extern const riscv::Instruction<4> instr32i_AMOOR_D;
+extern const riscv::Instruction<4> instr32i_AMOAND_D;
+extern const riscv::Instruction<4> instr32i_AMOMAX_D;
+extern const riscv::Instruction<4> instr32i_AMOMIN_D;
+extern const riscv::Instruction<4> instr32i_AMOMAXU_D;
+extern const riscv::Instruction<4> instr32i_AMOMINU_D;
+extern const riscv::Instruction<4> instr32i_AMOSWAP_W;
+extern const riscv::Instruction<4> instr32i_AMOSWAP_D;
+extern const riscv::Instruction<4> instr32i_LOAD_RESV;
+extern const riscv::Instruction<4> instr32i_STORE_COND;
+
+extern const riscv::Instruction<8> instr64i_AMOADD_W;
+extern const riscv::Instruction<8> instr64i_AMOXOR_W;
+extern const riscv::Instruction<8> instr64i_AMOOR_W;
+extern const riscv::Instruction<8> instr64i_AMOAND_W;
+extern const riscv::Instruction<8> instr64i_AMOMAX_W;
+extern const riscv::Instruction<8> instr64i_AMOMIN_W;
+extern const riscv::Instruction<8> instr64i_AMOMAXU_W;
+extern const riscv::Instruction<8> instr64i_AMOMINU_W;
+extern const riscv::Instruction<8> instr64i_AMOADD_D;
+extern const riscv::Instruction<8> instr64i_AMOXOR_D;
+extern const riscv::Instruction<8> instr64i_AMOOR_D;
+extern const riscv::Instruction<8> instr64i_AMOAND_D;
+extern const riscv::Instruction<8> instr64i_AMOMAX_D;
+extern const riscv::Instruction<8> instr64i_AMOMIN_D;
+extern const riscv::Instruction<8> instr64i_AMOMAXU_D;
+extern const riscv::Instruction<8> instr64i_AMOMINU_D;
+extern const riscv::Instruction<8> instr64i_AMOSWAP_W;
+extern const riscv::Instruction<8> instr64i_AMOSWAP_D;
+extern const riscv::Instruction<8> instr64i_LOAD_RESV;
+extern const riscv::Instruction<8> instr64i_STORE_COND;
+#endif

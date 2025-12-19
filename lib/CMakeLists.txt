@@ -89,6 +89,7 @@ set(SOURCES
     libriscv/rvc_instr.cpp
     libriscv/rvi_instr.cpp
     libriscv/rvf_instr.cpp
+    libriscv/rva_instr.cpp
     libriscv/util/crc32c.cpp)
 if(RISCV_32I)
   list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/rv32i.cpp)

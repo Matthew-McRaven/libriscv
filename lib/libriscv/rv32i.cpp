@@ -7,9 +7,11 @@
 #define INSTRUCTION(x, ...) \
 	static const CPU<4>::instruction_t instr32i_##x { __VA_ARGS__ }
 #define DECODED_INSTR(x) instr32i_##x
+
 #ifdef RISCV_EXT_ATOMICS
-#include "rva_instr.cpp"
+#include "rva.hpp"
 #endif
+
 #ifdef RISCV_EXT_VECTOR
 #include "rvv_instr.cpp"
 #endif
@@ -185,9 +187,9 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
       const riscv::rv32f_instruction fi{instruction};
       switch (fi.Itype.funct3) {
       case 0x2: // FLW
-        return (DECODED_FLOAT(FLW));
+        return (DECODED_INSTR(FLW));
       case 0x3: // FLD
-        return (DECODED_FLOAT(FLD));
+        return (DECODED_INSTR(FLD));
 #ifdef RISCV_EXT_VECTOR
       case 0x6: // VLE32
         return (DECODED_VECTOR(VLE32));
@@ -199,9 +201,9 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
       const rv32f_instruction fi{instruction};
       switch (fi.Itype.funct3) {
       case 0x2: // FSW
-        return (DECODED_FLOAT(FSW));
+        return (DECODED_INSTR(FSW));
       case 0x3: // FSD
-        return (DECODED_FLOAT(FSD));
+        return (DECODED_INSTR(FSD));
 #ifdef RISCV_EXT_VECTOR
       case 0x6: // VSE32
         return (DECODED_VECTOR(VSE32));
@@ -209,37 +211,37 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
       default: return (DECODED_INSTR(ILLEGAL));
       }
     }
-    case RV32F_FMADD: return (DECODED_FLOAT(FMADD));
-    case RV32F_FMSUB: return (DECODED_FLOAT(FMSUB));
-    case RV32F_FNMSUB: return (DECODED_FLOAT(FNMSUB));
-    case RV32F_FNMADD: return (DECODED_FLOAT(FNMADD));
+    case RV32F_FMADD: return (DECODED_INSTR(FMADD));
+    case RV32F_FMSUB: return (DECODED_INSTR(FMSUB));
+    case RV32F_FNMSUB: return (DECODED_INSTR(FNMSUB));
+    case RV32F_FNMADD: return (DECODED_INSTR(FNMADD));
     case RV32F_FPFUNC:
       switch (instruction.fpfunc()) {
-      case 0b00000: return (DECODED_FLOAT(FADD));
-      case 0b00001: return (DECODED_FLOAT(FSUB));
-      case 0b00010: return (DECODED_FLOAT(FMUL));
-      case 0b00011: return (DECODED_FLOAT(FDIV));
-      case 0b00100: return (DECODED_FLOAT(FSGNJ_NX));
-      case 0b00101: return (DECODED_FLOAT(FMIN_FMAX));
-      case 0b01011: return (DECODED_FLOAT(FSQRT));
+      case 0b00000: return (DECODED_INSTR(FADD));
+      case 0b00001: return (DECODED_INSTR(FSUB));
+      case 0b00010: return (DECODED_INSTR(FMUL));
+      case 0b00011: return (DECODED_INSTR(FDIV));
+      case 0b00100: return (DECODED_INSTR(FSGNJ_NX));
+      case 0b00101: return (DECODED_INSTR(FMIN_FMAX));
+      case 0b01011: return (DECODED_INSTR(FSQRT));
       case 0b10100:
-        if (rv32f_instruction{instruction}.R4type.rd != 0) return (DECODED_FLOAT(FEQ_FLT_FLE));
+        if (rv32f_instruction{instruction}.R4type.rd != 0) return (DECODED_INSTR(FEQ_FLT_FLE));
         return (DECODED_INSTR(NOP));
-      case 0b01000: return (DECODED_FLOAT(FCVT_SD_DS));
+      case 0b01000: return (DECODED_INSTR(FCVT_SD_DS));
       case 0b11000:
-        if (rv32f_instruction{instruction}.R4type.rd != 0) return (DECODED_FLOAT(FCVT_W_SD));
+        if (rv32f_instruction{instruction}.R4type.rd != 0) return (DECODED_INSTR(FCVT_W_SD));
         return (DECODED_INSTR(NOP));
-      case 0b11010: return (DECODED_FLOAT(FCVT_SD_W));
+      case 0b11010: return (DECODED_INSTR(FCVT_SD_W));
       case 0b11100:
         if (rv32f_instruction{instruction}.R4type.rd != 0) {
           if (rv32f_instruction{instruction}.R4type.funct3 == 0) {
-            return (DECODED_FLOAT(FMV_X_W));
+            return (DECODED_INSTR(FMV_X_W));
           } else {
-            return (DECODED_FLOAT(FCLASS));
+            return (DECODED_INSTR(FCLASS));
           }
         }
         return (DECODED_INSTR(NOP));
-      case 0b11110: return (DECODED_FLOAT(FMV_W_X));
+      case 0b11110: return (DECODED_INSTR(FMV_W_X));
       }
       break;
 
@@ -273,56 +275,39 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
       case AMOSIZE_W:
         switch (instruction.Atype.funct5) {
         case 0b00010:
-          if (instruction.Atype.rs2 == 0) return (DECODED_ATOMIC(LOAD_RESV));
+          if (instruction.Atype.rs2 == 0) return (DECODED_INSTR(LOAD_RESV));
           return (DECODED_INSTR(ILLEGAL));
-        case 0b00011: return (DECODED_ATOMIC(STORE_COND));
-        case 0b00000: return (DECODED_ATOMIC(AMOADD_W));
-        case 0b00001: return (DECODED_ATOMIC(AMOSWAP_W));
-        case 0b00100: return (DECODED_ATOMIC(AMOXOR_W));
-        case 0b01000: return (DECODED_ATOMIC(AMOOR_W));
-        case 0b01100: return (DECODED_ATOMIC(AMOAND_W));
-        case 0b10000: return (DECODED_ATOMIC(AMOMIN_W));
-        case 0b10100: return (DECODED_ATOMIC(AMOMAX_W));
-        case 0b11000: return (DECODED_ATOMIC(AMOMINU_W));
-        case 0b11100: return (DECODED_ATOMIC(AMOMAXU_W));
+        case 0b00011: return (DECODED_INSTR(STORE_COND));
+        case 0b00000: return (DECODED_INSTR(AMOADD_W));
+        case 0b00001: return (DECODED_INSTR(AMOSWAP_W));
+        case 0b00100: return (DECODED_INSTR(AMOXOR_W));
+        case 0b01000: return (DECODED_INSTR(AMOOR_W));
+        case 0b01100: return (DECODED_INSTR(AMOAND_W));
+        case 0b10000: return (DECODED_INSTR(AMOMIN_W));
+        case 0b10100: return (DECODED_INSTR(AMOMAX_W));
+        case 0b11000: return (DECODED_INSTR(AMOMINU_W));
+        case 0b11100: return (DECODED_INSTR(AMOMAXU_W));
         }
         break;
       case AMOSIZE_D:
         if constexpr (sizeof(address_t) >= 8) {
           switch (instruction.Atype.funct5) {
           case 0b00010:
-            if (instruction.Atype.rs2 == 0) return (DECODED_ATOMIC(LOAD_RESV));
+            if (instruction.Atype.rs2 == 0) return (DECODED_INSTR(LOAD_RESV));
             return (DECODED_INSTR(ILLEGAL));
-          case 0b00011: return (DECODED_ATOMIC(STORE_COND));
-          case 0b00000: return (DECODED_ATOMIC(AMOADD_D));
-          case 0b00001: return (DECODED_ATOMIC(AMOSWAP_D));
-          case 0b00100: return (DECODED_ATOMIC(AMOXOR_D));
-          case 0b01000: return (DECODED_ATOMIC(AMOOR_D));
-          case 0b01100: return (DECODED_ATOMIC(AMOAND_D));
-          case 0b10000: return (DECODED_ATOMIC(AMOMIN_D));
-          case 0b10100: return (DECODED_ATOMIC(AMOMAX_D));
-          case 0b11000: return (DECODED_ATOMIC(AMOMINU_D));
-          case 0b11100: return (DECODED_ATOMIC(AMOMAXU_D));
+          case 0b00011: return (DECODED_INSTR(STORE_COND));
+          case 0b00000: return (DECODED_INSTR(AMOADD_D));
+          case 0b00001: return (DECODED_INSTR(AMOSWAP_D));
+          case 0b00100: return (DECODED_INSTR(AMOXOR_D));
+          case 0b01000: return (DECODED_INSTR(AMOOR_D));
+          case 0b01100: return (DECODED_INSTR(AMOAND_D));
+          case 0b10000: return (DECODED_INSTR(AMOMIN_D));
+          case 0b10100: return (DECODED_INSTR(AMOMAX_D));
+          case 0b11000: return (DECODED_INSTR(AMOMINU_D));
+          case 0b11100: return (DECODED_INSTR(AMOMAXU_D));
           }
           break;
         }
-#ifdef RISCV_128BIT_ISA_INSTRUCTIONS
-      case AMOSIZE_Q:
-        if constexpr (sizeof(address_t) == 16) {
-          switch (instruction.Atype.funct5) {
-          case 0b00010:
-            if (instruction.Atype.rs2 == 0) return (DECODED_ATOMIC(LOAD_RESV));
-            return (DECODED_INSTR(ILLEGAL));
-          case 0b00011: return (DECODED_ATOMIC(STORE_COND));
-          case 0b00000: return (DECODED_ATOMIC(AMOADD_Q));
-          case 0b00001: return (DECODED_ATOMIC(AMOSWAP_Q));
-          case 0b00100: return (DECODED_ATOMIC(AMOXOR_Q));
-          case 0b01000: return (DECODED_ATOMIC(AMOOR_Q));
-          case 0b01100: return (DECODED_ATOMIC(AMOAND_Q));
-          }
-          break;
-        }
-#endif // RISCV_128BIT_ISA_INSTRUCTIONS
       }
 #endif
     }
@@ -335,21 +320,21 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
     case CI_CODE(0b000, 0b00):
       // if all bits are zero, it's an illegal instruction
       if (ci.whole != 0x0) {
-        return (DECODED_COMPR(C0_ADDI4SPN));
+        return (DECODED_INSTR(C0_ADDI4SPN));
       }
       return (DECODED_INSTR(ILLEGAL));
     case CI_CODE(0b001, 0b00):
     case CI_CODE(0b010, 0b00):
     case CI_CODE(0b011, 0b00):
       if (ci.CL.funct3 == 0x1) { // C.FLD
-        return (DECODED_COMPR(C0_REG_FLD));
+        return (DECODED_INSTR(C0_REG_FLD));
       } else if (ci.CL.funct3 == 0x2) { // C.LW
-        return (DECODED_COMPR(C0_REG_LW));
+        return (DECODED_INSTR(C0_REG_LW));
       } else if (ci.CL.funct3 == 0x3) {
         if constexpr (sizeof(address_t) == 8) { // C.LD
-          return (DECODED_COMPR(C0_REG_LD));
+          return (DECODED_INSTR(C0_REG_LD));
         } else { // C.FLW
-          return (DECODED_COMPR(C0_REG_FLW));
+          return (DECODED_INSTR(C0_REG_FLW));
         }
       }
       return (DECODED_INSTR(ILLEGAL));
@@ -360,48 +345,48 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
       switch (ci.CS.funct3) {
       case 4: return (DECODED_INSTR(UNIMPLEMENTED));
       case 5: // C.FSD
-        return (DECODED_COMPR(C0_REG_FSD));
+        return (DECODED_INSTR(C0_REG_FSD));
       case 6: // C.SW
-        return (DECODED_COMPR(C0_REG_SW));
+        return (DECODED_INSTR(C0_REG_SW));
       case 7: // C.SD / C.FSW
         if constexpr (sizeof(address_t) == 8) {
-          return (DECODED_COMPR(C0_REG_SD));
+          return (DECODED_INSTR(C0_REG_SD));
         } else {
-          return (DECODED_COMPR(C0_REG_FSW));
+          return (DECODED_INSTR(C0_REG_FSW));
         }
       }
       return (DECODED_INSTR(ILLEGAL));
     // Quadrant 1
     case CI_CODE(0b000, 0b01): // C.ADDI
       if (ci.CI.rd != 0) {
-        return (DECODED_COMPR(C1_ADDI));
+        return (DECODED_INSTR(C1_ADDI));
       }
       return (DECODED_INSTR(NOP));
     case CI_CODE(0b001, 0b01): // C.ADDIW / C.JAL
       if constexpr (sizeof(address_t) == 8) {
         if (ci.CI.rd != 0) {
-          return (DECODED_COMPR(C1_ADDIW));
+          return (DECODED_INSTR(C1_ADDIW));
         }
         return (DECODED_INSTR(NOP));
       } else {
-        return (DECODED_COMPR(C1_JAL));
+        return (DECODED_INSTR(C1_JAL));
       }
     case CI_CODE(0b010, 0b01):
       if (ci.CI.rd != 0) {
-        return (DECODED_COMPR(C1_LI));
+        return (DECODED_INSTR(C1_LI));
       }
       return (DECODED_INSTR(NOP));
     case CI_CODE(0b011, 0b01):
       if (ci.CI.rd == 2) {
-        return (DECODED_COMPR(C1_ADDI16SP));
+        return (DECODED_INSTR(C1_ADDI16SP));
       } else if (ci.CI.rd != 0) {
-        return (DECODED_COMPR(C1_LUI));
+        return (DECODED_INSTR(C1_LUI));
       }
       return (DECODED_INSTR(ILLEGAL));
-    case CI_CODE(0b100, 0b01): return (DECODED_COMPR(C1_ALU_OPS));
-    case CI_CODE(0b101, 0b01): return (DECODED_COMPR(C1_JUMP));
-    case CI_CODE(0b110, 0b01): return (DECODED_COMPR(C1_BEQZ));
-    case CI_CODE(0b111, 0b01): return (DECODED_COMPR(C1_BNEZ));
+    case CI_CODE(0b100, 0b01): return (DECODED_INSTR(C1_ALU_OPS));
+    case CI_CODE(0b101, 0b01): return (DECODED_INSTR(C1_JUMP));
+    case CI_CODE(0b110, 0b01): return (DECODED_INSTR(C1_BEQZ));
+    case CI_CODE(0b111, 0b01): return (DECODED_INSTR(C1_BNEZ));
     // Quadrant 2
     case CI_CODE(0b000, 0b10):
     case CI_CODE(0b001, 0b10):
@@ -409,62 +394,62 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
     case CI_CODE(0b011, 0b10):
       if (ci.CI.funct3 == 0x0 && ci.CI.rd != 0) {
         // C.SLLI
-        return (DECODED_COMPR(C2_SLLI));
+        return (DECODED_INSTR(C2_SLLI));
       } else if (ci.CI2.funct3 == 0x1) {
         // C.FLDSP
-        return (DECODED_COMPR(C2_FLDSP));
+        return (DECODED_INSTR(C2_FLDSP));
       } else if (ci.CI2.funct3 == 0x2 && ci.CI2.rd != 0) {
         // C.LWSP
-        return (DECODED_COMPR(C2_LWSP));
+        return (DECODED_INSTR(C2_LWSP));
       } else if (ci.CI2.funct3 == 0x3) {
         if constexpr (sizeof(address_t) == 8) {
           if (ci.CI2.rd != 0) {
             // C.LDSP
-            return (DECODED_COMPR(C2_LDSP));
+            return (DECODED_INSTR(C2_LDSP));
           }
         } else {
           // C.FLWSP
-          return (DECODED_COMPR(C2_FLWSP));
+          return (DECODED_INSTR(C2_FLWSP));
         }
       } else if (ci.CI.rd == 0) {
         // C.HINT
         return (DECODED_INSTR(NOP));
       }
-      return (DECODED_COMPR(UNIMPLEMENTED));
+      return (DECODED_INSTR(UNIMPLEMENTED));
     case CI_CODE(0b100, 0b10): {
       const bool topbit = ci.whole & (1 << 12);
       if (!topbit && ci.CR.rd != 0 && ci.CR.rs2 == 0) { // JR rd
-        return (DECODED_COMPR(C2_JR));
+        return (DECODED_INSTR(C2_JR));
       } else if (topbit && ci.CR.rd != 0 && ci.CR.rs2 == 0) { // JALR ra, rd+0
-        return (DECODED_COMPR(C2_JALR));
+        return (DECODED_INSTR(C2_JALR));
       } else if (!topbit && ci.CR.rd != 0 && ci.CR.rs2 != 0) { // MV rd, rs2
-        return (DECODED_COMPR(C2_MV));
+        return (DECODED_INSTR(C2_MV));
       } else if (ci.CR.rd != 0) { // ADD rd, rd + rs2
-        return (DECODED_COMPR(C2_ADD));
+        return (DECODED_INSTR(C2_ADD));
       } else if (topbit && ci.CR.rd == 0 && ci.CR.rs2 == 0) { // EBREAK
-        return (DECODED_COMPR(C2_EBREAK));
+        return (DECODED_INSTR(C2_EBREAK));
       }
-      return (DECODED_COMPR(UNIMPLEMENTED));
+      return (DECODED_INSTR(UNIMPLEMENTED));
     }
     case CI_CODE(0b101, 0b10):
     case CI_CODE(0b110, 0b10):
     case CI_CODE(0b111, 0b10):
       if (ci.CSS.funct3 == 5) {
         // FSDSP
-        return (DECODED_COMPR(C2_FSDSP));
+        return (DECODED_INSTR(C2_FSDSP));
       } else if (ci.CSS.funct3 == 6) {
         // SWSP
-        return (DECODED_COMPR(C2_SWSP));
+        return (DECODED_INSTR(C2_SWSP));
       } else if (ci.CSS.funct3 == 7) {
         if constexpr (sizeof(address_t) == 8) {
           // SDSP
-          return (DECODED_COMPR(C2_SDSP));
+          return (DECODED_INSTR(C2_SDSP));
         } else {
           // FSWSP
-          return (DECODED_COMPR(C2_FSWSP));
+          return (DECODED_INSTR(C2_FSWSP));
         }
       }
-      return (DECODED_COMPR(UNIMPLEMENTED));
+      return (DECODED_INSTR(UNIMPLEMENTED));
     }
   }
 #endif
@@ -476,7 +461,7 @@ template <int W> const riscv::Instruction<W> &fuck_this(const riscv::instruction
   if (CPU<W>::on_unimplemented_instruction != nullptr) {
     return (CPU<W>::on_unimplemented_instruction(instruction));
   } else {
-    return (DECODED_COMPR(UNIMPLEMENTED));
+    return (DECODED_INSTR(UNIMPLEMENTED));
   }
 }
 namespace riscv
