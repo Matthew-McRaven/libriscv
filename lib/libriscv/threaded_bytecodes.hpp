@@ -1,4 +1,6 @@
 #pragma once
+#include <cstdint>
+#include "libriscv/common.hpp"
 #include "libriscv_settings.h"
 
 namespace riscv

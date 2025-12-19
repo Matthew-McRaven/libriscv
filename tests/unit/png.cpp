@@ -1,6 +1,5 @@
 #include <catch.hpp>
 
-
 #include <libriscv/machine.hpp>
 extern std::vector<uint8_t> build_and_load(const std::string& code,
 	const std::string& args = "-O2 -static", bool cpp = false);
@@ -8,8 +7,11 @@ static const uint64_t MAX_MEMORY = 8ul << 20; /* 8MB */
 static const uint64_t MAX_INSTRUCTIONS = 64'000'000ul;
 static const std::string cwd {SRCDIR};
 using namespace riscv;
-#include "crc32.hpp"
+// Must be before mandelbrot
 #include "png.hpp"
+
+#include "libriscv/rv32i.cpp"
+#include "libriscv/util/crc32.hpp"
 #include "mandelbrot.cpp"
 static constexpr size_t COUNTER = 4;
 

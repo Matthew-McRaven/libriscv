@@ -89,6 +89,13 @@ namespace riscv
 
 	template <int W> struct DecoderData;
 
+  // Instructions may be unaligned with C-extension
+  // On amd64 we take the cost, because it's faster
+  union UnderAlign32 {
+    uint16_t data[2];
+    operator uint32_t() { return data[0] | uint32_t(data[1]) << 16; }
+  };
+
 #ifdef RISCV_BINARY_TRANSLATION
 	template <int W>
 	struct TransInfo;

@@ -1,7 +1,9 @@
 #pragma once
 #include <map>
 #include <set>
+#include "../registers.hpp"
 #include "../types.hpp"
+#include "libriscv/riscvbase.hpp"
 
 namespace riscv {
 template <int W> struct Machine;
@@ -50,5 +52,13 @@ private:
 	std::array<SignalAction<W>, 64> signals {};
 	std::map<int, SignalPerThread<W>> m_per_thread;
 };
+
+template <int W> Signals<W>::Signals() {}
+template <int W> Signals<W>::~Signals() {}
+
+template <int W> SignalAction<W> &Signals<W>::get(int sig) {
+  if (sig > 0) return signals.at(sig - 1);
+  throw MachineException(ILLEGAL_OPERATION, "Signal 0 invoked");
+}
 
 } // riscv

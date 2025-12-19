@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include "common.hpp"
+#include "cpu.hpp"
 #include "libriscv/riscvbase.hpp"
 #include "libriscv/rvc.hpp"
 #include "libriscv/rvfd.hpp"
@@ -756,5 +757,4 @@ namespace riscv
 
     return bytecode;
   }
-
 } // riscv

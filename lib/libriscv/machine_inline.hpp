@@ -320,4 +320,3 @@ MachineOptions<W>& Machine<W>::options()
 	return *m_options;
 }
 
-#include "machine_vmcall.hpp"

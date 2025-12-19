@@ -1,5 +1,7 @@
 #include "../threads.hpp"
 
+#include <libriscv/machine.hpp>
+
 namespace riscv {
 
 template <int W>

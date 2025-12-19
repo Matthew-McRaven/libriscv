@@ -1,10 +1,8 @@
-
-template <int W> inline
-const PageData& Memory<W>::cached_readable_page(address_t address, size_t len) const
-{
-	const auto pageno = page_number(address);
-	auto& entry = m_rd_cache;
-	if (entry.pageno == pageno)
+#pragma once
+template <int W> inline const PageData &Memory<W>::cached_readable_page(address_t address, size_t len) const {
+  const auto pageno = page_number(address);
+  auto &entry = m_rd_cache;
+  if (entry.pageno == pageno)
 		return *entry.page;
 
 	auto& page = get_readable_pageno(pageno);

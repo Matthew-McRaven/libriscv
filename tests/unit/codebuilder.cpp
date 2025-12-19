@@ -1,9 +1,9 @@
-#include <stdexcept>
 #include <cstdio>
 #include <cstring>
-#include <vector>
+#include <stdexcept>
 #include <unistd.h>
-#include "crc32.hpp"
+#include <vector>
+#include "libriscv/util/crc32.hpp"
 static constexpr bool VERBOSE_COMPILER = true;
 static const std::string DEFAULT_C_COMPILER = "riscv64-linux-gnu-gcc-12";
 static const std::string DEFAULT_CXX_COMPILER = "riscv64-linux-gnu-g++-12";
@@ -64,9 +64,9 @@ std::vector<uint8_t> build_and_load(
 	}
 	// Compile code to binary file
 	char bin_filename[256];
-	const uint32_t code_checksum = crc32((const uint8_t *)code.c_str(), code.size());
-	const uint32_t final_checksum = crc32(code_checksum, (const uint8_t *)args.c_str(), args.size());
-	(void)snprintf(bin_filename, sizeof(bin_filename),
+  const uint32_t code_checksum = riscv::crc32((const uint8_t *)code.c_str(), code.size());
+  const uint32_t final_checksum = riscv::crc32(code_checksum, (const uint8_t *)args.c_str(), args.size());
+  (void)snprintf(bin_filename, sizeof(bin_filename),
 		"/tmp/binary-%08X", final_checksum);
 
 	std::string command;

@@ -406,17 +406,6 @@ void DebugMachine<W>::register_debug_logging() const
 	}
 }
 
-// Instructions may be unaligned with C-extension
-// On amd64 we take the cost, because it's faster
-union UnderAlign32
-{
-	uint16_t data[2];
-	operator uint32_t()
-	{
-		return data[0] | uint32_t(data[1]) << 16;
-	}
-};
-
 template<int W>
 void DebugMachine<W>::simulate(std::function<void(DebugMachine<W>&)> callback, uint64_t imax)
 {

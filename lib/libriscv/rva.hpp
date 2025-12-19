@@ -9,18 +9,16 @@ namespace riscv
 	{
 		using address_t = address_type<W>;
 
-		bool load_reserve(int size, address_t addr) RISCV_INTERNAL
-		{
-			if (!check_alignment(size, addr))
-				return false;
+    bool load_reserve(int size, address_t addr) RISCV_INTERNAL {
+      if (!check_alignment(size, addr)) return false;
 
-			m_reservation = addr;
+      m_reservation = addr;
 			return true;
-		}
+    }
 
-		// Volume I: RISC-V Unprivileged ISA V20190608 p.49:
-		// An SC can only pair with the most recent LR in program order.
-		bool store_conditional(int size, address_t addr) RISCV_INTERNAL
+    // Volume I: RISC-V Unprivileged ISA V20190608 p.49:
+    // An SC can only pair with the most recent LR in program order.
+    bool store_conditional(int size, address_t addr) RISCV_INTERNAL
 		{
 			if (!check_alignment(size, addr))
 				return false;
