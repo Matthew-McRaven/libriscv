@@ -280,6 +280,7 @@ extern const riscv::Instruction<8> instr64i_AUIPC;
 extern const riscv::Instruction<8> instr64i_OP_IMM32_ADDIW;
 extern const riscv::Instruction<8> instr64i_OP_IMM32_SLLIW;
 extern const riscv::Instruction<8> instr64i_OP_IMM32_SRLIW;
+extern const riscv::Instruction<8> instr64i_OP_IMM32_SRAIW;
 extern const riscv::Instruction<8> instr64i_OP_IMM32_SLLI_UW;
 extern const riscv::Instruction<8> instr64i_OP_IMM32;
 extern const riscv::Instruction<8> instr64i_OP32;

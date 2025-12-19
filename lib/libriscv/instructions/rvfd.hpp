@@ -114,6 +114,7 @@ extern const riscv::Instruction<8> instr64i_FSQRT;
 extern const riscv::Instruction<8> instr64i_FMIN_FMAX;
 extern const riscv::Instruction<8> instr64i_FEQ_FLT_FLE;
 extern const riscv::Instruction<8> instr64i_FCVT_SD_DS;
+extern const riscv::Instruction<8> instr64i_FCVT_W_SD;
 extern const riscv::Instruction<8> instr64i_FCVT_SD_W;
 extern const riscv::Instruction<8> instr64i_FSGNJ_NX;
 extern const riscv::Instruction<8> instr64i_FCLASS;

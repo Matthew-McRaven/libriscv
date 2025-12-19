@@ -46,7 +46,6 @@ set(RISCV_VERSION_MINOR 11)
 set(SOURCES
     libriscv/cpu.cpp
     libriscv/debug.cpp
-
     libriscv/decoder_cache.cpp
     libriscv/machine_defaults.cpp
     libriscv/memory.cpp
@@ -62,20 +61,6 @@ set(SOURCES
     libriscv/instructions/rva_instr.cpp
     libriscv/instructions/rvv_instr.cpp
     libriscv/util/crc32c.cpp)
-if(RISCV_32I)
-  list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/instructions/rv32i.cpp)
-  # C1605 (compiler limit: object file size cannot exceed 4 GB) occurs
-  # frequently in MSVC release builds. These TUs explode, so we deoptimize them
-  # for now.
-  if(MSVC)
-    set_source_files_properties(
-      ${CMAKE_CURRENT_LIST_DIR}/libriscv/instructions/rv32i.cpp
-      PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:/Od;/Ob0>")
-  endif()
-endif()
-if(RISCV_64I)
-  list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/instructions/rv64i.cpp)
-endif()
 
 if(MINGW_TOOLCHAIN
    OR MINGW

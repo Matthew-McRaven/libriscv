@@ -13,6 +13,9 @@
 #ifdef RISCV_EXT_ATOMICS
 #include "instructions/rva.hpp"
 #endif
+#ifdef RISCV_EXT_VECTOR
+#include "instructions/rvv.hpp"
+#endif
 #include <vector>
 
 namespace riscv {
@@ -941,5 +944,55 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
   // Unknown instructions can be custom-handled
   return RV32I_BC_FUNCTION;
 } // computed_index_for()
+
+// rv32i/rv64i.cpp
+template <int W> RISCV_INTERNAL const CPU<W>::instruction_t &CPU<W>::decode(const format_t instruction) {}
+
+template <int W> RISCV_INTERNAL void CPU<W>::execute(const format_t instruction) {
+  auto dec = decode(instruction);
+  dec.handler(*this, instruction);
+}
+
+template <int W> RISCV_INTERNAL void CPU<W>::execute(uint8_t &handler_idx, uint32_t instr) {
+  if (handler_idx == 0 && instr != 0) {
+    [[unlikely]];
+    handler_idx = DecoderData<W>::handler_index_for(decode(instr).handler);
+  }
+  DecoderData<W>::get_handlers()[handler_idx](*this, instr);
+}
+
+template <int W> const Instruction<W> &CPU<W>::get_unimplemented_instruction() noexcept {
+  if constexpr (W == 4) return instr32i_UNIMPLEMENTED;
+  else return instr64i_UNIMPLEMENTED;
+}
+
+template <int W> RISCV_COLD_PATH() std::string Registers<W>::to_string() const {
+  char buffer[600];
+  int len = 0;
+  for (int i = 1; i < 32; i++) {
+    len += snprintf(buffer + len, sizeof(buffer) - len, "[%s\t%08X] ", RISCV::regname(i), this->get(i));
+    if (i % 5 == 4) len += snprintf(buffer + len, sizeof(buffer) - len, "\n");
+  }
+  return std::string(buffer, len);
+}
+
+template <int W>
+RISCV_COLD_PATH()
+std::string CPU<W>::to_string(instruction_format format, const instruction_t &instr) const {
+  char buffer[256];
+  char ibuffer[128];
+  int ibuflen = instr.printer(ibuffer, sizeof(ibuffer), *this, format);
+  int len = 0;
+  if (format.length() == 4) {
+    len = snprintf(buffer, sizeof(buffer), "[%08X] %08X %.*s", this->pc(), format.whole, ibuflen, ibuffer);
+  } else if (format.length() == 2) {
+    len =
+        snprintf(buffer, sizeof(buffer), "[%08X]     %04hX %.*s", this->pc(), (uint16_t)format.whole, ibuflen, ibuffer);
+  } else {
+    throw MachineException(UNIMPLEMENTED_INSTRUCTION_LENGTH, "Unimplemented instruction format length",
+                           format.length());
+  }
+  return std::string(buffer, len);
+}
 
 } // namespace riscv

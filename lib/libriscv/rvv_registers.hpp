@@ -1,6 +1,7 @@
 #pragma once
-#include "types.hpp"
 #include <array>
+#include "common.hpp"
+#include "types.hpp"
 
 namespace riscv
 {

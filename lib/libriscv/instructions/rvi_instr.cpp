@@ -1091,6 +1091,7 @@ const riscv::Instruction<8> instr64i_AUIPC{riscv::AUIPC_handler, riscv::AUIPC_pr
 const riscv::Instruction<8> instr64i_OP_IMM32_ADDIW{riscv::OP_IMM32_ADDIW_handler, riscv::OP_IMM32_ADDIW_printer};
 const riscv::Instruction<8> instr64i_OP_IMM32_SLLIW{riscv::OP_IMM32_SLLIW_handler, riscv::OP_IMM32_ADDIW_printer};
 const riscv::Instruction<8> instr64i_OP_IMM32_SRLIW{riscv::OP_IMM32_SRLIW_handler, riscv::OP_IMM32_ADDIW_printer};
+const riscv::Instruction<8> instr64i_OP_IMM32_SRAIW{riscv::OP_IMM32_SRAIW_handler, riscv::OP_IMM32_ADDIW_printer};
 const riscv::Instruction<8> instr64i_OP_IMM32_SLLI_UW{riscv::OP_IMM32_SLLI_UW_handler, riscv::OP_IMM32_ADDIW_printer};
 const riscv::Instruction<8> instr64i_OP_IMM32{riscv::OP_IMM32_handler, riscv::OP_IMM32_ADDIW_printer};
 const riscv::Instruction<8> instr64i_OP32{riscv::OP32_handler, riscv::OP32_printer};

@@ -673,6 +673,7 @@ namespace riscv
   const riscv::Instruction<8> instr64i_FMIN_FMAX{riscv::FMIN_FMAX_handler, riscv::FMIN_FMAX_printer};
   const riscv::Instruction<8> instr64i_FEQ_FLT_FLE{riscv::FEQ_FLT_FLE_handler, riscv::FEQ_FLT_FLE_printer};
   const riscv::Instruction<8> instr64i_FCVT_SD_DS{riscv::FCVT_SD_DS_handler, riscv::FCVT_SD_DS_printer};
+  const riscv::Instruction<8> instr64i_FCVT_W_SD{riscv::FCVT_W_SD_handler, riscv::FCVT_W_SD_printer};
   const riscv::Instruction<8> instr64i_FCVT_SD_W{riscv::FCVT_SD_W_handler, riscv::FCVT_SD_W_printer};
   const riscv::Instruction<8> instr64i_FSGNJ_NX{riscv::FSGNJ_NX_handler, riscv::FSGNJ_NX_printer};
   const riscv::Instruction<8> instr64i_FCLASS{riscv::FCLASS_handler, riscv::FCLASS_printer};
