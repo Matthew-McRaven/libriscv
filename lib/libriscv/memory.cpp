@@ -25,8 +25,4 @@ const Page &Page::guard_page() noexcept {
 const Page &Page::host_page() noexcept {
   return host_codepage; // host code page
 }
-
-INSTANTIATE_32_IF_ENABLED(Memory);
-INSTANTIATE_64_IF_ENABLED(Memory);
-INSTANTIATE_128_IF_ENABLED(Memory);
 } // namespace riscv

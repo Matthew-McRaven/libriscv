@@ -24,10 +24,3 @@ namespace riscv
 #include "cpu_dispatch.cpp"
 
 #include "cpu_inaccurate_dispatch.cpp"
-
-namespace riscv
-{
-	INSTANTIATE_32_IF_ENABLED(CPU);
-	INSTANTIATE_64_IF_ENABLED(CPU);
-	INSTANTIATE_128_IF_ENABLED(CPU);
-} // riscv

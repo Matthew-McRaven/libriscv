@@ -507,5 +507,4 @@ void DebugMachine<W>::simulate(uint64_t imax)
 
 	INSTANTIATE_32_IF_ENABLED(DebugMachine);
 	INSTANTIATE_64_IF_ENABLED(DebugMachine);
-	INSTANTIATE_128_IF_ENABLED(DebugMachine);
 } // riscv
