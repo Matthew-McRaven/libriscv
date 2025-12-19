@@ -55,12 +55,7 @@ set(SOURCES
     libriscv/posix/threads.cpp
     libriscv/posix/socket_calls.cpp
     libriscv/serialize.cpp
-    libriscv/instructions/rvc32_c0_instr.cpp
-    libriscv/instructions/rvc32_c1_instr.cpp
-    libriscv/instructions/rvc32_c2_instr.cpp
-    libriscv/instructions/rvc64_c0_instr.cpp
-    libriscv/instructions/rvc64_c1_instr.cpp
-    libriscv/instructions/rvc64_c2_instr.cpp
+    libriscv/instructions/rvc_instr.cpp
     libriscv/instructions/rvi_instr.cpp
     libriscv/instructions/rvf_instr.cpp
     libriscv/instructions/rva_instr.cpp
