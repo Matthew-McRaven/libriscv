@@ -39,27 +39,6 @@ endif()
 # TAILCALL_DISPATCH enables clang-based compilers to use musttail dispatch.
 option(RISCV_TAILCALL_DISPATCH "Enable exp. tailcall dispatch" OFF)
 
-if(RISCV_EXPERIMENTAL)
-  # RISCV_ENCOMPASSING_ARENA allows the memory arena to encompass the entire
-  # memory space, allowing for more efficient memory accesses, but is only
-  # available for 32-bit RISC-V.
-  option(RISCV_ENCOMPASSING_ARENA "Enable encompassing memory arena" OFF)
-  if(RISCV_ENCOMPASSING_ARENA)
-    # Encompassing arena defaults to 32-bit address space, but it is
-    # configurable (power of 2).
-    set(RISCV_ENCOMPASSING_ARENA_BITS
-        "32"
-        CACHE STRING "Encompassing arena address space bits")
-    # Encompassing arena implies flat read-write arena
-    set(RISCV_FLAT_RW_ARENA ON)
-  else()
-    unset(RISCV_ENCOMPASSING_ARENA_BITS CACHE)
-  endif()
-else()
-  unset(RISCV_ENCOMPASSING_ARENA CACHE)
-  unset(RISCV_ENCOMPASSING_ARENA_BITS CACHE)
-endif()
-
 # Version information from git tags
 set(RISCV_VERSION_MAJOR 1)
 set(RISCV_VERSION_MINOR 11)
@@ -153,9 +132,6 @@ endif()
 if(RISCV_EXPERIMENTAL AND RISCV_ENCOMPASSING_ARENA)
   target_compile_definitions(
     riscv PUBLIC RISCV_ENCOMPASSING_ARENA_BITS=${RISCV_ENCOMPASSING_ARENA_BITS})
-endif()
-if(RISCV_EXPERIMENTAL AND RISCV_ASM_DISPATCH)
-  target_compile_definitions(riscv PUBLIC RISCV_ASM_DISPATCH=1)
 endif()
 
 if(RISCV_MULTIPROCESS)

@@ -11,14 +11,6 @@ template <int W>
 template <typename T> inline
 T Memory<W>::read(address_t address)
 {
-	if constexpr (encompassing_Nbit_arena)
-	{
-		if constexpr (encompassing_Nbit_arena == 32)
-			return *(T *)&((const char*)m_arena.data)[uint32_t(address)];
-		else // It's a power-of-two encompassing arena
-			return *(T *)&((const char*)m_arena.data)[address & encompassing_arena_mask];
-	} else {
-
 	const auto offset = address & memory_align_mask<T>();
 	if constexpr (unaligned_memory_slowpaths) {
 		if (UNLIKELY(offset+sizeof(T) > Page::size())) {
@@ -43,22 +35,12 @@ T Memory<W>::read(address_t address)
 
 	const auto& pagedata = cached_readable_page(address, sizeof(T));
 	return pagedata.template aligned_read<T>(offset);
-
-	} // encompassing_Nbit_arena
 }
 
 template <int W>
 template <typename T> inline
 T& Memory<W>::writable_read(address_t address)
 {
-	if constexpr (encompassing_Nbit_arena)
-	{
-		if constexpr (encompassing_Nbit_arena == 32)
-			return *(T *)&((char*)m_arena.data)[uint32_t(address)];
-		else // It's a power-of-two encompassing arena
-			return *(T *)&((char*)m_arena.data)[address & encompassing_arena_mask];
-	} else {
-
 	if constexpr (flat_readwrite_arena) {
 		if (LIKELY(address - initial_rodata_end() < memory_arena_write_boundary())) {
 			return *(T *)&((char*)m_arena.data)[RISCV_SPECSAFE(address)];
@@ -68,23 +50,12 @@ T& Memory<W>::writable_read(address_t address)
 
 	auto& pagedata = cached_writable_page(address);
 	return pagedata.template aligned_read<T>(address & memory_align_mask<T>());
-
-	} // encompassing_Nbit_arena
 }
 
 template <int W>
 template <typename T> inline
 void Memory<W>::write(address_t address, T value)
 {
-	if constexpr (encompassing_Nbit_arena)
-	{
-		if constexpr (encompassing_Nbit_arena == 32)
-			*(T *)&((char*)m_arena.data)[uint32_t(address)] = value;
-		else // It's a power-of-two encompassing arena
-			*(T *)&((char*)m_arena.data)[address & encompassing_arena_mask] = value;
-		return;
-	} else {
-
 	const auto offset = address & memory_align_mask<T>();
 	if constexpr (unaligned_memory_slowpaths) {
 		if (UNLIKELY(offset+sizeof(T) > Page::size())) {
@@ -123,8 +94,6 @@ void Memory<W>::write(address_t address, T value)
 		}
 	}
 	page.page().template aligned_write<T>(offset, value);
-
-	} // encompassing_Nbit_arena
 }
 
 template <int W>

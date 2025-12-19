@@ -123,21 +123,12 @@ static void add_mman_syscalls()
 			result = addr_g;
 		} else if ((flags & LINUX_MAP_FIXED) != 0 && addr_g > nextfree) {
 			// Fixed mapping after current end of mmap arena
-			// TODO: Evaluate if relaxation is counter-productive with the new cache
-			if constexpr (riscv::encompassing_Nbit_arena > 0) {
-				// We have to force the address to be within the arena
-				if (nextfree + length > riscv::encompassing_arena_mask)
-					MMAP_HAS_FAILED();
-				result = nextfree;
-				nextfree += length;
-			} else {
-				result = addr_g;
-			}
-		} else {
-			MMAP_HAS_FAILED();
-		}
+      result = addr_g;
+    } else {
+      MMAP_HAS_FAILED();
+    }
 
-		// anon pages need to be zeroed
+    // anon pages need to be zeroed
 		if (flags & LINUX_MAP_ANONYMOUS) {
 			machine.memory.memdiscard(result, length, true);
 		}

@@ -198,12 +198,7 @@ namespace riscv
 #else
 	static constexpr unsigned vector_extension = 0;
 #endif
-#ifdef RISCV_128I
-#define RISCV_128BIT_ISA
-	static constexpr bool rv128i_enabled = true;
-#else
 	static constexpr bool rv128i_enabled = false;
-#endif
 #ifdef RISCV_FCSR
 	static constexpr bool fcsr_emulation = true;
 #else
@@ -214,13 +209,6 @@ namespace riscv
 	static constexpr bool flat_readwrite_arena = true;
 #else
 	static constexpr bool flat_readwrite_arena = false;
-#endif
-#ifdef RISCV_ENCOMPASSING_ARENA_BITS
-	static constexpr int encompassing_Nbit_arena = RISCV_ENCOMPASSING_ARENA_BITS;
-	static constexpr uint64_t encompassing_arena_mask = (1ull << RISCV_ENCOMPASSING_ARENA_BITS) - 1;
-#else
-	static constexpr int encompassing_Nbit_arena = 0;
-	static constexpr uint64_t encompassing_arena_mask = 0;
 #endif
 	static constexpr bool libtcc_enabled = false;
 

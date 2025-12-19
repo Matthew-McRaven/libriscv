@@ -264,18 +264,18 @@ namespace riscv
 		address_t elf_base_address(address_t offset) const;
 
 		bool uses_flat_memory_arena() const noexcept { return riscv::flat_readwrite_arena && this->m_arena.data != nullptr; }
-		bool uses_Nbit_encompassing_arena() const noexcept { return riscv::encompassing_Nbit_arena != 0 && this->m_arena.data != nullptr; }
-		void* memory_arena_ptr() const noexcept { return (void *)this->m_arena.data; }
-		auto& memory_arena_ptr_ref() const noexcept { return this->m_arena.data; }
-		size_t memory_arena_size() const noexcept { return this->m_arena.pages * Page::size(); }
-		address_t memory_arena_read_boundary() const noexcept { return this->m_arena.read_boundary; }
-		address_t memory_arena_write_boundary() const noexcept { return this->m_arena.write_boundary; }
-		address_t initial_rodata_end() const noexcept { return this->m_arena.initial_rodata_end; }
+    bool uses_Nbit_encompassing_arena() const noexcept { return false; }
+    void *memory_arena_ptr() const noexcept { return (void *)this->m_arena.data; }
+    auto &memory_arena_ptr_ref() const noexcept { return this->m_arena.data; }
+    size_t memory_arena_size() const noexcept { return this->m_arena.pages * Page::size(); }
+    address_t memory_arena_read_boundary() const noexcept { return this->m_arena.read_boundary; }
+    address_t memory_arena_write_boundary() const noexcept { return this->m_arena.write_boundary; }
+    address_t initial_rodata_end() const noexcept { return this->m_arena.initial_rodata_end; }
 
-		// Serializes the current memory state to an existing vector
-		// Returns the final size of the serialized state
-		size_t serialize_to(std::vector<uint8_t>& vec) const;
-		// Returns memory to a previously stored state
+    // Serializes the current memory state to an existing vector
+    // Returns the final size of the serialized state
+    size_t serialize_to(std::vector<uint8_t> &vec) const;
+    // Returns memory to a previously stored state
 		void deserialize_from(const std::vector<uint8_t>&, const SerializedMachine<W>&);
 
 		Memory(Machine<W>&, std::string_view, MachineOptions<W>);
@@ -369,8 +369,6 @@ namespace riscv
 #include "memory_inline.hpp"
 #include "memory_inline_pages.hpp"
   // memory.cpp
-  [[maybe_unused]] static constexpr uint64_t UNBOUNDED_ARENA_SIZE = (1ULL << encompassing_Nbit_arena) + Page::size();
-
   template <int W>
   Memory<W>::Memory(Machine<W> &mach, std::string_view bin, MachineOptions<W> options)
       : m_machine{mach}, m_original_machine{true}, m_binary{bin} {
@@ -382,51 +380,21 @@ namespace riscv
 
       if (options.use_memory_arena) {
 #if defined(__linux__) || defined(__FreeBSD__)
-        if constexpr (encompassing_Nbit_arena != 0) {
-          static_assert(flat_readwrite_arena || encompassing_Nbit_arena == 0,
-                        "N-bit encompassing arena requires flat_readwrite_arena to be enabled");
 
-          // Allocate a complete N-bit arena, covering the entire N-bit address space
-          // Add 1 extra page to avoid having to bounds-check memory accesses
-          // TODO: Allocate unpresent pages for the whole address space,
-          // and only allocate real memory according to pages_max. Then handle
-          // page faults for the rest of the address space using userfaultfd.
-          this->m_arena.data = (PageData *)mmap(NULL, UNBOUNDED_ARENA_SIZE, PROT_READ | PROT_WRITE,
-                                                MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
-          if (UNLIKELY(this->m_arena.data == MAP_FAILED)) {
-            // We probably reached a limit on the number of mappings
-            this->m_arena.data = nullptr;
-            throw MachineException(OUT_OF_MEMORY, "Out of memory", UNBOUNDED_ARENA_SIZE);
-          }
-          this->m_arena.pages = (1ULL << encompassing_Nbit_arena) / Page::size();
-          /*this->m_arena.data = (PageData *)mmap(m_arena.data, (pages_max + 1) * Page::size(), PROT_READ | PROT_WRITE,
-            MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
-          if (UNLIKELY(this->m_arena.data == MAP_FAILED)) {
-            throw MachineException(OUT_OF_MEMORY, "Out of memory", this->m_arena.pages * Page::size());
-          }*/
-        } else {
-          // Over-allocate by 1 page in order to avoid bounds-checking with size
-          const size_t len = (pages_max + 1) * Page::size();
-          this->m_arena.data =
-              (PageData *)mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
-          this->m_arena.pages = pages_max;
-          // mmap() returns MAP_FAILED (-1) when mapping fails
-          if (UNLIKELY(this->m_arena.data == MAP_FAILED)) {
-            this->m_arena.data = nullptr;
-            this->m_arena.pages = 0;
-          }
+        // Over-allocate by 1 page in order to avoid bounds-checking with size
+        const size_t len = (pages_max + 1) * Page::size();
+        this->m_arena.data =
+            (PageData *)mmap(NULL, len, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_NORESERVE, -1, 0);
+        this->m_arena.pages = pages_max;
+        // mmap() returns MAP_FAILED (-1) when mapping fails
+        if (UNLIKELY(this->m_arena.data == MAP_FAILED)) {
+          this->m_arena.data = nullptr;
+          this->m_arena.pages = 0;
         }
 #else
-        if constexpr (encompassing_Nbit_arena != 0) {
-          // Allocate a complete N-bit arena, covering the entire N-bit address space
-          // Add 1 extra page to avoid having to bounds-check memory accesses
-          this->m_arena.data = new PageData[UNBOUNDED_ARENA_SIZE / Page::size()];
-          this->m_arena.pages = (1ULL << encompassing_Nbit_arena) / Page::size();
-        } else {
-          // TODO: XXX: Investigate if this is a time sink
-          this->m_arena.data = new PageData[pages_max + 1];
-          this->m_arena.pages = pages_max;
-        }
+        // TODO: XXX: Investigate if this is a time sink
+        this->m_arena.data = new PageData[pages_max + 1];
+        this->m_arena.pages = pages_max;
 #endif
       }
 
@@ -485,12 +453,7 @@ namespace riscv
     // only the original machine owns arena
     if (this->m_arena.data != nullptr && !is_forked()) {
 #if defined(__linux__) || defined(__FreeBSD__)
-      if constexpr (riscv::encompassing_Nbit_arena != 0) {
-        // munmap() the entire address space
-        munmap(this->m_arena.data, UNBOUNDED_ARENA_SIZE);
-      } else {
-        munmap(this->m_arena.data, (this->m_arena.pages + 1) * Page::size());
-      }
+      munmap(this->m_arena.data, (this->m_arena.pages + 1) * Page::size());
 #else
       delete[] this->m_arena.data;
 #endif
