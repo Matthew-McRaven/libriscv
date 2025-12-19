@@ -2,10 +2,10 @@
 #include <unordered_map>
 #include <vector>
 #include "common.hpp"
-#include "libriscv/decoded_exec_segment.hpp"
-#include "libriscv/instruction_list.hpp"
+#include "decoded_exec_segment.hpp"
+#include "instructions/instruction_list.hpp"
+#include "instructions/safe_instr_loader.hpp"
 #include "memory.hpp"
-#include "safe_instr_loader.hpp"
 #include "types.hpp"
 #include "util/crc32.hpp"
 

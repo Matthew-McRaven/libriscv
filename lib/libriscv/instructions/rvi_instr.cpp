@@ -1,10 +1,9 @@
 // Must be before instr_helpers.hpp
-#include "common.hpp"
+#include "../common.hpp"
 
 #include <atomic>
-#include "instr_helpers.hpp"
-#include "machine.hpp"
-#include "rvc.hpp"
+#include "../instr_helpers.hpp"
+#include "../machine.hpp"
 
 #if __has_include(<bit>)
 # include <bit>

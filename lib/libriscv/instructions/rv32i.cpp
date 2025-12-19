@@ -1,7 +1,8 @@
-#include "machine.hpp"
+#include "../decoder_cache.hpp"
+#include "../machine.hpp"
 
-#include "decoder_cache.hpp"
 #include "rv32i_instr.hpp"
+#include "rvc.hpp"
 #include "rvfd.hpp"
 
 #define INSTRUCTION(x, ...) \

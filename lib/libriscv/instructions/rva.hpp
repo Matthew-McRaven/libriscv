@@ -1,9 +1,8 @@
 #pragma once
 
-#include "common.hpp"
-
 #include <cstdint>
-#include "types.hpp"
+#include "../common.hpp"
+#include "../types.hpp"
 
 #define AMOSIZE_W 0x2
 #define AMOSIZE_D 0x3

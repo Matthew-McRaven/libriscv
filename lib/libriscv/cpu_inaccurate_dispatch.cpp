@@ -1,13 +1,13 @@
-#include "machine.hpp"
 #include "decoder_cache.hpp"
+#include "instructions/rv32i_instr.hpp"
+#include "instructions/rvfd.hpp"
+#include "machine.hpp"
 #include "threaded_bytecodes.hpp"
-#include "rv32i_instr.hpp"
-#include "rvfd.hpp"
 #ifdef RISCV_EXT_COMPRESSED
-#include "rvc.hpp"
+#include "instructions/rvc.hpp"
 #endif
 #ifdef RISCV_EXT_VECTOR
-#include "rvv.hpp"
+#include "instructions/rvv.hpp"
 #endif
 
 /**

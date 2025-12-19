@@ -1,14 +1,14 @@
-#include "machine.hpp"
 #include "decoder_cache.hpp"
-#include "instruction_list.hpp"
-#include "internal_common.hpp"
-#include "rvc.hpp"
-#include "safe_instr_loader.hpp"
-#include "threaded_bytecodes.hpp"
-#include "util/crc32.hpp"
 #include <inttypes.h>
 #include <mutex>
 #include <unordered_set>
+#include "instructions/instruction_list.hpp"
+#include "instructions/rvc.hpp"
+#include "instructions/safe_instr_loader.hpp"
+#include "internal_common.hpp"
+#include "machine.hpp"
+#include "threaded_bytecodes.hpp"
+#include "util/crc32.hpp"
 //#define ENABLE_TIMINGS
 
 namespace riscv

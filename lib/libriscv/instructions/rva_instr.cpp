@@ -1,7 +1,6 @@
-#include "cpu.hpp"
-
-#include "instr_helpers.hpp"
-#include "machine.hpp"
+#include "../cpu.hpp"
+#include "../instr_helpers.hpp"
+#include "../machine.hpp"
 
 #if __has_include(<atomic>)
 #define USE_ATOMIC_OPS __cpp_lib_atomic_ref

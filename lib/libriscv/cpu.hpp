@@ -1,17 +1,17 @@
 #pragma once
 #include "common.hpp"
-#include "instruction_list.hpp"
+#include "instructions/instruction_list.hpp"
+#include "instructions/rv32i_instr.hpp"
+#include "instructions/rvc.hpp"
+#include "instructions/rvfd.hpp"
 #include "internal_common.hpp"
 #include "page.hpp"
 #include "registers.hpp"
 #include "riscvbase.hpp"
-#include "rv32i_instr.hpp"
-#include "rvc.hpp"
-#include "rvfd.hpp"
 #include "threaded_bytecodes.hpp"
 
 #ifdef RISCV_EXT_ATOMICS
-#include "rva.hpp"
+#include "instructions/rva.hpp"
 #endif
 #include <vector>
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include "../types.hpp"
 
 namespace riscv
 {
@@ -181,8 +182,6 @@ namespace riscv
 	};
 	static_assert(sizeof(rv32i_instruction) == 4, "Instruction is 4 bytes");
 } // riscv
-
-#include "types.hpp"
 
 extern const riscv::Instruction<4> instr32i_NOP;
 extern const riscv::Instruction<4> instr32i_UNIMPLEMENTED;

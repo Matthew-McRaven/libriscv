@@ -1,9 +1,9 @@
 // Must be before instr_helpers.hpp
-#include "common.hpp"
+#include "../common.hpp"
 
 #include <cmath>
-#include "instr_helpers.hpp"
-#include "machine.hpp"
+#include "../instr_helpers.hpp"
+#include "../machine.hpp"
 #include "rvfd.hpp"
 
 namespace riscv

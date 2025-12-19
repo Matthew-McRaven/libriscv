@@ -2,11 +2,11 @@
 #include <memory>
 #include "common.hpp"
 #include "cpu.hpp"
+#include "libriscv/instructions/rv32i_instr.hpp"
+#include "libriscv/instructions/rvc.hpp"
+#include "libriscv/instructions/rvfd.hpp"
 #include "libriscv/riscvbase.hpp"
-#include "libriscv/rvc.hpp"
-#include "libriscv/rvfd.hpp"
 #include "libriscv/threaded_bytecodes.hpp"
-#include "rv32i_instr.hpp"
 #include "types.hpp"
 
 namespace riscv

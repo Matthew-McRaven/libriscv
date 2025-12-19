@@ -1,11 +1,11 @@
 // Must be before instr_helpers.hpp
-#include "common.hpp"
+#include "../common.hpp"
 
 #include <inttypes.h>
-#include "instr_helpers.hpp"
-#include "machine.hpp"
-#include "riscvbase.hpp"
-#include "rvc.hpp"
+#include "../instr_helpers.hpp"
+#include "../machine.hpp"
+#include "../riscvbase.hpp"
+#include "./rvc.hpp"
 
 namespace riscv {
 const auto C0_ADDI4SPN_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {

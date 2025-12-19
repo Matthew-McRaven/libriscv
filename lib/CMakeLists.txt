@@ -46,7 +46,7 @@ set(RISCV_VERSION_MINOR 11)
 set(SOURCES
     libriscv/cpu.cpp
     libriscv/debug.cpp
-    libriscv/decode_bytecodes.cpp
+
     libriscv/decoder_cache.cpp
     libriscv/machine_defaults.cpp
     libriscv/memory.cpp
@@ -56,24 +56,24 @@ set(SOURCES
     libriscv/posix/threads.cpp
     libriscv/posix/socket_calls.cpp
     libriscv/serialize.cpp
-    libriscv/rvc_instr.cpp
-    libriscv/rvi_instr.cpp
-    libriscv/rvf_instr.cpp
-    libriscv/rva_instr.cpp
+    libriscv/instructions/rvc_instr.cpp
+    libriscv/instructions/rvi_instr.cpp
+    libriscv/instructions/rvf_instr.cpp
+    libriscv/instructions/rva_instr.cpp
     libriscv/util/crc32c.cpp)
 if(RISCV_32I)
-  list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/rv32i.cpp)
+  list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/instructions/rv32i.cpp)
   # C1605 (compiler limit: object file size cannot exceed 4 GB) occurs
   # frequently in MSVC release builds. These TUs explode, so we deoptimize them
   # for now.
   if(MSVC)
     set_source_files_properties(
-      ${CMAKE_CURRENT_LIST_DIR}/libriscv/rv32i.cpp
+      ${CMAKE_CURRENT_LIST_DIR}/libriscv/instructions/rv32i.cpp
       PROPERTIES COMPILE_OPTIONS "$<$<CONFIG:Release>:/Od;/Ob0>")
   endif()
 endif()
 if(RISCV_64I)
-  list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/rv64i.cpp)
+  list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/instructions/rv64i.cpp)
 endif()
 
 if(MINGW_TOOLCHAIN
@@ -159,7 +159,7 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "libriscv")
           libriscv/guest_datatypes.hpp
           libriscv/instr_helpers.hpp
           libriscv/instruction_counter.hpp
-          libriscv/instruction_list.hpp
+          libriscv/instructions/instruction_list.hpp
           libriscv/machine.hpp
           libriscv/machine_inline.hpp
           libriscv/machine_vmcall.hpp
@@ -174,10 +174,10 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "libriscv")
           libriscv/registers.hpp
           libriscv/rvv_registers.hpp
           libriscv/riscvbase.hpp
-          libriscv/rv32i_instr.hpp
-          libriscv/rva.hpp
-          libriscv/rvc.hpp
-          libriscv/rvfd.hpp
+          libriscv/instructions/rv32i_instr.hpp
+          libriscv/instructions/rva.hpp
+          libriscv/instructions/rvc.hpp
+          libriscv/instructions/rvfd.hpp
           libriscv/rsp_server.hpp
           libriscv/threads.hpp
           libriscv/types.hpp
