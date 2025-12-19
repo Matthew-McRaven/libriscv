@@ -10,23 +10,13 @@ namespace riscv
 {
 	template <int W> struct CPU;
 
-#ifndef RISCV_128I
 	template <int N>
 	using address_type = typename std::conditional<(N == 4), uint32_t, uint64_t>::type;
 
 	template <int N>
 	using signed_address_type = typename std::conditional<(N == 4), int32_t, int64_t>::type;
-#else
-	template <int N>
-	using address_type = typename std::conditional<(N == 4), uint32_t,
-		typename std::conditional<(N == 8), uint64_t, __uint128_t>::type>::type;
 
-	template <int N>
-	using signed_address_type = typename std::conditional<(N == 4), int32_t,
-		typename std::conditional<(N == 8), int64_t, __int128_t>::type>::type;
-#endif
-
-	enum exceptions
+  enum exceptions
 	{
 		ILLEGAL_OPCODE,
 		ILLEGAL_OPERATION,
