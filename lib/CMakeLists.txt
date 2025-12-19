@@ -8,7 +8,7 @@ option(RISCV_DEBUG "Enable extra checks in the RISC-V machine" OFF)
 # to disable any.
 option(RISCV_EXT_A "Enable RISC-V atomic instructions" ON)
 option(RISCV_EXT_C "Enable RISC-V compressed instructions" ON)
-option(RISCV_EXT_V "Enable RISC-V vector instructions" OFF)
+option(RISCV_EXT_V "Enable RISC-V vector instructions" ON)
 # Enable 32- and 64-bit architecture emulation
 option(RISCV_32I "Enable 32-bit RISC-V" ON)
 option(RISCV_64I "Enable 64-bit RISC-V" ON)
@@ -60,6 +60,7 @@ set(SOURCES
     libriscv/instructions/rvi_instr.cpp
     libriscv/instructions/rvf_instr.cpp
     libriscv/instructions/rva_instr.cpp
+    libriscv/instructions/rvv_instr.cpp
     libriscv/util/crc32c.cpp)
 if(RISCV_32I)
   list(APPEND SOURCES ${CMAKE_CURRENT_LIST_DIR}/libriscv/instructions/rv32i.cpp)

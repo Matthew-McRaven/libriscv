@@ -1,5 +1,9 @@
+#include "../common.hpp"
+
+#include "../instr_helpers.hpp"
+#include "../machine.hpp"
+#include "../rvv_registers.hpp"
 #include "rvv.hpp"
-#include "instr_helpers.hpp"
 
 namespace riscv
 {
@@ -18,280 +22,265 @@ namespace riscv
 		 "VFWADD", "VFWREDUSUM", "VFWSUB", "VFWREDOSUM", "VFWADD.W", "???", "VFWSUB.W", "???", "VFWMUL", "???", "???", "???", "VFWMACC", "VFWNMACC", "VFWMSAC", "VFWNMSAC"},
 		};
 
-	VECTOR_INSTR(VSETVLI,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VSETVLI %s, %s, 0x%X",
-						RISCV::regname(vi.VLI.rd),
-						RISCV::regname(vi.VLI.rs1),
-						vi.VLI.zimm);
-	});
+  const auto VSETVLI_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+  };
+  const auto VSETVLI_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VSETVLI %s, %s, 0x%X", RISCV::regname(vi.VLI.rd), RISCV::regname(vi.VLI.rs1),
+                    vi.VLI.zimm);
+  };
 
-	VECTOR_INSTR(VSETIVLI,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VSETIVLI %s, 0x%X, 0x%X",
-						RISCV::regname(vi.IVLI.rd),
-						vi.IVLI.uimm,
-						vi.IVLI.zimm);
-	});
+  const auto VSETIVLI_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+  };
+  const auto VSETIVLI_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VSETIVLI %s, 0x%X, 0x%X", RISCV::regname(vi.IVLI.rd), vi.IVLI.uimm, vi.IVLI.zimm);
+  };
 
-	VECTOR_INSTR(VSETVL,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VSETVL %s, %s, %s",
-						RISCV::regname(vi.VSETVL.rd),
-						RISCV::regname(vi.VSETVL.rs1),
-						RISCV::regname(vi.VSETVL.rs2));
-	});
+  const auto VSETVL_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+  };
+  const auto VSETVL_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VSETVL %s, %s, %s", RISCV::regname(vi.VSETVL.rd), RISCV::regname(vi.VSETVL.rs1),
+                    RISCV::regname(vi.VSETVL.rs2));
+  };
 
-	VECTOR_INSTR(VLE32,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		const auto addr = cpu.reg(vi.VLS.rs1);
-		if (riscv::force_align_memory || addr % VectorLane::size() == 0) {
-			auto& rvv = cpu.registers().rvv();
-			rvv.get(vi.VLS.vd) = cpu.machine().memory.template read<VectorLane> (addr);
-		} else {
-			cpu.trigger_exception(INVALID_ALIGNMENT, addr);
-		}
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VLE32.V %s, %s, %s",
-						RISCV::vecname(vi.VLS.vd),
-						RISCV::regname(vi.VLS.rs1),
-						RISCV::regname(vi.VLS.rs2));
-	});
+  const auto VLE32_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    const auto addr = cpu.reg(vi.VLS.rs1);
+    if (riscv::force_align_memory || addr % VectorLane::size() == 0) {
+      auto &rvv = cpu.registers().rvv();
+      rvv.get(vi.VLS.vd) = cpu.machine().memory.template read<VectorLane>(addr);
+    } else {
+      cpu.trigger_exception(INVALID_ALIGNMENT, addr);
+    }
+  };
+  const auto VLE32_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VLE32.V %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
+                    RISCV::regname(vi.VLS.rs2));
+  };
 
-	VECTOR_INSTR(VSE32,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		const auto addr = cpu.reg(vi.VLS.rs1);
-		if (riscv::force_align_memory || addr % VectorLane::size() == 0) {
-			auto& rvv = cpu.registers().rvv();
-			cpu.machine().memory.template write<VectorLane> (addr, rvv.get(vi.VLS.vd));
-		} else {
-			cpu.trigger_exception(INVALID_ALIGNMENT, addr);
-		}
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VSE32.V %s, %s, %s",
-						RISCV::vecname(vi.VLS.vd),
-						RISCV::regname(vi.VLS.rs1),
-						RISCV::regname(vi.VLS.rs2));
-	});
+  const auto VSE32_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    const auto addr = cpu.reg(vi.VLS.rs1);
+    if (riscv::force_align_memory || addr % VectorLane::size() == 0) {
+      auto &rvv = cpu.registers().rvv();
+      cpu.machine().memory.template write<VectorLane>(addr, rvv.get(vi.VLS.vd));
+    } else {
+      cpu.trigger_exception(INVALID_ALIGNMENT, addr);
+    }
+  };
+  const auto VSE32_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VSE32.V %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
+                    RISCV::regname(vi.VLS.rs2));
+  };
 
-	VECTOR_INSTR(VOPI_VV,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		auto& rvv = cpu.registers().rvv();
-		switch (vi.OPVV.funct6) {
-		case 0b000000: // VADD
-			for (size_t i = 0; i < rvv.u32(0).size(); i++) {
-				rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] + rvv.u32(vi.OPVV.vs2)[i];
-			}
-			break;
-		case 0b000010: // VSUB
-			for (size_t i = 0; i < rvv.u32(0).size(); i++) {
-				rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] - rvv.u32(vi.OPVV.vs2)[i];
-			}
-			break;
-		case 0b001001: // VAND
-			for (size_t i = 0; i < rvv.u32(0).size(); i++) {
-				rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] & rvv.u32(vi.OPVV.vs2)[i];
-			}
-			break;
-		case 0b001010: // VOR
-			for (size_t i = 0; i < rvv.u32(0).size(); i++) {
-				rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] | rvv.u32(vi.OPVV.vs2)[i];
-			}
-			break;
-		case 0b001011: // VXOR
-			for (size_t i = 0; i < rvv.u32(0).size(); i++) {
-				rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] ^ rvv.u32(vi.OPVV.vs2)[i];
-			}
-			break;
-		case 0b001100: // VRGATHER
-			for (size_t i = 0; i < rvv.u32(0).size(); i++) {
-				const auto vs1 = rvv.u32(vi.OPVV.vs1)[i];
-				rvv.u32(vi.OPVV.vd)[i] = (vs1 >= rvv.u32(0).size()) ? 0 : rvv.u32(vi.OPVV.vs2)[vs1];
-			}
-			break;
-		default:
-			cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-		}
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "%s %s, %s, %s",
-						VOPNAMES[0][vi.OPVV.funct6],
-						RISCV::vecname(vi.VLS.vd),
-						RISCV::regname(vi.VLS.rs1),
-						RISCV::regname(vi.VLS.rs2));
-	});
+  const auto VOPI_VV_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    auto &rvv = cpu.registers().rvv();
+    switch (vi.OPVV.funct6) {
+    case 0b000000: // VADD
+      for (size_t i = 0; i < rvv.u32(0).size(); i++) {
+        rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] + rvv.u32(vi.OPVV.vs2)[i];
+      }
+      break;
+    case 0b000010: // VSUB
+      for (size_t i = 0; i < rvv.u32(0).size(); i++) {
+        rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] - rvv.u32(vi.OPVV.vs2)[i];
+      }
+      break;
+    case 0b001001: // VAND
+      for (size_t i = 0; i < rvv.u32(0).size(); i++) {
+        rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] & rvv.u32(vi.OPVV.vs2)[i];
+      }
+      break;
+    case 0b001010: // VOR
+      for (size_t i = 0; i < rvv.u32(0).size(); i++) {
+        rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] | rvv.u32(vi.OPVV.vs2)[i];
+      }
+      break;
+    case 0b001011: // VXOR
+      for (size_t i = 0; i < rvv.u32(0).size(); i++) {
+        rvv.u32(vi.OPVV.vd)[i] = rvv.u32(vi.OPVV.vs1)[i] ^ rvv.u32(vi.OPVV.vs2)[i];
+      }
+      break;
+    case 0b001100: // VRGATHER
+      for (size_t i = 0; i < rvv.u32(0).size(); i++) {
+        const auto vs1 = rvv.u32(vi.OPVV.vs1)[i];
+        rvv.u32(vi.OPVV.vd)[i] = (vs1 >= rvv.u32(0).size()) ? 0 : rvv.u32(vi.OPVV.vs2)[vs1];
+      }
+      break;
+    default: cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+    }
+  };
+  const auto VOPI_VV_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "%s %s, %s, %s", VOPNAMES[0][vi.OPVV.funct6], RISCV::vecname(vi.VLS.vd),
+                    RISCV::regname(vi.VLS.rs1), RISCV::regname(vi.VLS.rs2));
+  };
 
-	VECTOR_INSTR(VOPF_VV,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		auto& rvv = cpu.registers().rvv();
-		switch (vi.OPVV.funct6) {
-		case 0b000000: // VFADD.VV
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vi.OPVV.vs1)[i] + rvv.f32(vi.OPVV.vs2)[i];
-			}
-			return;
-		case 0b000001:   // VFREDUSUM
-		case 0b000011: { // VFREDOSUM
-			float sum = 0.0f;
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				sum += rvv.f32(vi.OPVV.vs1)[i] + rvv.f32(vi.OPVV.vs2)[i];
-			}
-			rvv.f32(vi.OPVV.vd)[0] = sum;
-			} return;
-		case 0b010000: // VWUNARY0.VV
-			if (vi.OPVV.vs1 == 0b00000) { // VFMV.F.S
-				cpu.registers().getfl(vi.OPVV.vd).set_float(rvv.f32(vi.OPVV.vs2)[0]);
-				return;
-			} break;
-		case 0b000010: // VFSUB.VV
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vi.OPVV.vs1)[i] - rvv.f32(vi.OPVV.vs2)[i];
-			}
-			return;
-		case 0b100100: // VFMUL.VV
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vi.OPVV.vs1)[i] * rvv.f32(vi.OPVV.vs2)[i];
-			}
-			return;
-		case 0b101000: // VFMADD.VV: Multiply-add (overwrites multiplicand)
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = (rvv.f32(vi.OPVV.vs1)[i] * rvv.f32(vi.OPVV.vd)[i]) + rvv.f32(vi.OPVV.vs2)[i];
-			}
-			return;
-		case 0b101100: // VFMACC.VV: Multiply-accumulate (overwrites addend)
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = (rvv.f32(vi.OPVV.vs1)[i] * rvv.f32(vi.OPVV.vs2)[i]) + rvv.f32(vi.OPVV.vd)[i];
-			}
-			return;
-		}
-		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "%s.VV %s, %s, %s",
-						VOPNAMES[2][vi.OPVV.funct6],
-						RISCV::vecname(vi.OPVV.vd),
-						RISCV::vecname(vi.OPVV.vs1),
-						RISCV::vecname(vi.OPVV.vs2));
-	});
+  const auto VOPF_VV_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    auto &rvv = cpu.registers().rvv();
+    switch (vi.OPVV.funct6) {
+    case 0b000000: // VFADD.VV
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vi.OPVV.vs1)[i] + rvv.f32(vi.OPVV.vs2)[i];
+      }
+      return;
+    case 0b000001:   // VFREDUSUM
+    case 0b000011: { // VFREDOSUM
+      float sum = 0.0f;
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        sum += rvv.f32(vi.OPVV.vs1)[i] + rvv.f32(vi.OPVV.vs2)[i];
+      }
+      rvv.f32(vi.OPVV.vd)[0] = sum;
+    }
+      return;
+    case 0b010000:                  // VWUNARY0.VV
+      if (vi.OPVV.vs1 == 0b00000) { // VFMV.F.S
+        cpu.registers().getfl(vi.OPVV.vd).set_float(rvv.f32(vi.OPVV.vs2)[0]);
+        return;
+      }
+      break;
+    case 0b000010: // VFSUB.VV
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vi.OPVV.vs1)[i] - rvv.f32(vi.OPVV.vs2)[i];
+      }
+      return;
+    case 0b100100: // VFMUL.VV
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vi.OPVV.vs1)[i] * rvv.f32(vi.OPVV.vs2)[i];
+      }
+      return;
+    case 0b101000: // VFMADD.VV: Multiply-add (overwrites multiplicand)
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = (rvv.f32(vi.OPVV.vs1)[i] * rvv.f32(vi.OPVV.vd)[i]) + rvv.f32(vi.OPVV.vs2)[i];
+      }
+      return;
+    case 0b101100: // VFMACC.VV: Multiply-accumulate (overwrites addend)
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = (rvv.f32(vi.OPVV.vs1)[i] * rvv.f32(vi.OPVV.vs2)[i]) + rvv.f32(vi.OPVV.vd)[i];
+      }
+      return;
+    }
+    cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+  };
+  const auto VOPF_VV_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "%s.VV %s, %s, %s", VOPNAMES[2][vi.OPVV.funct6], RISCV::vecname(vi.OPVV.vd),
+                    RISCV::vecname(vi.OPVV.vs1), RISCV::vecname(vi.OPVV.vs2));
+  };
 
-	VECTOR_INSTR(VOPM_VV,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VOPM.VV %s, %s, %s",
-						RISCV::vecname(vi.VLS.vd),
-						RISCV::regname(vi.VLS.rs1),
-						RISCV::regname(vi.VLS.rs2));
-	});
+  const auto VOPM_VV_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+  };
+  const auto VOPM_VV_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VOPM.VV %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
+                    RISCV::regname(vi.VLS.rs2));
+  };
 
-	VECTOR_INSTR(VOPI_VI,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		auto& rvv = cpu.registers().rvv();
-		const uint32_t scalar = vi.OPVI.imm;
-		switch (vi.OPVV.funct6) {
-		case 0b010111: // VMERGE.VI
-			if (vi.OPVI.vs2 == 0) {
-				for (size_t i = 0; i < rvv.u32(0).size(); i++) {
-					rvv.u32(vi.OPVI.vd)[i] = scalar;
-				}
-				return;
-			}
-		}
-		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VOPI.VI %s %s, %s, %s",
-						VOPNAMES[0][vi.OPVI.funct6],
-						RISCV::vecname(vi.VLS.vd),
-						RISCV::regname(vi.VLS.rs1),
-						RISCV::regname(vi.VLS.rs2));
-	});
+  const auto VOPI_VI_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    auto &rvv = cpu.registers().rvv();
+    const uint32_t scalar = vi.OPVI.imm;
+    switch (vi.OPVV.funct6) {
+    case 0b010111: // VMERGE.VI
+      if (vi.OPVI.vs2 == 0) {
+        for (size_t i = 0; i < rvv.u32(0).size(); i++) {
+          rvv.u32(vi.OPVI.vd)[i] = scalar;
+        }
+        return;
+      }
+    }
+    cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+  };
+  const auto VOPI_VI_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VOPI.VI %s %s, %s, %s", VOPNAMES[0][vi.OPVI.funct6], RISCV::vecname(vi.VLS.vd),
+                    RISCV::regname(vi.VLS.rs1), RISCV::regname(vi.VLS.rs2));
+  };
 
-	VECTOR_INSTR(VOPF_VF,
-	[] (auto& cpu, rv32i_instruction instr) RVINSTR_ATTR
-	{
-		const rv32v_instruction vi { instr };
-		auto& rvv = cpu.registers().rvv();
-		const float scalar = cpu.registers().getfl(vi.OPVV.vs1).f32[0];
-		const auto vector = vi.OPVV.vs2;
-		switch (vi.OPVV.funct6) {
-		case 0b000000: // VFADD.VF
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vector)[i] + scalar;
-			}
-			return;
-		case 0b000001:   // VFREDUSUM.VF
-		case 0b000011: { // VFREDOSUM.VF
-			float sum = 0.0f;
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				sum += rvv.f32(vector)[i] + scalar;
-			}
-			rvv.f32(vi.OPVV.vd)[0] = sum;
-			} return;
-		case 0b000010: // VFSUB.VF
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vector)[i] - scalar;
-			}
-			return;
-		case 0b010000: // VRFUNARY0.VF
-			if (vector == 0) { // VFMV.S.F
-				for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-					rvv.f32(vi.OPVV.vd)[i] = scalar;
-				}
-				return;
-			} break;
-		case 0b100100: // VFMUL.VF
-			for (size_t i = 0; i < rvv.f32(0).size(); i++) {
-				rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vector)[i] * scalar;
-			}
-			return;
-		}
-		cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
-	},
-	[] (char* buffer, size_t len, auto&, rv32i_instruction instr) RVPRINTR_ATTR {
-		const rv32v_instruction vi { instr };
-		return snprintf(buffer, len, "VOPF.VF %s, %s, %s",
-						RISCV::vecname(vi.VLS.vd),
-						RISCV::regname(vi.VLS.rs1),
-						RISCV::regname(vi.VLS.rs2));
-	});
-} // riscv
+  const auto VOPF_VF_handler = [](auto &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+    const rv32v_instruction vi{instr};
+    auto &rvv = cpu.registers().rvv();
+    const float scalar = cpu.registers().getfl(vi.OPVV.vs1).f32[0];
+    const auto vector = vi.OPVV.vs2;
+    switch (vi.OPVV.funct6) {
+    case 0b000000: // VFADD.VF
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vector)[i] + scalar;
+      }
+      return;
+    case 0b000001:   // VFREDUSUM.VF
+    case 0b000011: { // VFREDOSUM.VF
+      float sum = 0.0f;
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        sum += rvv.f32(vector)[i] + scalar;
+      }
+      rvv.f32(vi.OPVV.vd)[0] = sum;
+    }
+      return;
+    case 0b000010: // VFSUB.VF
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vector)[i] - scalar;
+      }
+      return;
+    case 0b010000:       // VRFUNARY0.VF
+      if (vector == 0) { // VFMV.S.F
+        for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+          rvv.f32(vi.OPVV.vd)[i] = scalar;
+        }
+        return;
+      }
+      break;
+    case 0b100100: // VFMUL.VF
+      for (size_t i = 0; i < rvv.f32(0).size(); i++) {
+        rvv.f32(vi.OPVV.vd)[i] = rvv.f32(vector)[i] * scalar;
+      }
+      return;
+    }
+    cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
+  };
+  const auto VOPF_VF_printer = [](char *buffer, size_t len, auto &, rv32i_instruction instr) RVPRINTR_ATTR {
+    const rv32v_instruction vi{instr};
+    return snprintf(buffer, len, "VOPF.VF %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
+                    RISCV::regname(vi.VLS.rs2));
+  };
+
+  } // namespace riscv
+
+#ifdef RISCV_32I
+  const riscv::Instruction<4> instr32i_VSETVLI{riscv::VSETVLI_handler, riscv::VSETVLI_printer};
+  const riscv::Instruction<4> instr32i_VSETIVLI{riscv::VSETIVLI_handler, riscv::VSETIVLI_printer};
+  const riscv::Instruction<4> instr32i_VSETVL{riscv::VSETVL_handler, riscv::VSETVL_printer};
+  const riscv::Instruction<4> instr32i_VLE32{riscv::VLE32_handler, riscv::VLE32_printer};
+  const riscv::Instruction<4> instr32i_VSE32{riscv::VSE32_handler, riscv::VSE32_printer};
+  const riscv::Instruction<4> instr32i_VOPI_VV{riscv::VOPI_VV_handler, riscv::VOPI_VV_printer};
+  const riscv::Instruction<4> instr32i_VOPF_VV{riscv::VOPF_VV_handler, riscv::VOPF_VV_printer};
+  const riscv::Instruction<4> instr32i_VOPM_VV{riscv::VOPM_VV_handler, riscv::VOPM_VV_printer};
+  const riscv::Instruction<4> instr32i_VOPI_VI{riscv::VOPI_VI_handler, riscv::VOPI_VI_printer};
+  const riscv::Instruction<4> instr32i_VOPF_VF{riscv::VOPF_VF_handler, riscv::VOPF_VF_printer};
+
+  const riscv::Instruction<8> instr64i_VSETVLI{riscv::VSETVLI_handler, riscv::VSETVLI_printer};
+  const riscv::Instruction<8> instr64i_VSETIVLI{riscv::VSETIVLI_handler, riscv::VSETIVLI_printer};
+  const riscv::Instruction<8> instr64i_VSETVL{riscv::VSETVL_handler, riscv::VSETVL_printer};
+  const riscv::Instruction<8> instr64i_VLE32{riscv::VLE32_handler, riscv::VLE32_printer};
+  const riscv::Instruction<8> instr64i_VSE32{riscv::VSE32_handler, riscv::VSE32_printer};
+  const riscv::Instruction<8> instr64i_VOPI_VV{riscv::VOPI_VV_handler, riscv::VOPI_VV_printer};
+  const riscv::Instruction<8> instr64i_VOPF_VV{riscv::VOPF_VV_handler, riscv::VOPF_VV_printer};
+  const riscv::Instruction<8> instr64i_VOPM_VV{riscv::VOPM_VV_handler, riscv::VOPM_VV_printer};
+  const riscv::Instruction<8> instr64i_VOPI_VI{riscv::VOPI_VI_handler, riscv::VOPI_VI_printer};
+  const riscv::Instruction<8> instr64i_VOPF_VF{riscv::VOPF_VF_handler, riscv::VOPF_VF_printer};
+
+#endif
