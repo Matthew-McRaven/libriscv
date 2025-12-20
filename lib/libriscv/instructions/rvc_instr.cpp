@@ -3,6 +3,7 @@
 #include "../common.hpp"
 
 #include <inttypes.h>
+#include "../cpu_impl.hpp"
 #include "../instr_helpers.hpp"
 #include "../machine.hpp"
 #include "../riscvbase.hpp"

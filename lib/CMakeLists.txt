@@ -44,10 +44,10 @@ set(RISCV_VERSION_MAJOR 1)
 set(RISCV_VERSION_MINOR 11)
 
 set(SOURCES
-    libriscv/cpu.cpp
+
     libriscv/debug.cpp
     libriscv/decoder_cache.cpp
-    libriscv/machine_defaults.cpp
+
     libriscv/memory.cpp
     libriscv/explicit_templates.cpp
     libriscv/posix/minimal.cpp

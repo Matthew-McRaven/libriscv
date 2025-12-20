@@ -1,10 +1,12 @@
 #pragma once
-namespace riscv {
-
+#include "machine.hpp"
 #include "memory.hpp"
+
+namespace riscv {
+// Helpers must be before
 #include "memory_helpers_paging.hpp"
-#include "memory_inline.hpp"
 #include "memory_inline_pages.hpp"
+
 // memory.cpp
 template <int W>
 Memory<W>::Memory(Machine<W> &mach, std::string_view bin, MachineOptions<W> options)

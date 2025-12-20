@@ -5,6 +5,8 @@
 #include "../rvv_registers.hpp"
 #include "rvv.hpp"
 
+#include "../memory_inline.hpp"
+
 namespace riscv
 {
 	static const char *VOPNAMES[3][64] = {

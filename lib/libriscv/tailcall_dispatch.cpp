@@ -401,5 +401,7 @@ namespace riscv
 		const addr_t new_pc = EXECUTE_INSTR();
 
 		cpu.registers().pc = new_pc;
-	}
+  }
+  INSTANTIATE_32_IF_ENABLED(CPU);
+  INSTANTIATE_64_IF_ENABLED(CPU);
 } // riscv

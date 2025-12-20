@@ -233,5 +233,6 @@ handle_rethrow_exception:
 #endif
 
 } // CPU::simulate_XXX()
-
+INSTANTIATE_32_IF_ENABLED(CPU);
+INSTANTIATE_64_IF_ENABLED(CPU);
 } // riscv

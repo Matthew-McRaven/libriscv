@@ -3,6 +3,9 @@
 #include "../internal_common.hpp"
 #include "../threads.hpp"
 
+#include <libriscv/machine_impl.hpp>
+#include <libriscv/memory_inline.hpp>
+
 //#define SYSCALL_VERBOSE 1
 #ifdef SYSCALL_VERBOSE
 #define SYSPRINT(fmt, ...) \

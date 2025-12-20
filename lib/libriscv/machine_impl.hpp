@@ -840,7 +840,6 @@ template <int W> void Machine<W>::setup_native_memory(const size_t syscall_base)
 }
 } // namespace riscv
 
-#include "machine_cpu.hpp"
 #include "machine_impl.hpp"
 #include "machine_threads.hpp"
 #include "machine_vmcall.hpp"

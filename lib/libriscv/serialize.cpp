@@ -1,4 +1,5 @@
-#include <libriscv/machine.hpp>
+#include <libriscv/machine_impl.hpp>
+#include "cpu_impl.hpp"
 
 #include "internal_common.hpp"
 #ifdef __GNUG__
@@ -230,16 +231,4 @@ namespace riscv
 		// page tables have been changed
 		this->invalidate_reset_cache();
 	}
-
-	INSTANTIATE_32_IF_ENABLED(Machine);
-	INSTANTIATE_64_IF_ENABLED(Machine);
-	INSTANTIATE_128_IF_ENABLED(Machine);
-
-	INSTANTIATE_32_IF_ENABLED(CPU);
-	INSTANTIATE_64_IF_ENABLED(CPU);
-	INSTANTIATE_128_IF_ENABLED(CPU);
-
-	INSTANTIATE_32_IF_ENABLED(Memory);
-	INSTANTIATE_64_IF_ENABLED(Memory);
-	INSTANTIATE_128_IF_ENABLED(Memory);
 }

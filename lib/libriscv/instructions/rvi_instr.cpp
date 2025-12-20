@@ -4,6 +4,7 @@
 #include <atomic>
 #include "../instr_helpers.hpp"
 #include "../machine.hpp"
+#include "../memory_inline.hpp"
 
 #if __has_include(<bit>)
 # include <bit>

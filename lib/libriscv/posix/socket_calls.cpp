@@ -1,5 +1,6 @@
 #include <libriscv/machine.hpp>
 #include <libriscv/machine_impl.hpp>
+#include <libriscv/memory_inline.hpp>
 
 //#define SOCKETCALL_VERBOSE 1
 #ifdef SOCKETCALL_VERBOSE

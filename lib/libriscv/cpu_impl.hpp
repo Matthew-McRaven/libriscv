@@ -1,4 +1,5 @@
 #include "cpu.hpp"
+#include "internal_common.hpp"
 #include "riscvbase.hpp"
 #include "threaded_bytecodes.hpp"
 
