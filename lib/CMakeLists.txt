@@ -36,18 +36,13 @@ else()
   option(RISCV_THREADED "Enable fastest simulation mode" OFF)
 endif()
 
-# TAILCALL_DISPATCH enables clang-based compilers to use musttail dispatch.
-option(RISCV_TAILCALL_DISPATCH "Enable exp. tailcall dispatch" OFF)
-
 # Version information from git tags
 set(RISCV_VERSION_MAJOR 1)
 set(RISCV_VERSION_MINOR 11)
 
 set(SOURCES
-
     libriscv/debug.cpp
     libriscv/decoder_cache.cpp
-
     libriscv/memory.cpp
     libriscv/explicit_templates.cpp
     libriscv/posix/minimal.cpp
@@ -70,18 +65,10 @@ elseif(UNIX)
   list(APPEND SOURCES libriscv/linux/system_calls.cpp)
 endif()
 
-if(RISCV_THREADED OR RISCV_TAILCALL_DISPATCH)
-  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang"
-     AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13.0
-     AND RISCV_TAILCALL_DISPATCH)
-    # Experimental tail-call dispatch
-    message(STATUS "libriscv: Tail-call dispatch enabled")
-    list(APPEND SOURCES libriscv/tailcall_dispatch.cpp)
-  else()
-    message(STATUS "libriscv: Threaded dispatch enabled")
-    list(APPEND SOURCES libriscv/threaded_dispatch.cpp
-         libriscv/threaded_inaccurate_dispatch.cpp)
-  endif()
+if(RISCV_THREADED)
+  message(STATUS "libriscv: Threaded dispatch enabled")
+  list(APPEND SOURCES libriscv/threaded_dispatch.cpp
+       libriscv/threaded_inaccurate_dispatch.cpp)
 else()
   message(STATUS "libriscv: Switch-based dispatch enabled")
   list(APPEND SOURCES libriscv/bytecode_dispatch.cpp)
