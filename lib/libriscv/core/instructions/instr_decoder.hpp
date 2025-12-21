@@ -1,19 +1,19 @@
-#include "../common.hpp"
-#include "../instr_helpers.hpp"
-#include "../types.hpp"
-#include "instruction_list.hpp"
-#include "rv32i_instr.hpp"
-#include "rvfd.hpp"
+#include "../../common.hpp"
+#include "../../types.hpp"
+#include "./instr_helpers.hpp"
+#include "./instruction_list.hpp"
+#include "./rv32i_instr.hpp"
+#include "./rvfd.hpp"
 
 #ifdef RISCV_EXT_COMPRESSED
-#include "rvc.hpp"
+#include "./rvc.hpp"
 #endif
 #ifdef RISCV_EXT_ATOMICS
-#include "rva.hpp"
+#include "./rva.hpp"
 #endif
 
 #ifdef RISCV_EXT_VECTOR
-#include "rvv.hpp"
+#include "./rvv.hpp"
 #endif
 
 namespace riscv {

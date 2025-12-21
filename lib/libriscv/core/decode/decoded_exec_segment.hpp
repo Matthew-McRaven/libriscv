@@ -1,12 +1,12 @@
 #pragma once
 #include <memory>
-#include "../common.hpp"
+#include "../../common.hpp"
+#include "../../riscvbase.hpp"
+#include "../../types.hpp"
 #include "../cpu.hpp"
 #include "../instructions/rv32i_instr.hpp"
 #include "../instructions/rvc.hpp"
 #include "../instructions/rvfd.hpp"
-#include "../riscvbase.hpp"
-#include "../types.hpp"
 #include "./threaded_bytecodes.hpp"
 
 namespace riscv

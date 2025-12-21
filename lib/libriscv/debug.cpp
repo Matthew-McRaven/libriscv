@@ -4,11 +4,11 @@
 #include <cstdio>
 #include <cstdlib>
 #include "common.hpp"
-#include "cpu_impl.hpp"
-#include "decode/decoder_cache_impl.hpp"
-#include "instructions/rv32i_instr.hpp"
+#include "core/cpu_impl.hpp"
+#include "core/decode/decoder_cache_impl.hpp"
+#include "core/instructions/rv32i_instr.hpp"
 #include "machine_impl.hpp"
-#include "memory_inline.hpp"
+#include "memory/memory_inline.hpp"
 
 namespace riscv
 {

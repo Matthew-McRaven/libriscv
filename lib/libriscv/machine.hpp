@@ -1,9 +1,9 @@
 #pragma once
 #include <random>
-#include "cpu.hpp"
+#include "core/cpu.hpp"
 #include "libriscv/common.hpp"
 #include "libriscv/util/auxvec.hpp"
-#include "memory.hpp"
+#include "memory/memory.hpp"
 #include "posix/filedesc.hpp"
 #include "posix/signals.hpp"
 #include "riscvbase.hpp"

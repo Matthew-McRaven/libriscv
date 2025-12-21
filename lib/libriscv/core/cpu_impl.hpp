@@ -1,7 +1,7 @@
-#include "common.hpp"
-#include "cpu.hpp"
-#include "decode/threaded_bytecodes.hpp"
-#include "riscvbase.hpp"
+#include "../common.hpp"
+#include "../riscvbase.hpp"
+#include "./cpu.hpp"
+#include "./decode/threaded_bytecodes.hpp"
 
 namespace riscv {
 // Use a trick to access the Machine directly on g++/clang, Linux-only for now

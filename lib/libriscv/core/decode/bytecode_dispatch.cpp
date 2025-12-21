@@ -1,7 +1,7 @@
-#include "../common.hpp"
+#include "../../common.hpp"
+#include "../../machine_impl.hpp"
+#include "../../memory/memory_inline.hpp"
 #include "../cpu_impl.hpp"
-#include "../machine_impl.hpp"
-#include "../memory_inline.hpp"
 
 #define DISPATCH_MODE_SWITCH_BASED
 #define DISPATCH_ATTR RISCV_HOT_PATH()

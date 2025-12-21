@@ -1,7 +1,7 @@
 #include <array>
 #include <cstdint>
 #include <vector>
-#include "types.hpp"
+#include "../types.hpp"
 
 namespace riscv
 {

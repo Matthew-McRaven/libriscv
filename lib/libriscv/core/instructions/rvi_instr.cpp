@@ -1,10 +1,10 @@
 // Must be before instr_helpers.hpp
-#include "../common.hpp"
+#include "../../common.hpp"
 
 #include <atomic>
-#include "../instr_helpers.hpp"
-#include "../machine.hpp"
-#include "../memory_inline.hpp"
+#include "../../machine.hpp"
+#include "../../memory/memory_inline.hpp"
+#include "instr_helpers.hpp"
 
 #if __has_include(<bit>)
 # include <bit>

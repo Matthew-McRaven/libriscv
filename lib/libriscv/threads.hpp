@@ -2,8 +2,8 @@
 #include <cstdio>
 #include <unordered_map>
 #include <vector>
-#include "registers.hpp"
-#include "types.hpp"
+#include "./core/registers.hpp"
+#include "./types.hpp"
 
 namespace riscv {
 

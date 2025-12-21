@@ -1,12 +1,12 @@
 #pragma once
 #include <unordered_map>
 #include <vector>
-#include "../common.hpp"
+#include "../../common.hpp"
+#include "../../memory/memory.hpp"
+#include "../../types.hpp"
+#include "../../util/crc32.hpp"
 #include "../instructions/instruction_list.hpp"
 #include "../instructions/safe_instr_loader.hpp"
-#include "../memory.hpp"
-#include "../types.hpp"
-#include "../util/crc32.hpp"
 #include "./decoded_exec_segment.hpp"
 
 namespace riscv {

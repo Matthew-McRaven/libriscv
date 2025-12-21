@@ -1,6 +1,6 @@
+#include "../../machine.hpp"
 #include "../instructions/rv32i_instr.hpp"
 #include "../instructions/rvfd.hpp"
-#include "../machine.hpp"
 #include "decoder_cache_impl.hpp"
 #include "threaded_bytecodes.hpp"
 #ifdef RISCV_EXT_COMPRESSED

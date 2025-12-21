@@ -1,8 +1,8 @@
 #pragma once
-#include "common.hpp"
-#include "instructions/instr_decoder.hpp"
-#include "page.hpp"
-#include "registers.hpp"
+#include "../common.hpp"
+#include "../memory/page.hpp"
+#include "./instructions/instr_decoder.hpp"
+#include "./registers.hpp"
 
 #ifdef RISCV_EXT_ATOMICS
 #endif

@@ -1,5 +1,5 @@
 #pragma once
-#include "machine.hpp"
+#include "../machine.hpp"
 #include "memory.hpp"
 
 namespace riscv {

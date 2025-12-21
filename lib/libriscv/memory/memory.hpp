@@ -4,17 +4,17 @@
 #include <inttypes.h>
 #include <string_view>
 #include <unordered_map>
-#include "decode/decoded_exec_segment.hpp"
-#include "elf.hpp"
-#include "mmap_cache.hpp"
-#include "page.hpp"
-#include "util/buffer.hpp" // <string>
-#include "util/function.hpp"
+#include "../core/decode/decoded_exec_segment.hpp"
+#include "../elf.hpp"
+#include "../util/buffer.hpp" // <string>
+#include "../util/function.hpp"
+#include "./mmap_cache.hpp"
+#include "./page.hpp"
 #if RISCV_SPAN_AVAILABLE
 #include <span>
 #endif
 #ifdef RISCV_EXT_ATOMICS
-#include "instructions/rva.hpp"
+#include "../core/instructions/rva.hpp"
 #endif
 
 #ifdef __linux__

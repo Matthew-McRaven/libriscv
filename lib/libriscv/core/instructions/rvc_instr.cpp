@@ -1,13 +1,13 @@
 #pragma once
 // Must be before instr_helpers.hpp
-#include "../common.hpp"
+#include "../../common.hpp"
 
 #include <inttypes.h>
+#include "../../machine.hpp"
+#include "../../riscvbase.hpp"
 #include "../cpu_impl.hpp"
-#include "../instr_helpers.hpp"
-#include "../machine.hpp"
-#include "../riscvbase.hpp"
 #include "./rvc.hpp"
+#include "instr_helpers.hpp"
 
 namespace riscv {
 template <int W> void C0_ADDI4SPN_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {

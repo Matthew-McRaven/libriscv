@@ -1,9 +1,9 @@
 #pragma once
-#include "common.hpp"
-#include "types.hpp"
+#include <array>
 #include <cassert>
 #include <memory>
-#include <array>
+#include "../common.hpp"
+#include "../types.hpp"
 
 namespace riscv {
 

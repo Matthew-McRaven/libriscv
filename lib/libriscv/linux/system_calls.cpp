@@ -4,7 +4,7 @@
 #include "../threads.hpp"
 
 #include <libriscv/machine_impl.hpp>
-#include <libriscv/memory_inline.hpp>
+#include <libriscv/memory/memory_inline.hpp>
 
 //#define SYSCALL_VERBOSE 1
 #ifdef SYSCALL_VERBOSE

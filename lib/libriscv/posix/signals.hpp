@@ -1,9 +1,9 @@
 #pragma once
 #include <map>
 #include <set>
-#include "../registers.hpp"
+#include "../core/registers.hpp"
+#include "../riscvbase.hpp"
 #include "../types.hpp"
-#include "libriscv/riscvbase.hpp"
 
 namespace riscv {
 template <int W> struct Machine;

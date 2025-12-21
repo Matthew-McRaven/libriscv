@@ -1,6 +1,6 @@
 #pragma once
-#include "../machine.hpp"
-#include "../memory.hpp"
+#include "../../machine.hpp"
+#include "../../memory/memory.hpp"
 #include "decoded_exec_segment.hpp"
 #include "decoder_cache.hpp"
 

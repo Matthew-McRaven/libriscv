@@ -42,19 +42,19 @@ set(RISCV_VERSION_MINOR 11)
 
 set(SOURCES
     libriscv/debug.cpp
-    libriscv/decode/decoder_cache.cpp
-    libriscv/memory.cpp
+    libriscv/core/decode/decoder_cache.cpp
+    libriscv/memory/memory.cpp
     libriscv/explicit_templates.cpp
     libriscv/posix/minimal.cpp
     libriscv/posix/signals.cpp
     libriscv/posix/threads.cpp
     libriscv/posix/socket_calls.cpp
     libriscv/serialize.cpp
-    libriscv/instructions/rvc_instr.cpp
-    libriscv/instructions/rvi_instr.cpp
-    libriscv/instructions/rvf_instr.cpp
-    libriscv/instructions/rva_instr.cpp
-    libriscv/instructions/rvv_instr.cpp
+    libriscv/core/instructions/rvc_instr.cpp
+    libriscv/core/instructions/rvi_instr.cpp
+    libriscv/core/instructions/rvf_instr.cpp
+    libriscv/core/instructions/rva_instr.cpp
+    libriscv/core/instructions/rvv_instr.cpp
     libriscv/util/crc32c.cpp)
 
 if(MINGW_TOOLCHAIN
@@ -67,11 +67,11 @@ endif()
 
 if(RISCV_THREADED)
   message(STATUS "libriscv: Threaded dispatch enabled")
-  list(APPEND SOURCES libriscv/decode/threaded_dispatch.cpp
-       libriscv/decode/threaded_inaccurate_dispatch.cpp)
+  list(APPEND SOURCES libriscv/core/decode/threaded_dispatch.cpp
+       libriscv/core/decode/threaded_inaccurate_dispatch.cpp)
 else()
   message(STATUS "libriscv: Switch-based dispatch enabled")
-  list(APPEND SOURCES libriscv/decode/bytecode_dispatch.cpp)
+  list(APPEND SOURCES libriscv/core/decode/bytecode_dispatch.cpp)
 endif()
 
 # Generate the settings header RISCV_VERSION_MAJOR and RISCV_VERSION_MINOR are

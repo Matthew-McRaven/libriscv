@@ -1,11 +1,10 @@
-#include "../common.hpp"
+#include "../../common.hpp"
 
-#include "../instr_helpers.hpp"
-#include "../machine.hpp"
+#include "../../machine.hpp"
+#include "../../memory/memory_inline.hpp"
 #include "../rvv_registers.hpp"
+#include "instr_helpers.hpp"
 #include "rvv.hpp"
-
-#include "../memory_inline.hpp"
 
 namespace riscv
 {

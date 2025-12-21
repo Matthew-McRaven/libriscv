@@ -1,11 +1,11 @@
 #pragma once
-#include "common.hpp"
-#include "types.hpp"
 #include <array>
 #include <memory>
 #include <string>
+#include "../common.hpp"
+#include "../types.hpp"
 #ifdef RISCV_EXT_VECTOR
-#include "rvv_registers.hpp"
+#include "./rvv_registers.hpp"
 #endif
 
 namespace riscv

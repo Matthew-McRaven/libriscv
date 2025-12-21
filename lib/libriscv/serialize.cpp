@@ -1,5 +1,5 @@
 #include <libriscv/machine_impl.hpp>
-#include "cpu_impl.hpp"
+#include "./core/cpu_impl.hpp"
 
 #include "common.hpp"
 #ifdef __GNUG__
