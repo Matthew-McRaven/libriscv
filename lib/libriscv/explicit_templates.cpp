@@ -1,5 +1,5 @@
 #include "decoder_cache.hpp"
-#include "internal_common.hpp"
+#include "common.hpp"
 #include "memory.hpp"
 
 #include "decoder_cache_impl.hpp"

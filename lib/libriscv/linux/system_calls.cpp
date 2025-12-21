@@ -1,6 +1,6 @@
 #include "../machine.hpp"
 
-#include "../internal_common.hpp"
+#include "../common.hpp"
 #include "../threads.hpp"
 
 #include <libriscv/machine_impl.hpp>

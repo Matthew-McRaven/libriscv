@@ -1,7 +1,7 @@
 #include "machine.hpp"
 
 #include "decoder_cache.hpp"
-#include "internal_common.hpp"
+#include "common.hpp"
 
 namespace riscv {
 

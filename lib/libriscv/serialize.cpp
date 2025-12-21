@@ -1,7 +1,7 @@
 #include <libriscv/machine_impl.hpp>
 #include "cpu_impl.hpp"
 
-#include "internal_common.hpp"
+#include "common.hpp"
 #ifdef __GNUG__
 #define RISCV_PACKED __attribute__((packed))
 #else

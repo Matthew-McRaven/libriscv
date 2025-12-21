@@ -258,7 +258,6 @@ namespace riscv
 } // riscv
 
 #ifdef __GNUG__
-
 #ifndef LIKELY
 #define LIKELY(x) __builtin_expect((x), 1)
 #endif
@@ -272,18 +271,27 @@ namespace riscv
 #define RISCV_HOT_PATH() __attribute__((hot))
 #endif
 #define RISCV_ALWAYS_INLINE __attribute__((always_inline))
+#define RISCV_NOINLINE __attribute__((noinline))
+#define RISCV_UNREACHABLE() __builtin_unreachable()
+#define RISCV_EXPORT __attribute__((visibility("default")))
+#elif defined(_MSC_VER)
+#define LIKELY(x) (x)
+#define UNLIKELY(x) (x)
+#define RISCV_COLD_PATH() /* */
+#define RISCV_HOT_PATH()  /* */
+#define RISCV_ALWAYS_INLINE __forceinline
+#define RISCV_NOINLINE __declspec(noinline)
+#define RISCV_UNREACHABLE() __assume(0)
+#define RISCV_EXPORT __declspec(dllexport)
 #else
 #define LIKELY(x)   (x)
 #define UNLIKELY(x) (x)
 #define RISCV_COLD_PATH() /* */
 #define RISCV_HOT_PATH()  /* */
 #define RISCV_ALWAYS_INLINE /* */
-#endif
-
-#ifdef _MSC_VER
-#undef RISCV_ALWAYS_INLINE
-#define RISCV_ALWAYS_INLINE __forceinline
-#define RISCV_NOINLINE      __declspec(noinline)
+#define RISCV_NOINLINE      /* */
+#define RISCV_UNREACHABLE() /* */
+#define RISCV_EXPORT        /* */
 #endif
 
 #ifdef __HAVE_BUILTIN_SPECULATION_SAFE_VALUE
@@ -298,4 +306,27 @@ namespace riscv
 #else
 #define RISCV_INTERNAL /* */
 #endif
+#endif
+
+#ifdef __APPLE__
+#include "TargetConditionals.h" // TARGET_* macros
+#endif
+
+#ifdef RISCV_32I
+#define INSTANTIATE_32_IF_ENABLED(x) template struct x<4>
+#else
+#define INSTANTIATE_32_IF_ENABLED(x) /* */
+#endif
+
+#ifdef RISCV_64I
+#define INSTANTIATE_64_IF_ENABLED(x) template struct x<8>
+#else
+#define INSTANTIATE_64_IF_ENABLED(x) /* */
+#endif
+
+#ifndef ANTI_FINGERPRINTING_MASK_MICROS
+#define ANTI_FINGERPRINTING_MASK_MICROS() ~0x3LL
+#endif
+#ifndef ANTI_FINGERPRINTING_MASK_NANOS
+#define ANTI_FINGERPRINTING_MASK_NANOS() ~0x3FFFLL
 #endif

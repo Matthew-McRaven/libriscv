@@ -6,7 +6,7 @@
 #include "cpu_impl.hpp"
 #include "decoder_cache_impl.hpp"
 #include "instructions/rv32i_instr.hpp"
-#include "internal_common.hpp"
+#include "common.hpp"
 #include "machine_impl.hpp"
 #include "memory_inline.hpp"
 

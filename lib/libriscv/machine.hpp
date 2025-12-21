@@ -1,7 +1,7 @@
 #pragma once
 #include <random>
 #include "cpu.hpp"
-#include "libriscv/internal_common.hpp"
+#include "libriscv/common.hpp"
 #include "libriscv/util/auxvec.hpp"
 #include "memory.hpp"
 #include "posix/filedesc.hpp"

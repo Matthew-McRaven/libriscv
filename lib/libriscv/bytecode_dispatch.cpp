@@ -1,6 +1,6 @@
 #include "common.hpp"
 #include "cpu_impl.hpp"
-#include "internal_common.hpp"
+#include "common.hpp"
 #include "machine_impl.hpp"
 #include "memory_inline.hpp"
 
