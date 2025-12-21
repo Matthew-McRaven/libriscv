@@ -1,3 +1,4 @@
+#pragma once
 #include "machine.hpp"
 
 namespace riscv {

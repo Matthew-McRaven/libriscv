@@ -3,41 +3,15 @@
 #include "../common.hpp"
 #include "../threads.hpp"
 
-#include <libriscv/machine_impl.hpp>
-#include <libriscv/memory/memory_inline.hpp>
-
-//#define SYSCALL_VERBOSE 1
-#ifdef SYSCALL_VERBOSE
-#define SYSPRINT(fmt, ...) \
-	{ char syspbuf[1024]; machine.print(syspbuf, \
-		snprintf(syspbuf, sizeof(syspbuf), fmt, ##__VA_ARGS__)); }
-static constexpr bool verbose_syscalls = true;
+#include "./syscalls.hpp"
+#include "syscalls_mman.hpp"
+#include "syscalls_poll.hpp"
+#include "syscalls_select.hpp"
+#ifdef __linux__
+#include "syscalls_epoll.hpp"
 #else
-#define SYSPRINT(fmt, ...) /* fmt */
-static constexpr bool verbose_syscalls = false;
+#include "../win32/epoll.hpp"
 #endif
-
-#include <fcntl.h>
-#include <signal.h>
-#undef sa_handler
-#include <unistd.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
-#if !defined(__OpenBSD__) && !defined(TARGET_OS_IPHONE)
-#include <sys/random.h>
-#endif
-extern "C" int dup3(int oldfd, int newfd, int flags);
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/uio.h>
-#if __has_include(<termios.h>)
-#include <termios.h>
-#endif
-#include <sys/syscall.h>
-#ifndef EBADFD
-#define EBADFD EBADF  // OpenBSD, FreeBSD
-#endif
-#define LINUX_SA_ONSTACK	0x08000000
 
 namespace riscv {
 template <AddressType address_t>
@@ -1168,16 +1142,6 @@ static void syscall_statx(Machine<address_t>& machine)
 }
 #endif // __linux__
 
-#include "syscalls_mman.cpp"
-
-#include "syscalls_select.cpp"
-#include "syscalls_poll.cpp"
-#ifdef __linux__
-#include "syscalls_epoll.cpp"
-#else
-#include "../win32/epoll.cpp"
-#endif
-
 template <AddressType address_t>
 void Machine<address_t>::setup_newlib_syscalls()
 {
@@ -1394,4 +1358,4 @@ FileDescriptors::~FileDescriptors() {
 	}
 }
 
-} // riscv
+} // namespace riscv

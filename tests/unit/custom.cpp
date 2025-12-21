@@ -1,7 +1,6 @@
 #include <catch.hpp>
 
 #include <any>
-#include <libriscv/instructions/rv32i_instr.hpp>
 #include <libriscv/machine.hpp>
 #include "custom.hpp"
 extern std::vector<uint8_t> build_and_load(const std::string& code,

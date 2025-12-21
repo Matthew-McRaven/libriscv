@@ -80,7 +80,8 @@ configure_file(libriscv_settings.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/libriscv_settings.h)
 configure_file(libriscv.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libriscv.pc)
 
-add_library(riscv ${SOURCES})
+add_library(riscv ${SOURCES}
+  libriscv/machine.cpp)
 if(COSMOPOLITAN)
   target_compile_options(riscv PUBLIC -fexceptions)
 endif()

@@ -37,42 +37,39 @@ ssize_t write(int fd, const void *buf, size_t count);
 
 namespace riscv
 {
-	static constexpr int RISCV32  = 4; /* 32-bits CPU */
-	static constexpr int RISCV64  = 8; /* 64-bits CPU */
-	static constexpr int RISCV128 = 16; /* 128-bits CPU */
+using RISCV32 = uint32_t; /* 32-bits CPU */
+using RISCV64 = uint64_t; /* 64-bits CPU */
 
-	/// Machine is a RISC-V emulator. The W template parameter is
-	/// used to determine the bit-architecture, like so:
-	/// 32-bit:  Machine<RISCV32>, 64-bit:  Machine<RISCV64>
-	/// 128-bit: Machine<RISCV128>
-	///
-	/// It is instantiated with an ELF binary that contains the
-	/// loaded RISC-V program to run:
-	///
-	///  std::vector<uint8_t> mybinary = load_file("riscv_program.elf");
-	///  Machine<RISCV64> machine { mybinary };
-	///  machine.setup_linux_syscalls();
-	///  machine.setup_linux({"program", "arg0"}, {"LC_ALL=C"});
-	///
-	/// @brief A RISC-V emulator
-	/// @tparam W The machine architecture
-	template <AddressType address_t>
-	struct alignas(RISCV_MACHINE_ALIGNMENT) Machine
-	{
-		using syscall_t = void(*)(Machine&);
-		using printer_func = void(*)(const Machine&, const char*, size_t);
-		using stdin_func = long(*)(const Machine&, char*, size_t);
-		using rdtime_func = uint64_t(*)(const Machine&);
+/// Machine is a RISC-V emulator. The W template parameter is
+/// used to determine the bit-architecture, like so:
+/// 32-bit:  Machine<RISCV32>, 64-bit:  Machine<RISCV64>
+/// 128-bit: Machine<RISCV128>
+///
+/// It is instantiated with an ELF binary that contains the
+/// loaded RISC-V program to run:
+///
+///  std::vector<uint8_t> mybinary = load_file("riscv_program.elf");
+///  Machine<RISCV64> machine { mybinary };
+///  machine.setup_linux_syscalls();
+///  machine.setup_linux({"program", "arg0"}, {"LC_ALL=C"});
+///
+/// @brief A RISC-V emulator
+/// @tparam W The machine architecture
+template <AddressType address_t> struct alignas(RISCV_MACHINE_ALIGNMENT) Machine {
+  using syscall_t = void (*)(Machine &);
+  using printer_func = void (*)(const Machine &, const char *, size_t);
+  using stdin_func = long (*)(const Machine &, char *, size_t);
+  using rdtime_func = uint64_t (*)(const Machine &);
 
-		/// The machine takes the binary as a const reference and does not
-		/// own it, instead the binary data must be kept alive with the machine
-		/// and not moved or reallocated.
-		///
-		/// @brief Construct a machine with string_view pointing to a RISC-V binary
-		/// @param binary The RISC-V binary that must outlive the machine
-		/// @note See common.hpp for MachineOptions
-		Machine(std::string_view binary, const MachineOptions<address_t>& = {});
-		Machine(const std::vector<uint8_t>& binary, const MachineOptions<address_t>& = {});
+  /// The machine takes the binary as a const reference and does not
+  /// own it, instead the binary data must be kept alive with the machine
+  /// and not moved or reallocated.
+  ///
+  /// @brief Construct a machine with string_view pointing to a RISC-V binary
+  /// @param binary The RISC-V binary that must outlive the machine
+  /// @note See common.hpp for MachineOptions
+  Machine(std::string_view binary, const MachineOptions<address_t> & = {});
+  Machine(const std::vector<uint8_t> &binary, const MachineOptions<address_t> & = {});
 #if RISCV_SPAN_AVAILABLE
 		/// @brief Construct a machine with std::span pointing to a RISC-V binary
 		/// @param binary The RISC-V binary that must outlive the machine
@@ -489,6 +486,6 @@ namespace riscv
     static void default_printer(const Machine &, const char *, size_t);
     static long default_stdin(const Machine &, char *, size_t);
     static uint64_t default_rdtime(const Machine&);
-	};
+};
 
   } // namespace riscv

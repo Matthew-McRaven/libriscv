@@ -1,32 +1,32 @@
+#include "../common.hpp"
+
 /// Linux memory mapping system call emulation
 /// Works on all platforms
 #define LINUX_MAP_ANONYMOUS        0x20
 #define LINUX_MAP_NORESERVE     0x04000
 #define LINUX_MAP_FIXED         0x10
-
-template <AddressType address_t>
-static void add_mman_syscalls()
-{
-	// munmap
-	Machine<address_t>::install_syscall_handler(215,
-	[] (Machine<address_t>& machine) {
-		const auto addr = machine.sysarg(0);
-		const auto len  = machine.sysarg(1);
-		if (addr + len < addr)
-			throw MachineException(SYSTEM_CALL_FAILED, "munmap() arguments overflow");
-		machine.memory.free_pages(addr, len);
+#include "../common.hpp"
+#include "../machine.hpp"
+#include "./syscalls.hpp"
+namespace riscv {
+template <AddressType address_t> static void add_mman_syscalls() {
+  // munmap
+  Machine<address_t>::install_syscall_handler(215, [](Machine<address_t> &machine) {
+    const auto addr = machine.sysarg(0);
+    const auto len = machine.sysarg(1);
+    if (addr + len < addr) throw MachineException(SYSTEM_CALL_FAILED, "munmap() arguments overflow");
+    machine.memory.free_pages(addr, len);
 		if (addr >= machine.memory.mmap_start() && addr + len <= machine.memory.mmap_address()) {
 			machine.memory.mmap_unmap(addr, len);
 		}
 		machine.set_result(0);
 		SYSPRINT(">>> munmap(0x%lX, len=%zu) => %d\n",
 			(long)addr, (size_t)len, (int)machine.return_value());
-	});
-	// mmap
-	Machine<address_t>::install_syscall_handler(222,
-	[] (Machine<address_t>& machine) {
-		const auto addr_g = machine.sysarg(0);
-		auto length       = machine.sysarg(1);
+  });
+  // mmap
+  Machine<address_t>::install_syscall_handler(222, [](Machine<address_t> &machine) {
+    const auto addr_g = machine.sysarg(0);
+    auto length       = machine.sysarg(1);
 		const auto prot   = machine.template sysarg<int>(2);
 		auto flags        = machine.template sysarg<int>(3);
 		const auto vfd    = machine.template sysarg<int>(4);
@@ -38,16 +38,16 @@ static void add_mman_syscalls()
 		};
 		SYSPRINT(">>> mmap(addr 0x%lX, len %zu, prot %#x, flags %#X, vfd=%d voff=%zu)\n",
 				(long)addr_g, (size_t)length, prot, flags, vfd, size_t(voff));
-		#define MMAP_HAS_FAILED() { \
-			machine.set_result(address_t(-1)); \
-			SYSPRINT("<<< mmap(addr 0x%lX, len %zu, ...) = MAP_FAILED\n", (long)addr_g, (size_t)length); \
-			return; \
-		}
+#define MMAP_HAS_FAILED()                                                                                              \
+  {                                                                                                                    \
+    machine.set_result(address_t(-1));                                                                                 \
+    SYSPRINT("<<< mmap(addr 0x%lX, len %zu, ...) = MAP_FAILED\n", (long)addr_g, (size_t)length);                       \
+    return;                                                                                                            \
+  }
 
-		if (addr_g % Page::size() != 0)
-			MMAP_HAS_FAILED();
+    if (addr_g % Page::size() != 0) MMAP_HAS_FAILED();
 
-		auto& nextfree = machine.memory.mmap_address();
+    auto& nextfree = machine.memory.mmap_address();
 		length = (length + PageMask) & ~address_t(PageMask);
 		address_t result = address_t(-1);
 
@@ -70,7 +70,7 @@ static void add_mman_syscalls()
 				std::array<riscv::vBuffer, 256> buffers;
 				const size_t cnt =
 					machine.memory.gather_writable_buffers_from_range(buffers.size(), buffers.data(), dst, length);
-				// Seek to the given offset in the file and read the contents into guest memory
+        // Seek to the given offset in the file and read the contents into guest memory
 #ifdef _WIN32
 				if (_lseek(real_fd, voff, SEEK_SET) == -1L)
 					MMAP_HAS_FAILED();
@@ -140,9 +140,9 @@ static void add_mman_syscalls()
 		machine.set_result(result);
 		SYSPRINT("<<< mmap(addr 0x%lX, len %zu, ...) = 0x%lX\n",
 				(long)addr_g, (size_t)length, (long)result);
-	});
-	// mremap
-	Machine<address_t>::install_syscall_handler(216,
+  });
+  // mremap
+  Machine<address_t>::install_syscall_handler(216,
 	[] (Machine<address_t>& machine) {
 		[[maybe_unused]] static constexpr int LINUX_MREMAP_MAYMOVE = 0x0001;
 		[[maybe_unused]] static constexpr int LINUX_MREMAP_FIXED   = 0x0002;
@@ -219,3 +219,4 @@ static void add_mman_syscalls()
 			(uint64_t)addr, (size_t)len, advice, (int)machine.return_value());
 	});
 }
+} // namespace riscv

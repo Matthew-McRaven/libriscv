@@ -1,7 +1,14 @@
+#pragma once
+
 #include <sys/epoll.h>
 #include <sys/eventfd.h>
 //#define SYSPRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
 
+#include "../common.hpp"
+#include "../machine.hpp"
+#include "./syscalls.hpp"
+
+namespace riscv {
 template <AddressType address_t>
 static void syscall_eventfd2(Machine<address_t>& machine)
 {
@@ -112,3 +119,4 @@ static void syscall_epoll_pwait(Machine<address_t>& machine)
 	SYSPRINT("SYSCALL epoll_pwait, epoll_fd: %d (real_fd: %d), maxevents: %d timeout: %d = %ld\n",
 		   vepoll_fd, real_fd, maxevents, timeout, (long)machine.return_value());
 }
+} // namespace riscv
