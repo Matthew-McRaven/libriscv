@@ -22,7 +22,7 @@ namespace riscv
 
 #ifdef RISCV_FCSR
 	template <int W, typename T>
-	static void fsflags(CPU<W>& cpu, long double exact, T& inexact) {
+	static void fsflags(CPU<address_t>& cpu, long double exact, T& inexact) {
 		if constexpr (fcsr_emulation) {
 			auto& fcsr = cpu.registers().fcsr();
 			fcsr.fflags = 0;
@@ -41,9 +41,9 @@ namespace riscv
 #else
 #define fsflags(c, e, i) /**/
 #endif
-	template <bool Signaling, int W, typename T, typename R>
-	static void feqflags(CPU<W>& cpu, T a, T b, R& dst) {
-		if constexpr (fcsr_emulation) {
+  template <bool Signaling, AddressType address_t, typename T, typename R>
+  static void feqflags(CPU<address_t> &cpu, T a, T b, R &dst) {
+    if constexpr (fcsr_emulation) {
 			auto& fcsr = cpu.registers().fcsr();
 			fcsr.fflags = 0;
 			if (std::isnan(a) || std::isnan(b)) {
@@ -58,47 +58,47 @@ namespace riscv
 					fcsr.fflags |= 16;
 			}
 		}
-	}
+  }
 
-  template <int W> void FLW_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FLW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto addr = cpu.reg(fi.Itype.rs1) + fi.Itype.signed_imm();
     auto &dst = cpu.registers().getfl(fi.Itype.rd);
     dst.load_u32(cpu.machine().memory.template read<uint32_t>(addr));
   };
-  template <int W> int FLW_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FLW_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 8> insn{"???", "FLH", "FLW", "FLD", "FLQ", "???", "???", "???"};
     return snprintf(buffer, len, "%s %s, [%s%+d]", insn[fi.Itype.funct3], RISCV::flpname(fi.Itype.rd),
                     RISCV::regname(fi.Stype.rs1), fi.Itype.signed_imm());
   };
-  template <int W> void FLD_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FLD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto addr = cpu.reg(fi.Itype.rs1) + fi.Itype.signed_imm();
     auto &dst = cpu.registers().getfl(fi.Itype.rd);
     dst.load_u64(cpu.machine().memory.template read<uint64_t>(addr));
   };
 
-  template <int W> void FSW_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FSW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     const auto &src = cpu.registers().getfl(fi.Stype.rs2);
     auto addr = cpu.reg(fi.Stype.rs1) + fi.Stype.signed_imm();
     cpu.machine().memory.template write<uint32_t>(addr, src.i32[0]);
   };
-  template <int W> int FSW_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FSW_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 8> insn{"???", "FSH", "FSW", "FSD", "FSQ", "???", "???", "???"};
     return snprintf(buffer, len, "%s [%s%+d], %s", insn[fi.Stype.funct3], RISCV::regname(fi.Stype.rs1),
                     fi.Stype.signed_imm(), RISCV::flpname(fi.Stype.rs2));
   };
-  template <int W> void FSD_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FSD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     const auto &src = cpu.registers().getfl(fi.Stype.rs2);
     auto addr = cpu.reg(fi.Stype.rs1) + fi.Stype.signed_imm();
     cpu.machine().memory.template write<uint64_t>(addr, src.i64);
   };
 
-  template <int W> void FMADD_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FMADD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -114,14 +114,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FMADD_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FMADD_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FMADD.S", "FMADD.D", "???", "FMADD.Q"};
     return snprintf(buffer, len, "%s %s * %s + %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rs3), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FMSUB_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FMSUB_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -137,14 +137,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FMSUB_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FMSUB_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FMSUB.S", "FMSUB.D", "???", "FMSUB.Q"};
     return snprintf(buffer, len, "%s %s * %s - %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rs3), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FNMADD_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FNMADD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -160,14 +160,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FNMADD_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FNMADD_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FMADD.S", "FMADD.D", "???", "FMADD.Q"};
     return snprintf(buffer, len, "%s %s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FNMSUB_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FNMSUB_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -183,14 +183,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FNMSUB_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FNMSUB_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FNMSUB.S", "FNMSUB.D", "???", "FNMSUB.Q"};
     return snprintf(buffer, len, "%s -(%s * %s) + %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rs3), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FADD_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FADD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -205,14 +205,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FADD_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FADD_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FADD.S", "FADD.D", "???", "FADD.Q"};
     return snprintf(buffer, len, "%s %s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FSUB_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FSUB_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -227,14 +227,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FSUB_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FSUB_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FSUB.S", "FSUB.D", "???", "FSUB.Q"};
     return snprintf(buffer, len, "%s %s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FMUL_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FMUL_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -249,14 +249,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FMUL_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FMUL_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FMUL.S", "FMUL.D", "???", "FMUL.Q"};
     return snprintf(buffer, len, "%s %s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FDIV_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FDIV_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -271,14 +271,14 @@ namespace riscv
       cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FDIV_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FDIV_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FDIV.S", "FDIV.D", "???", "FDIV.Q"};
     return snprintf(buffer, len, "%s %s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rs2), RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FSQRT_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FSQRT_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
@@ -294,14 +294,14 @@ namespace riscv
     default: cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W> int FSQRT_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FSQRT_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FSQRT.S", "FSQRT.D", "???", "FSQRT.Q"};
     return snprintf(buffer, len, "%s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FMIN_FMAX_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_COLDATTR {
+  template <AddressType address_t> void FMIN_FMAX_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_COLDATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
     auto &rs2 = cpu.registers().getfl(fi.R4type.rs2);
@@ -347,15 +347,15 @@ namespace riscv
       else cpu.registers().fcsr().fflags = 0;
     }
   };
-  template <int W>
-  int FMIN_FMAX_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FMIN_FMAX_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 8> insn{"FMIN", "FMAX", "???", "???", "???", "???", "???", "???"};
     return snprintf(buffer, len, "%s.%c %s %s, %s", insn[fi.R4type.funct3], RISCV::flpsize(fi.R4type.funct2),
                     RISCV::flpname(fi.R4type.rs1), RISCV::flpname(fi.R4type.rs2), RISCV::regname(fi.R4type.rd));
   };
 
-  template <int W> void FEQ_FLT_FLE_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FEQ_FLT_FLE_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
     auto &rs2 = cpu.registers().getfl(fi.R4type.rs2);
@@ -389,15 +389,15 @@ namespace riscv
     default: cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W>
-  int FEQ_FLT_FLE_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FEQ_FLT_FLE_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> insn{"FLE", "FLT", "FEQ", "F???"};
     return snprintf(buffer, len, "%s.%c %s %s, %s", insn[fi.R4type.funct3], RISCV::flpsize(fi.R4type.funct2),
                     RISCV::flpname(fi.R4type.rs1), RISCV::flpname(fi.R4type.rs2), RISCV::regname(fi.R4type.rd));
   };
 
-  template <int W> void FCVT_SD_DS_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FCVT_SD_DS_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
@@ -411,15 +411,15 @@ namespace riscv
     default: cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W>
-  int FCVT_SD_DS_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FCVT_SD_DS_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FCVT.S.D", "FCVT.D.S", "???", "???"};
     return snprintf(buffer, len, "%s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FCVT_W_SD_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FCVT_W_SD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
     auto &dst = cpu.reg(fi.R4type.rd);
@@ -446,15 +446,15 @@ namespace riscv
     }
     cpu.trigger_exception(ILLEGAL_OPERATION);
   };
-  template <int W>
-  int FCVT_W_SD_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FCVT_W_SD_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FCVT.W.S", "FCVT.W.D", "???", "FCVT.W.Q"};
     return snprintf(buffer, len, "%s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
                     RISCV::regname(fi.R4type.rd));
   };
 
-  template <int W> void FCVT_SD_W_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FCVT_SD_W_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.reg(fi.R4type.rs1);
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
@@ -483,15 +483,15 @@ namespace riscv
     }
     cpu.trigger_exception(ILLEGAL_OPERATION);
   };
-  template <int W>
-  int FCVT_SD_W_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FCVT_SD_W_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FCVT.S.W", "FCVT.D.W", "???", "FCVT.Q.W"};
     return snprintf(buffer, len, "%s %s, %s", f2[fi.R4type.funct2], RISCV::regname(fi.R4type.rs1),
                     RISCV::flpname(fi.R4type.rd));
   };
 
-  template <int W> void FSGNJ_NX_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FSGNJ_NX_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
     auto &rs2 = cpu.registers().getfl(fi.R4type.rs2);
@@ -533,8 +533,8 @@ namespace riscv
     default: cpu.trigger_exception(ILLEGAL_OPERATION);
     }
   };
-  template <int W>
-  int FSGNJ_NX_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FSGNJ_NX_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
 
     if (fi.R4type.rs1 == fi.R4type.rs2) {
@@ -548,7 +548,7 @@ namespace riscv
   };
 
   // 1110 f3 = 0x1
-  template <int W> void FCLASS_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FCLASS_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.reg(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -580,7 +580,7 @@ namespace riscv
     }
     cpu.trigger_exception(ILLEGAL_OPERATION);
   };
-  template <int W> int FCLASS_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t> int FCLASS_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FCLASS.S", "FCLASS.D", "???", "FCLASS.Q"};
     return snprintf(buffer, len, "%s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
@@ -588,7 +588,7 @@ namespace riscv
   };
 
   // 1110 f3 = 0x0
-  template <int W> void FMV_X_W_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FMV_X_W_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &dst = cpu.reg(fi.R4type.rd);
     auto &rs1 = cpu.registers().getfl(fi.R4type.rs1);
@@ -609,8 +609,8 @@ namespace riscv
     }
     cpu.trigger_exception(ILLEGAL_OPERATION);
   };
-  template <int W>
-  int FMV_X_W_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FMV_X_W_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FMV.X.W", "FMV.X.D", "???", "FMV.X.Q"};
     return snprintf(buffer, len, "%s %s, %s", f2[fi.R4type.funct2], RISCV::flpname(fi.R4type.rs1),
@@ -618,7 +618,7 @@ namespace riscv
   };
 
   // 1111
-  template <int W> void FMV_W_X_handler(CPU<W> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> void FMV_W_X_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
     const rv32f_instruction fi{instr};
     auto &rs1 = cpu.reg(fi.R4type.rs1);
     auto &dst = cpu.registers().getfl(fi.R4type.rd);
@@ -635,8 +635,8 @@ namespace riscv
     }
     cpu.trigger_exception(ILLEGAL_OPERATION);
   };
-  template <int W>
-  int FMV_W_X_printer(char *buffer, size_t len, const CPU<W> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  int FMV_W_X_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
     const rv32f_instruction fi{instr};
     static const std::array<const char *, 4> f2{"FMV.W.X", "FMV.D.X", "???", "FMV.Q.X"};
     return snprintf(buffer, len, "%s %s, %s", f2[fi.R4type.funct2], RISCV::regname(fi.R4type.rs1),
@@ -646,49 +646,49 @@ namespace riscv
   } // namespace riscv
 
 #ifdef RISCV_32I
-  const riscv::Instruction<4> instr32i_FLW{riscv::FLW_handler, riscv::FLW_printer};
-  const riscv::Instruction<4> instr32i_FLD{riscv::FLD_handler, riscv::FLW_printer};
-  const riscv::Instruction<4> instr32i_FSW{riscv::FSW_handler, riscv::FSW_printer};
-  const riscv::Instruction<4> instr32i_FSD{riscv::FSD_handler, riscv::FSW_printer};
-  const riscv::Instruction<4> instr32i_FMADD{riscv::FMADD_handler, riscv::FMADD_printer};
-  const riscv::Instruction<4> instr32i_FMSUB{riscv::FMSUB_handler, riscv::FMSUB_printer};
-  const riscv::Instruction<4> instr32i_FNMADD{riscv::FNMADD_handler, riscv::FNMADD_printer};
-  const riscv::Instruction<4> instr32i_FNMSUB{riscv::FNMSUB_handler, riscv::FNMSUB_printer};
-  const riscv::Instruction<4> instr32i_FADD{riscv::FADD_handler, riscv::FADD_printer};
-  const riscv::Instruction<4> instr32i_FSUB{riscv::FSUB_handler, riscv::FSUB_printer};
-  const riscv::Instruction<4> instr32i_FMUL{riscv::FMUL_handler, riscv::FMUL_printer};
-  const riscv::Instruction<4> instr32i_FDIV{riscv::FDIV_handler, riscv::FDIV_printer};
-  const riscv::Instruction<4> instr32i_FSQRT{riscv::FSQRT_handler, riscv::FSQRT_printer};
-  const riscv::Instruction<4> instr32i_FMIN_FMAX{riscv::FMIN_FMAX_handler, riscv::FMIN_FMAX_printer};
-  const riscv::Instruction<4> instr32i_FEQ_FLT_FLE{riscv::FEQ_FLT_FLE_handler, riscv::FEQ_FLT_FLE_printer};
-  const riscv::Instruction<4> instr32i_FCVT_SD_DS{riscv::FCVT_SD_DS_handler, riscv::FCVT_SD_DS_printer};
-  const riscv::Instruction<4> instr32i_FCVT_W_SD{riscv::FCVT_W_SD_handler, riscv::FCVT_W_SD_printer};
-  const riscv::Instruction<4> instr32i_FCVT_SD_W{riscv::FCVT_SD_W_handler, riscv::FCVT_SD_W_printer};
-  const riscv::Instruction<4> instr32i_FSGNJ_NX{riscv::FSGNJ_NX_handler, riscv::FSGNJ_NX_printer};
-  const riscv::Instruction<4> instr32i_FCLASS{riscv::FCLASS_handler, riscv::FCLASS_printer};
-  const riscv::Instruction<4> instr32i_FMV_X_W{riscv::FMV_X_W_handler, riscv::FMV_X_W_printer};
-  const riscv::Instruction<4> instr32i_FMV_W_X{riscv::FMV_W_X_handler, riscv::FMV_W_X_printer};
+  const riscv::Instruction<uint32_t> instr32i_FLW{riscv::FLW_handler, riscv::FLW_printer};
+  const riscv::Instruction<uint32_t> instr32i_FLD{riscv::FLD_handler, riscv::FLW_printer};
+  const riscv::Instruction<uint32_t> instr32i_FSW{riscv::FSW_handler, riscv::FSW_printer};
+  const riscv::Instruction<uint32_t> instr32i_FSD{riscv::FSD_handler, riscv::FSW_printer};
+  const riscv::Instruction<uint32_t> instr32i_FMADD{riscv::FMADD_handler, riscv::FMADD_printer};
+  const riscv::Instruction<uint32_t> instr32i_FMSUB{riscv::FMSUB_handler, riscv::FMSUB_printer};
+  const riscv::Instruction<uint32_t> instr32i_FNMADD{riscv::FNMADD_handler, riscv::FNMADD_printer};
+  const riscv::Instruction<uint32_t> instr32i_FNMSUB{riscv::FNMSUB_handler, riscv::FNMSUB_printer};
+  const riscv::Instruction<uint32_t> instr32i_FADD{riscv::FADD_handler, riscv::FADD_printer};
+  const riscv::Instruction<uint32_t> instr32i_FSUB{riscv::FSUB_handler, riscv::FSUB_printer};
+  const riscv::Instruction<uint32_t> instr32i_FMUL{riscv::FMUL_handler, riscv::FMUL_printer};
+  const riscv::Instruction<uint32_t> instr32i_FDIV{riscv::FDIV_handler, riscv::FDIV_printer};
+  const riscv::Instruction<uint32_t> instr32i_FSQRT{riscv::FSQRT_handler, riscv::FSQRT_printer};
+  const riscv::Instruction<uint32_t> instr32i_FMIN_FMAX{riscv::FMIN_FMAX_handler, riscv::FMIN_FMAX_printer};
+  const riscv::Instruction<uint32_t> instr32i_FEQ_FLT_FLE{riscv::FEQ_FLT_FLE_handler, riscv::FEQ_FLT_FLE_printer};
+  const riscv::Instruction<uint32_t> instr32i_FCVT_SD_DS{riscv::FCVT_SD_DS_handler, riscv::FCVT_SD_DS_printer};
+  const riscv::Instruction<uint32_t> instr32i_FCVT_W_SD{riscv::FCVT_W_SD_handler, riscv::FCVT_W_SD_printer};
+  const riscv::Instruction<uint32_t> instr32i_FCVT_SD_W{riscv::FCVT_SD_W_handler, riscv::FCVT_SD_W_printer};
+  const riscv::Instruction<uint32_t> instr32i_FSGNJ_NX{riscv::FSGNJ_NX_handler, riscv::FSGNJ_NX_printer};
+  const riscv::Instruction<uint32_t> instr32i_FCLASS{riscv::FCLASS_handler, riscv::FCLASS_printer};
+  const riscv::Instruction<uint32_t> instr32i_FMV_X_W{riscv::FMV_X_W_handler, riscv::FMV_X_W_printer};
+  const riscv::Instruction<uint32_t> instr32i_FMV_W_X{riscv::FMV_W_X_handler, riscv::FMV_W_X_printer};
 
-  const riscv::Instruction<8> instr64i_FLW{riscv::FLW_handler, riscv::FLW_printer};
-  const riscv::Instruction<8> instr64i_FLD{riscv::FLD_handler, riscv::FLW_printer};
-  const riscv::Instruction<8> instr64i_FSW{riscv::FSW_handler, riscv::FSW_printer};
-  const riscv::Instruction<8> instr64i_FSD{riscv::FSD_handler, riscv::FSW_printer};
-  const riscv::Instruction<8> instr64i_FMADD{riscv::FMADD_handler, riscv::FMADD_printer};
-  const riscv::Instruction<8> instr64i_FMSUB{riscv::FMSUB_handler, riscv::FMSUB_printer};
-  const riscv::Instruction<8> instr64i_FNMADD{riscv::FNMADD_handler, riscv::FNMADD_printer};
-  const riscv::Instruction<8> instr64i_FNMSUB{riscv::FNMSUB_handler, riscv::FNMSUB_printer};
-  const riscv::Instruction<8> instr64i_FADD{riscv::FADD_handler, riscv::FADD_printer};
-  const riscv::Instruction<8> instr64i_FSUB{riscv::FSUB_handler, riscv::FSUB_printer};
-  const riscv::Instruction<8> instr64i_FMUL{riscv::FMUL_handler, riscv::FMUL_printer};
-  const riscv::Instruction<8> instr64i_FDIV{riscv::FDIV_handler, riscv::FDIV_printer};
-  const riscv::Instruction<8> instr64i_FSQRT{riscv::FSQRT_handler, riscv::FSQRT_printer};
-  const riscv::Instruction<8> instr64i_FMIN_FMAX{riscv::FMIN_FMAX_handler, riscv::FMIN_FMAX_printer};
-  const riscv::Instruction<8> instr64i_FEQ_FLT_FLE{riscv::FEQ_FLT_FLE_handler, riscv::FEQ_FLT_FLE_printer};
-  const riscv::Instruction<8> instr64i_FCVT_SD_DS{riscv::FCVT_SD_DS_handler, riscv::FCVT_SD_DS_printer};
-  const riscv::Instruction<8> instr64i_FCVT_W_SD{riscv::FCVT_W_SD_handler, riscv::FCVT_W_SD_printer};
-  const riscv::Instruction<8> instr64i_FCVT_SD_W{riscv::FCVT_SD_W_handler, riscv::FCVT_SD_W_printer};
-  const riscv::Instruction<8> instr64i_FSGNJ_NX{riscv::FSGNJ_NX_handler, riscv::FSGNJ_NX_printer};
-  const riscv::Instruction<8> instr64i_FCLASS{riscv::FCLASS_handler, riscv::FCLASS_printer};
-  const riscv::Instruction<8> instr64i_FMV_X_W{riscv::FMV_X_W_handler, riscv::FMV_X_W_printer};
-  const riscv::Instruction<8> instr64i_FMV_W_X{riscv::FMV_W_X_handler, riscv::FMV_W_X_printer};
+  const riscv::Instruction<uint64_t> instr64i_FLW{riscv::FLW_handler, riscv::FLW_printer};
+  const riscv::Instruction<uint64_t> instr64i_FLD{riscv::FLD_handler, riscv::FLW_printer};
+  const riscv::Instruction<uint64_t> instr64i_FSW{riscv::FSW_handler, riscv::FSW_printer};
+  const riscv::Instruction<uint64_t> instr64i_FSD{riscv::FSD_handler, riscv::FSW_printer};
+  const riscv::Instruction<uint64_t> instr64i_FMADD{riscv::FMADD_handler, riscv::FMADD_printer};
+  const riscv::Instruction<uint64_t> instr64i_FMSUB{riscv::FMSUB_handler, riscv::FMSUB_printer};
+  const riscv::Instruction<uint64_t> instr64i_FNMADD{riscv::FNMADD_handler, riscv::FNMADD_printer};
+  const riscv::Instruction<uint64_t> instr64i_FNMSUB{riscv::FNMSUB_handler, riscv::FNMSUB_printer};
+  const riscv::Instruction<uint64_t> instr64i_FADD{riscv::FADD_handler, riscv::FADD_printer};
+  const riscv::Instruction<uint64_t> instr64i_FSUB{riscv::FSUB_handler, riscv::FSUB_printer};
+  const riscv::Instruction<uint64_t> instr64i_FMUL{riscv::FMUL_handler, riscv::FMUL_printer};
+  const riscv::Instruction<uint64_t> instr64i_FDIV{riscv::FDIV_handler, riscv::FDIV_printer};
+  const riscv::Instruction<uint64_t> instr64i_FSQRT{riscv::FSQRT_handler, riscv::FSQRT_printer};
+  const riscv::Instruction<uint64_t> instr64i_FMIN_FMAX{riscv::FMIN_FMAX_handler, riscv::FMIN_FMAX_printer};
+  const riscv::Instruction<uint64_t> instr64i_FEQ_FLT_FLE{riscv::FEQ_FLT_FLE_handler, riscv::FEQ_FLT_FLE_printer};
+  const riscv::Instruction<uint64_t> instr64i_FCVT_SD_DS{riscv::FCVT_SD_DS_handler, riscv::FCVT_SD_DS_printer};
+  const riscv::Instruction<uint64_t> instr64i_FCVT_W_SD{riscv::FCVT_W_SD_handler, riscv::FCVT_W_SD_printer};
+  const riscv::Instruction<uint64_t> instr64i_FCVT_SD_W{riscv::FCVT_SD_W_handler, riscv::FCVT_SD_W_printer};
+  const riscv::Instruction<uint64_t> instr64i_FSGNJ_NX{riscv::FSGNJ_NX_handler, riscv::FSGNJ_NX_printer};
+  const riscv::Instruction<uint64_t> instr64i_FCLASS{riscv::FCLASS_handler, riscv::FCLASS_printer};
+  const riscv::Instruction<uint64_t> instr64i_FMV_X_W{riscv::FMV_X_W_handler, riscv::FMV_X_W_printer};
+  const riscv::Instruction<uint64_t> instr64i_FMV_W_X{riscv::FMV_W_X_handler, riscv::FMV_W_X_printer};
 #endif

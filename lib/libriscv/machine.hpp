@@ -56,11 +56,10 @@ namespace riscv
 	///
 	/// @brief A RISC-V emulator
 	/// @tparam W The machine architecture
-	template <int W>
+	template <AddressType address_t>
 	struct alignas(RISCV_MACHINE_ALIGNMENT) Machine
 	{
 		using syscall_t = void(*)(Machine&);
-		using address_t = address_type<W>; // one unsigned memory address
 		using printer_func = void(*)(const Machine&, const char*, size_t);
 		using stdin_func = long(*)(const Machine&, char*, size_t);
 		using rdtime_func = uint64_t(*)(const Machine&);
@@ -72,18 +71,18 @@ namespace riscv
 		/// @brief Construct a machine with string_view pointing to a RISC-V binary
 		/// @param binary The RISC-V binary that must outlive the machine
 		/// @note See common.hpp for MachineOptions
-		Machine(std::string_view binary, const MachineOptions<W>& = {});
-		Machine(const std::vector<uint8_t>& binary, const MachineOptions<W>& = {});
+		Machine(std::string_view binary, const MachineOptions<address_t>& = {});
+		Machine(const std::vector<uint8_t>& binary, const MachineOptions<address_t>& = {});
 #if RISCV_SPAN_AVAILABLE
 		/// @brief Construct a machine with std::span pointing to a RISC-V binary
 		/// @param binary The RISC-V binary that must outlive the machine
 		/// @note See common.hpp for MachineOptions
-		Machine(std::span<const uint8_t> binary, const MachineOptions<W>& = {});
+		Machine(std::span<const uint8_t> binary, const MachineOptions<address_t>& = {});
 #endif
 
 		/// @brief Create an empty RISC-V machine
 		/// @param opts Machine options
-		Machine(const MachineOptions<W>& opts = {});
+		Machine(const MachineOptions<address_t>& opts = {});
 
 		/// @brief Create a thin fork from another Machine.
 		/// The main machine that forks are based on must outlive its forks.
@@ -95,7 +94,7 @@ namespace riscv
 		/// all cached structures like execute segment, and the instruction cache
 		/// is also loaned. The main machine must not be destroyed or (in most cases)
 		/// modified while the fork is running. Forks consume very little resources.
-		Machine(const Machine& main, const MachineOptions<W>& opts = {});
+		Machine(const Machine& main, const MachineOptions<address_t>& opts = {});
 
 		/// @brief Tears down the machine, freeing all owned memory and pages.
 		~Machine();
@@ -105,11 +104,11 @@ namespace riscv
 		bool has_options() const noexcept { return m_options != nullptr; }
 		/// @brief Set the machine options that will be used for future forked machines and execute segments.
 		/// @param opts The machine options.
-		void set_options(std::shared_ptr<MachineOptions<W>> opts) noexcept { m_options = std::move(opts); }
+		void set_options(std::shared_ptr<MachineOptions<address_t>> opts) noexcept { m_options = std::move(opts); }
 		/// @brief Returns the machine options that were used to create the machine.
 		/// @return The machine options.
-		MachineOptions<W>& options() const;
-		MachineOptions<W>& options();
+		MachineOptions<address_t>& options() const;
+		MachineOptions<address_t>& options();
 
 		/// @brief Simulate RISC-V starting from the PC register, and
 		/// stopping when at most @max_instructions have been executed.
@@ -179,8 +178,8 @@ namespace riscv
 		/// @param val The value to add to the instruction counter.
 		void     penalize(uint32_t val);
 
-		CPU<W>    cpu;
-		Memory<W> memory;
+		CPU<address_t>    cpu;
+		Memory<address_t> memory;
 
 		/// @brief Copy data into the programs virtual memory, from the host.
 		/// Page protections apply. Use memory.set_page_attr() to remove page
@@ -220,16 +219,16 @@ namespace riscv
 		template <typename T = address_t>
 		inline T sysarg(int idx) const;
 
-		/// @brief Retrieve a tuple of arguments based on the given types.
-		/// Example: auto [str, i, f] machine.sysargs<std::string, int, float> ();
-		/// Example: auto [addr, len] machine.sysargs<address_type<W>, unsigned> ();
-		/// Note: String views and riscv::Buffer consume 2 registers each.
-		/// The registers consumed are the address and the length, consequtively:
-		/// Example: auto [buffer] machine.sysargs<riscv::Buffer> ();
-		/// Example: auto [view] machine.sysargs<std::string_view> ();
-		/// @tparam ...Args A list of argument types.
-		/// @return The resolved arguments in a tuple.
-		template <typename... Args>
+    /// @brief Retrieve a tuple of arguments based on the given types.
+    /// Example: auto [str, i, f] machine.sysargs<std::string, int, float> ();
+    /// Example: auto [addr, len] machine.sysargs<address_t, unsigned> ();
+    /// Note: String views and riscv::Buffer consume 2 registers each.
+    /// The registers consumed are the address and the length, consequtively:
+    /// Example: auto [buffer] machine.sysargs<riscv::Buffer> ();
+    /// Example: auto [view] machine.sysargs<std::string_view> ();
+    /// @tparam ...Args A list of argument types.
+    /// @return The resolved arguments in a tuple.
+    template <typename... Args>
 		inline auto sysargs() const;
 
 		/// @brief Set the result of a system or function call.
@@ -378,7 +377,7 @@ namespace riscv
 		/// @param handlers A list of system call handlers.
 		static void install_syscall_handlers(std::initializer_list<std::pair<size_t, syscall_t>>);
 
-		static void unknown_syscall_handler(Machine<W>&);
+		static void unknown_syscall_handler(Machine<address_t>&);
 		static constexpr auto initialize_syscalls() noexcept {
 			std::array<syscall_t, RISCV_SYSCALLS_MAX> arr;
 			for (auto& h : arr) h = unknown_syscall_handler;
@@ -395,7 +394,7 @@ namespace riscv
 		void system(union rv32i_instruction);
 		// User callback for unhandled CSRs
 		static inline void (*on_unhandled_csr) (Machine&, int, int, int)
-			= [] (Machine<W>&, int, int, int) {};
+			= [] (Machine<address_t>&, int, int, int) {};
 
 		// Returns true if this machine is forked from another, and thus
 		// dependent on the original machine to function properly.
@@ -433,8 +432,8 @@ namespace riscv
 		static void register_clobbering_syscall(size_t sysnum);
 		static bool is_clobbering_syscall(size_t sysnum) noexcept;
 		// Threads: Access to thread internal structures
-		const MultiThreading<W>& threads() const;
-		MultiThreading<W>& threads();
+		const MultiThreading<address_t>& threads() const;
+		MultiThreading<address_t>& threads();
 		bool has_threads() const noexcept { return this->m_mt != nullptr; }
 		int gettid() const noexcept;
 		// FileDescriptors: Access to translation between guest fds
@@ -442,8 +441,8 @@ namespace riscv
 		const FileDescriptors& fds() const;
 		FileDescriptors& fds();
 		// Signal structure, lazily created
-		Signals<W>& signals();
-		SignalAction<W>& sigaction(int sig) { return signals().get(sig); }
+		Signals<address_t>& signals();
+		SignalAction<address_t>& sigaction(int sig) { return signals().get(sig); }
 
 		// Resets the machine to the initial state. It is, however, not a
 		// reliable way to reset complex machines with all kinds of features
@@ -481,15 +480,15 @@ namespace riscv
 		mutable stdin_func   m_stdin = default_stdin;
 		mutable rdtime_func  m_rdtime = default_rdtime;
 		std::unique_ptr<Arena> m_arena;
-		std::unique_ptr<MultiThreading<W>> m_mt = nullptr;
+		std::unique_ptr<MultiThreading<address_t>> m_mt = nullptr;
 		std::unique_ptr<FileDescriptors> m_fds = nullptr;
-		std::unique_ptr<Signals<W>> m_signals = nullptr;
-		std::shared_ptr<MachineOptions<W>> m_options = nullptr;
+		std::unique_ptr<Signals<address_t>> m_signals = nullptr;
+		std::shared_ptr<MachineOptions<address_t>> m_options = nullptr;
 
-		static_assert((W == 4 || W == 8 || W == 16), "Must be either 32-bit, 64-bit or 128-bit ISA");
-		static void default_printer(const Machine&, const char*, size_t);
-		static long default_stdin(const Machine&, char*, size_t);
-		static uint64_t default_rdtime(const Machine&);
+    static_assert((sizeof(address_t) == 4 || sizeof(address_t) == 8), "Must be either 32-bit or 64-bit ISA");
+    static void default_printer(const Machine &, const char *, size_t);
+    static long default_stdin(const Machine &, char *, size_t);
+    static uint64_t default_rdtime(const Machine&);
 	};
 
   } // namespace riscv

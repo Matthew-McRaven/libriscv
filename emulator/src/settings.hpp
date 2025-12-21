@@ -1,10 +1,10 @@
 #pragma once
 #include <string>
 #include <unordered_set>
-template <int W>
-static std::vector<riscv::address_type<W>> load_jump_hints(const std::string& filename, bool verbose = false);
-template <int W>
-static void store_jump_hints(const std::string& filename, const std::vector<riscv::address_type<W>>& hints);
+template <AddressType address_t>
+static std::vector<riscv::address_t> load_jump_hints(const std::string& filename, bool verbose = false);
+template <AddressType address_t>
+static void store_jump_hints(const std::string& filename, const std::vector<riscv::address_t>& hints);
 
 #if defined(EMULATOR_MODE_LINUX)
 	static constexpr bool full_linux_guest = true;

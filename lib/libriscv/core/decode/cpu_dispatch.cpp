@@ -36,9 +36,9 @@ namespace riscv
 
 #define NEXT_BLOCK(len, OF)                 \
 	pc += len;                              \
-	decoder += len >> DecoderCache<W>::SHIFT;              \
+	decoder += len >> DecoderCache<address_t>::SHIFT;              \
 	if constexpr (FUZZING) /* Give OOB-aid to ASAN */      \
-	decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT]; \
+	decoder = &exec_decoder[pc >> DecoderCache<address_t>::SHIFT]; \
 	if constexpr (OF) {						\
 		if (UNLIKELY(counter.overflowed())) \
 			goto check_jump;				\
@@ -49,11 +49,11 @@ namespace riscv
 
 #define SAFE_INSTR_NEXT(len)                  \
 	pc += len;                                \
-	decoder += len >> DecoderCache<W>::SHIFT; \
+	decoder += len >> DecoderCache<address_t>::SHIFT; \
 	counter.increment_counter(1);
 
 #define NEXT_SEGMENT()                                       \
-	decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];  \
+	decoder = &exec_decoder[pc >> DecoderCache<address_t>::SHIFT];  \
 	pc += decoder->block_bytes();                            \
 	counter.increment_counter(decoder->instruction_count()); \
 	EXECUTE_INSTR();
@@ -73,24 +73,23 @@ namespace riscv
 #define OVERFLOW_CHECKED_JUMP() \
 	goto check_jump
 
-
-template <int W> DISPATCH_ATTR
-bool CPU<W>::simulate(address_t pc, uint64_t inscounter, uint64_t maxcounter)
-{
-	static constexpr uint32_t XLEN = W * 8;
-	using addr_t  = address_type<W>;
-	using saddr_t = signed_address_type<W>;
+template <AddressType address_t>
+DISPATCH_ATTR bool CPU<address_t>::simulate(address_t pc, uint64_t inscounter, uint64_t maxcounter) {
+  static constexpr auto W = sizeof(address_t);
+  static constexpr uint32_t XLEN = W * 8;
+	using addr_t  = address_t;
+  using saddr_t = ToSignedAddress<addr_t>;
 
 #ifdef DISPATCH_MODE_THREADED
 #include "threaded_bytecode_array.hpp"
 #endif
 
-	DecodedExecuteSegment<W>* exec = this->m_exec;
+	DecodedExecuteSegment<address_t>* exec = this->m_exec;
 	address_t current_begin = exec->exec_begin();
 	address_t current_end   = exec->exec_end();
 
-	DecoderData<W>* exec_decoder = exec->decoder_cache();
-	DecoderData<W>* decoder;
+	DecoderData<address_t>* exec_decoder = exec->decoder_cache();
+	DecoderData<address_t>* decoder;
 
 	InstrCounter counter{inscounter, maxcounter};
 
@@ -99,7 +98,7 @@ bool CPU<W>::simulate(address_t pc, uint64_t inscounter, uint64_t maxcounter)
 		goto new_execute_segment;
 
 continue_segment:
-	decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
+	decoder = &exec_decoder[pc >> DecoderCache<address_t>::SHIFT];
 
 	pc += decoder->block_bytes();
 	counter.increment_counter(decoder->instruction_count());
@@ -212,7 +211,7 @@ new_execute_segment: {
 
 execute_invalid:
 	// Calculate the current PC from the decoder pointer
-	pc = (decoder - exec_decoder) << DecoderCache<W>::SHIFT;
+	pc = (decoder - exec_decoder) << DecoderCache<address_t>::SHIFT;
 	// Check if the instruction is still invalid
 	try {
 		if (decoder->instr == 0 && MACHINE().memory.template read<uint16_t>(pc) != 0) {

@@ -4,12 +4,12 @@
 #define LINUX_MAP_NORESERVE     0x04000
 #define LINUX_MAP_FIXED         0x10
 
-template <int W>
+template <AddressType address_t>
 static void add_mman_syscalls()
 {
 	// munmap
-	Machine<W>::install_syscall_handler(215,
-	[] (Machine<W>& machine) {
+	Machine<address_t>::install_syscall_handler(215,
+	[] (Machine<address_t>& machine) {
 		const auto addr = machine.sysarg(0);
 		const auto len  = machine.sysarg(1);
 		if (addr + len < addr)
@@ -23,8 +23,8 @@ static void add_mman_syscalls()
 			(long)addr, (size_t)len, (int)machine.return_value());
 	});
 	// mmap
-	Machine<W>::install_syscall_handler(222,
-	[] (Machine<W>& machine) {
+	Machine<address_t>::install_syscall_handler(222,
+	[] (Machine<address_t>& machine) {
 		const auto addr_g = machine.sysarg(0);
 		auto length       = machine.sysarg(1);
 		const auto prot   = machine.template sysarg<int>(2);
@@ -39,7 +39,7 @@ static void add_mman_syscalls()
 		SYSPRINT(">>> mmap(addr 0x%lX, len %zu, prot %#x, flags %#X, vfd=%d voff=%zu)\n",
 				(long)addr_g, (size_t)length, prot, flags, vfd, size_t(voff));
 		#define MMAP_HAS_FAILED() { \
-			machine.set_result(address_type<W>(-1)); \
+			machine.set_result(address_t(-1)); \
 			SYSPRINT("<<< mmap(addr 0x%lX, len %zu, ...) = MAP_FAILED\n", (long)addr_g, (size_t)length); \
 			return; \
 		}
@@ -48,8 +48,8 @@ static void add_mman_syscalls()
 			MMAP_HAS_FAILED();
 
 		auto& nextfree = machine.memory.mmap_address();
-		length = (length + PageMask) & ~address_type<W>(PageMask);
-		address_type<W> result = address_type<W>(-1);
+		length = (length + PageMask) & ~address_t(PageMask);
+		address_t result = address_t(-1);
 
 		if (vfd != -1)
 		{
@@ -57,7 +57,7 @@ static void add_mman_syscalls()
 			{
 				const int real_fd = machine.fds().translate(vfd);
 
-				address_type<W> dst = 0x0;
+				address_t dst = 0x0;
 				if (addr_g == 0x0) {
 					dst = nextfree;
 					nextfree += length;
@@ -142,8 +142,8 @@ static void add_mman_syscalls()
 				(long)addr_g, (size_t)length, (long)result);
 	});
 	// mremap
-	Machine<W>::install_syscall_handler(216,
-	[] (Machine<W>& machine) {
+	Machine<address_t>::install_syscall_handler(216,
+	[] (Machine<address_t>& machine) {
 		[[maybe_unused]] static constexpr int LINUX_MREMAP_MAYMOVE = 0x0001;
 		[[maybe_unused]] static constexpr int LINUX_MREMAP_FIXED   = 0x0002;
 		const auto old_addr = machine.sysarg(0);
@@ -164,11 +164,11 @@ static void add_mman_syscalls()
 			return;
 		}
 		(void) flags;
-		machine.set_result(address_type<W>(-1));
+		machine.set_result(address_t(-1));
 	});
 	// mprotect
-	Machine<W>::install_syscall_handler(226,
-	[] (Machine<W>& machine) {
+	Machine<address_t>::install_syscall_handler(226,
+	[] (Machine<address_t>& machine) {
 		const auto addr = machine.sysarg(0);
 		const auto len  = machine.sysarg(1);
 		const int  prot = machine.template sysarg<int> (2);
@@ -182,8 +182,8 @@ static void add_mman_syscalls()
 			(long)addr, (size_t)len, prot, (int)machine.return_value());
 	});
 	// madvise
-	Machine<W>::install_syscall_handler(233,
-	[] (Machine<W>& machine) {
+	Machine<address_t>::install_syscall_handler(233,
+	[] (Machine<address_t>& machine) {
 		const auto addr  = machine.sysarg(0);
 		const auto len   = machine.sysarg(1);
 		const int advice = machine.template sysarg<int> (2);

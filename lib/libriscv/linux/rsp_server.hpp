@@ -10,8 +10,8 @@
 
 namespace riscv {
 
-template <int W>
-RSP<W>::RSP(riscv::Machine<W>& m, uint16_t port)
+template <AddressType address_t>
+RSP<address_t>::RSP(riscv::Machine<address_t>& m, uint16_t port)
 	: m_machine{m}
 {
 	this->server_fd = socket(AF_INET,
@@ -40,8 +40,8 @@ RSP<W>::RSP(riscv::Machine<W>& m, uint16_t port)
 		throw MachineException(SYSTEM_CALL_FAILED, "GDB listener failed to listen on port");
 	}
 }
-template <int W>
-std::unique_ptr<RSPClient<W>> RSP<W>::accept(int timeout_secs)
+template <AddressType address_t>
+std::unique_ptr<RSPClient<address_t>> RSP<address_t>::accept(int timeout_secs)
 {
 	struct timeval tv {
 		.tv_sec = timeout_secs,
@@ -78,27 +78,27 @@ std::unique_ptr<RSPClient<W>> RSP<W>::accept(int timeout_secs)
 		close(sockfd);
 		return nullptr;
 	}
-	return std::make_unique<RSPClient<W>>(m_machine, sockfd);
+	return std::make_unique<RSPClient<address_t>>(m_machine, sockfd);
 }
-template <int W> inline
-RSP<W>::~RSP() {
+template <AddressType address_t> inline
+RSP<address_t>::~RSP() {
 	close(server_fd);
 }
 
-template <int W> inline
-RSPClient<W>::~RSPClient() {
+template <AddressType address_t> inline
+RSPClient<address_t>::~RSPClient() {
     if (!is_closed())
         close(this->sockfd);
 }
 
-template <int W> inline
-void RSPClient<W>::close_now() {
+template <AddressType address_t> inline
+void RSPClient<address_t>::close_now() {
     this->m_closed = true;
     close(this->sockfd);
 }
 
-template <int W>
-bool RSPClient<W>::sendf(const char* fmt, ...)
+template <AddressType address_t>
+bool RSPClient<address_t>::sendf(const char* fmt, ...)
 {
     char buffer[PACKET_SIZE];
     va_list args;
@@ -122,8 +122,8 @@ bool RSPClient<W>::sendf(const char* fmt, ...)
     return (buffer[0] == '+');
 }
 
-template <int W>
-bool RSPClient<W>::send(const char* str)
+template <AddressType address_t>
+bool RSPClient<address_t>::send(const char* str)
 {
     char buffer[PACKET_SIZE];
     int plen = forge_packet(buffer, sizeof(buffer), str, strlen(str));
@@ -143,8 +143,8 @@ bool RSPClient<W>::send(const char* str)
     }
     return (buffer[0] == '+');
 }
-template <int W>
-bool RSPClient<W>::process_one()
+template <AddressType address_t>
+bool RSPClient<address_t>::process_one()
 {
     char tmp[1024];
     int len = ::read(this->sockfd, tmp, sizeof(tmp));
@@ -179,14 +179,14 @@ bool RSPClient<W>::process_one()
     return true;
 }
 
-template <int W> inline
-void RSPClient<W>::reply_ack() {
+template <AddressType address_t> inline
+void RSPClient<address_t>::reply_ack() {
     ssize_t len = write(sockfd, "+", 1);
     if (len < 0) throw MachineException(SYSTEM_CALL_FAILED, "RSPClient: Unable to ACK");
 }
 
-template <int W>
-void RSPClient<W>::kill() {
+template <AddressType address_t>
+void RSPClient<address_t>::kill() {
     close(sockfd);
 }
 } // riscv

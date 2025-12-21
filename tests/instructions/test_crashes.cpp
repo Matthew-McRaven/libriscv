@@ -39,11 +39,11 @@ unsigned char timeout_1a6dbaa717f8837c4bd4332121e92bd73bbec049[] = {
 };
 unsigned int timeout_1a6dbaa717f8837c4bd4332121e92bd73bbec049_len = 1;
 
-template <int W>
+template <AddressType address_t>
 void execute(uint64_t max_mem, const char* array_name,
 			uint8_t* data, size_t len)
 {
-	riscv::Machine<W> machine { std::string_view{}, {
+	riscv::Machine<address_t> machine { std::string_view{}, {
 		.memory_max = max_mem
 	} };
 	printf("* Testing %s\n", array_name);
@@ -65,7 +65,7 @@ void execute(uint64_t max_mem, const char* array_name,
 			machine.cpu.jump(0x1000);
 			// let's avoid loops
 
-			DebugMachine<W> debug { machine };
+			DebugMachine<address_t> debug { machine };
 
 			debug.verbose_instructions = true;
 			debug.simulate(5000);

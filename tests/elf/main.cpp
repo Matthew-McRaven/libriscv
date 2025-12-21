@@ -5,7 +5,7 @@
 static inline std::vector<uint8_t> load_file(const std::string&);
 static constexpr uint64_t MAX_MEMORY = 1024 * 1024 * 256;
 
-template <int W>
+template <AddressType address_t>
 static long run_program(
 	const char* program,
 	const std::vector<uint8_t>& binary,
@@ -16,7 +16,7 @@ static long run_program(
 	} state;
 	state.program = program;
 
-	riscv::Machine<W> machine { binary, {
+	riscv::Machine<address_t> machine { binary, {
 		.memory_max = MAX_MEMORY,
 		.allow_write_exec_segment = true,
 		.verbose_loader = (getenv("VERBOSE") != nullptr),

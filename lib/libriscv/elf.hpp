@@ -9,15 +9,13 @@ namespace riscv
 	static constexpr unsigned ELFCLASS64  = 2;
 	static constexpr unsigned ELFCLASS128 = 3;
 
-	template <int W>
-	struct Elf
-	{
-		using addr_t  = address_type<W>;
-		using saddr_t = signed_address_type<W>;
+  template <AddressType address_t> struct Elf {
+    using addr_t = address_t;
+    using saddr_t = ToSignedAddress<address_t>;
 
-		static constexpr uint32_t PT_LOAD    = 1;
-		static constexpr uint32_t PT_DYNAMIC = 2;
-		static constexpr uint32_t PT_PHDR	 = 6;
+    static constexpr uint32_t PT_LOAD = 1;
+    static constexpr uint32_t PT_DYNAMIC = 2;
+    static constexpr uint32_t PT_PHDR	 = 6;
 		static constexpr uint32_t PT_GNU_EH_FRAME = 0x6474e550;
 		static constexpr uint32_t PT_GNU_STACK = 0x6474e551;
 		static constexpr uint32_t PT_GNU_RELRO = 0x6474e552;
@@ -101,9 +99,9 @@ namespace riscv
 			addr_t		p_memsz;
 			addr_t		p_align;
 		};
-		using ProgramHeader = typename std::conditional<W == 4, Phdr32, typename std::conditional<W == 8, Phdr64, Phdr128>::type>::type;
+		using ProgramHeader = typename std::conditional<sizeof(address_t) == 4, Phdr32, typename std::conditional<sizeof(address_t) == 8, Phdr64, Phdr128>::type>::type;
 #else
-		using ProgramHeader = typename std::conditional<W == 4, Phdr32, Phdr64>::type;
+		using ProgramHeader = typename std::conditional<sizeof(address_t) == 4, Phdr32, Phdr64>::type;
 #endif
 
 		struct Sym32 {
@@ -122,7 +120,7 @@ namespace riscv
 			uint64_t	st_value;
 			uint64_t	st_size;
 		};
-		using Sym = typename std::conditional<W == 4, Sym32, Sym64>::type;
+		using Sym = typename std::conditional<sizeof(address_t) == 4, Sym32, Sym64>::type;
 
 		struct Rela {
 			addr_t	r_offset;
@@ -145,24 +143,22 @@ namespace riscv
 		}
 
 		static unsigned RelaSym(addr_t r_info) {
-			if constexpr (W == 4)
+			if constexpr (sizeof(address_t) == 4)
 				return r_info >> 8;
 			else
 				return r_info >> 32;
 		}
 
 		static unsigned RelaType(addr_t r_info) {
-			if constexpr (W == 4)
+			if constexpr (sizeof(address_t) == 4)
 				return r_info & 0xFF;
 			else
 				return r_info & 0xFFFFFFFF;
 		}
-	};
+  };
 
-	template <int W>
-	inline bool Elf<W>::validate(std::string_view binary)
-	{
-		if (binary.size() < sizeof(Header))
+  template <AddressType address_t> inline bool Elf<address_t>::validate(std::string_view binary) {
+    if (binary.size() < sizeof(Header))
 			return false;
 		auto& hdr = *(Header *)binary.data();
 		if (hdr.e_ident[0] != 0x7F ||
@@ -170,24 +166,22 @@ namespace riscv
 			hdr.e_ident[2] != 'L'  ||
 			hdr.e_ident[3] != 'F')
 			return false;
-		if constexpr (W == 4)
+		if constexpr (sizeof(address_t) == 4)
 			return hdr.e_ident[Header::EI_CLASS] == ELFCLASS32;
-		else if constexpr (W == 8)
+		else if constexpr (sizeof(address_t) == 8)
 			return hdr.e_ident[Header::EI_CLASS] == ELFCLASS64;
-		else if constexpr (W == 16)
-			return hdr.e_ident[Header::EI_CLASS] == ELFCLASS128;
 		return false;
-	}
+  }
 
-	template <int W>
-	inline std::tuple<bool, std::string_view> Elf<W>::is_dynamic(std::string_view binary)
+  template <AddressType address_t>
+	inline std::tuple<bool, std::string_view> Elf<address_t>::is_dynamic(std::string_view binary)
 	{
 		auto* hdr = (Header *)binary.data();
 		if (binary.size() < sizeof(Header))
 			return {false, ""};
 
 		// Check if it is a 64-bit executable with an .interp section
-		if ((W == 4 && binary[4] == riscv::ELFCLASS32) || (W == 8 && binary[4] == riscv::ELFCLASS64))
+		if ((sizeof(address_t) == 4 && binary[4] == riscv::ELFCLASS32) || (sizeof(address_t) == 8 && binary[4] == riscv::ELFCLASS64))
 		{
 			if (hdr->e_phnum == 0 || hdr->e_phentsize != sizeof(ProgramHeader))
 #if __cpp_exceptions

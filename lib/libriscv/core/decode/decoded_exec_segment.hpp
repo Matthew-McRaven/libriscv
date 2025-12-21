@@ -11,15 +11,13 @@
 
 namespace riscv
 {
-	template<int W> struct DecoderCache;
-	template<int W> struct DecoderData;
+	template<AddressType address_t> struct DecoderCache;
+	template<AddressType address_t> struct DecoderData;
 
 	// A fully decoded execute segment
-	template <int W>
+	template <AddressType address_t>
 	struct DecodedExecuteSegment
 	{
-		using address_t = address_type<W>;
-
 		bool is_within(address_t addr, size_t len = 2) const noexcept {
 			address_t addr_end;
 #ifdef _MSC_VER
@@ -45,15 +43,15 @@ namespace riscv
 		auto* decoder_cache_base() const noexcept { return m_decoder_cache.get(); }
 		size_t decoder_cache_size() const noexcept { return m_decoder_cache_size; }
 
-		auto* create_decoder_cache(DecoderCache<W>* cache, size_t size) {
+		auto* create_decoder_cache(DecoderCache<address_t>* cache, size_t size) {
 			m_decoder_cache.reset(cache);
 			m_decoder_cache_size = size;
 			return m_decoder_cache.get();
 		}
-		void set_decoder(DecoderData<W>* dec) { m_exec_decoder = dec; }
+		void set_decoder(DecoderData<address_t>* dec) { m_exec_decoder = dec; }
 
 		size_t size_bytes() const noexcept {
-			return sizeof(*this) + m_exec_pagedata_size + m_decoder_cache_size; // * sizeof(DecoderCache<W>);
+			return sizeof(*this) + m_exec_pagedata_size + m_decoder_cache_size; // * sizeof(DecoderCache<address_t>);
 		}
 		bool empty() const noexcept { return m_exec_pagedata_size == 0; }
 
@@ -82,7 +80,7 @@ namespace riscv
 	private:
 		address_t m_vaddr_begin = 0;
 		address_t m_vaddr_end   = 0;
-		DecoderData<W>* m_exec_decoder = nullptr;
+		DecoderData<address_t>* m_exec_decoder = nullptr;
 
 		// The flat execute segment is used to execute
 		// the CPU::simulate_precise function in order to
@@ -94,7 +92,7 @@ namespace riscv
 
 		// Decoder cache is used to run bytecode simulation at a high speed
 		size_t          m_decoder_cache_size = 0;
-		std::unique_ptr<DecoderCache<W>[]> m_decoder_cache = nullptr;
+		std::unique_ptr<DecoderCache<address_t>[]> m_decoder_cache = nullptr;
 
 		uint32_t m_crc32c_hash = 0x0; // CRC32-C of the execute segment
 		bool m_is_execute_only = false;
@@ -104,8 +102,8 @@ namespace riscv
 		bool m_is_stale = false;
 	};
 
-	template <int W>
-	inline DecodedExecuteSegment<W>::DecodedExecuteSegment(
+	template <AddressType address_t>
+	inline DecodedExecuteSegment<address_t>::DecodedExecuteSegment(
 		address_t pbase, size_t len, address_t exaddr, size_t exlen)
 	{
 		m_vaddr_begin = exaddr;
@@ -115,8 +113,8 @@ namespace riscv
 		m_exec_pagedata_base = pbase;
 	}
 
-	template <int W>
-	inline DecodedExecuteSegment<W>::DecodedExecuteSegment(DecodedExecuteSegment&& other)
+	template <AddressType address_t>
+	inline DecodedExecuteSegment<address_t>::DecodedExecuteSegment(DecodedExecuteSegment&& other)
 	{
 		m_vaddr_begin = other.m_vaddr_begin;
 		m_vaddr_end   = other.m_vaddr_end;
@@ -131,13 +129,13 @@ namespace riscv
 		m_decoder_cache = std::move(other.m_decoder_cache);
 	}
 
-  template <int W> inline DecodedExecuteSegment<W>::~DecodedExecuteSegment() {}
+  template <AddressType address_t> inline DecodedExecuteSegment<address_t>::~DecodedExecuteSegment() {}
 
-  template <int W>
-  RISCV_INTERNAL size_t DecodedExecuteSegment<W>::threaded_rewrite(size_t bytecode, [[maybe_unused]] address_t pc,
+  template <AddressType address_t>
+  RISCV_INTERNAL size_t DecodedExecuteSegment<address_t>::threaded_rewrite(size_t bytecode, [[maybe_unused]] address_t pc,
                                                                    rv32i_instruction &instr) {
     static constexpr unsigned PCAL = compressed_enabled ? 2 : 4;
-    static constexpr unsigned XLEN = 8 * W;
+    static constexpr unsigned XLEN = 8 * sizeof(address_t);
     const auto &original = instr;
 
     switch (bytecode) {
@@ -178,7 +176,7 @@ namespace riscv
     case RV64I_BC_SLLIW:
     case RV64I_BC_SRLIW:
     case RV64I_BC_SRAIW: {
-      if (W == 4) return RV32I_BC_INVALID;
+      if (sizeof(address_t) == 4) return RV32I_BC_INVALID;
 
       FasterItype rewritten;
       rewritten.rs1 = original.Itype.rd;
@@ -204,7 +202,7 @@ namespace riscv
     }
 #ifdef RISCV_64I
     case RV64I_BC_ADDIW:
-      if (W == 4) return RV32I_BC_INVALID;
+      if (sizeof(address_t) == 4) return RV32I_BC_INVALID;
       [[fallthrough]];
 #endif
     case RV32I_BC_SEXT_B:
@@ -266,7 +264,7 @@ namespace riscv
     case RV64I_BC_OP_ADD_UW:
     case RV64I_BC_OP_SH1ADD_UW:
     case RV64I_BC_OP_SH2ADD_UW:
-      if (W == 4) return RV32I_BC_INVALID;
+      if (sizeof(address_t) == 4) return RV32I_BC_INVALID;
       [[fallthrough]];
 #endif
     case RV32I_BC_OP_ADD:
@@ -299,7 +297,7 @@ namespace riscv
 #ifdef RISCV_64I
     case RV32I_BC_LDWU:
     case RV32I_BC_LDD:
-      if (W == 4) return RV32I_BC_INVALID;
+      if (sizeof(address_t) == 4) return RV32I_BC_INVALID;
       [[fallthrough]];
 #endif
     case RV32I_BC_LDB:
@@ -317,7 +315,7 @@ namespace riscv
     }
 #ifdef RISCV_64I
     case RV32I_BC_STD:
-      if (W == 4) return RV32I_BC_INVALID;
+      if (sizeof(address_t) == 4) return RV32I_BC_INVALID;
       [[fallthrough]];
 #endif
     case RV32I_BC_STB:
@@ -493,11 +491,8 @@ namespace riscv
       FasterItype rewritten;
       rewritten.rs1 = ci.CI.rd;
       rewritten.rs2 = 0;
-      if constexpr (W >= 8) {
-        rewritten.imm = ci.CI.shift64_imm();
-      } else {
-        rewritten.imm = ci.CI.shift_imm();
-      }
+      if constexpr (sizeof(address_t) == 8) rewritten.imm = ci.CI.shift64_imm();
+      else rewritten.imm = ci.CI.shift_imm();
 
       instr.whole = rewritten.whole;
       return RV32C_BC_SLLI;
@@ -507,11 +502,8 @@ namespace riscv
 
       FasterItype rewritten;
       rewritten.rs1 = ci.CA.srd + 8;
-      if constexpr (W >= 8) {
-        rewritten.imm = ci.CAB.shift64_imm();
-      } else {
-        rewritten.imm = ci.CAB.shift_imm();
-      }
+      if constexpr (sizeof(address_t) == 8) rewritten.imm = ci.CAB.shift64_imm();
+      else rewritten.imm = ci.CAB.shift_imm();
 
       instr.whole = rewritten.whole;
       return bytecode;
@@ -571,7 +563,7 @@ namespace riscv
     case RV32C_BC_JAL_ADDIW: {
       const rv32c_instruction ci{instr};
 
-      if (W >= 8 && bytecode == RV32C_BC_JAL_ADDIW) {
+      if (sizeof(address_t) == 8 && bytecode == RV32C_BC_JAL_ADDIW) {
         // C.ADDIW instead
         FasterItype rewritten;
         rewritten.rs1 = ci.CI.rd;

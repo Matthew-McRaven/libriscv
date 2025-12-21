@@ -1,31 +1,30 @@
 #include "machine.hpp"
 
 namespace riscv {
-template <int W> template <typename... Args> constexpr inline void Machine<W>::setup_call(Args &&...args) {
+template <AddressType address_t> template <typename... Args> constexpr inline void Machine<address_t>::setup_call(Args &&...args) {
   cpu.reg(REG_RA) = memory.exit_address();
   [[maybe_unused]] int iarg = REG_ARG0;
 	[[maybe_unused]] int farg = REG_FA0;
 	([&] {
 		if constexpr (std::is_integral_v<remove_cvref<Args>>) {
 			cpu.reg(iarg++) = args;
-			if constexpr (sizeof(Args) > W) // upper 32-bits for 64-bit integers
-				cpu.reg(iarg++) = args >> 32;
-		}
+      if constexpr (sizeof(Args) > sizeof(address_t)) // upper 32-bits for 64-bit integers
+        cpu.reg(iarg++) = args >> 32;
+    }
 		else if constexpr (is_stdstring<remove_cvref<Args>>::value)
 			cpu.reg(iarg++) = stack_push(args.data(), args.size()+1);
 		else if constexpr (is_string<Args>::value)
 			cpu.reg(iarg++) = stack_push(args, strlen(args)+1);
 #ifdef __cpp_exceptions
-		else if constexpr (std::is_same_v<GuestStdString<W>, remove_cvref<Args>>) {
+		else if constexpr (std::is_same_v<GuestStdString<address_t>, remove_cvref<Args>>) {
 			args.move(cpu.reg(REG_SP) - sizeof(Args)); // SSO-adjustment
 			cpu.reg(iarg++) = stack_push(&args, sizeof(Args));
-		}
-		else if constexpr (is_scoped_guest_object<W, remove_cvref<Args>>::value) {
-			cpu.reg(iarg++) = args.address();
-		}
+    } else if constexpr (is_scoped_guest_object<address_t, remove_cvref<Args>>::value) {
+      cpu.reg(iarg++) = args.address();
+    }
 #endif
-		else if constexpr (is_stdvector<remove_cvref<Args>>::value)
-			cpu.reg(iarg++) = stack_push(args.data(), args.size() * sizeof(args[0]));
+    else if constexpr (is_stdvector<remove_cvref<Args>>::value)
+      cpu.reg(iarg++) = stack_push(args.data(), args.size() * sizeof(args[0]));
 		else if constexpr (std::is_same_v<float, remove_cvref<Args>>)
 			cpu.registers().getfl(farg++).set_float(args);
 		else if constexpr (std::is_same_v<double, remove_cvref<Args>>)
@@ -40,9 +39,9 @@ template <int W> template <typename... Args> constexpr inline void Machine<W>::s
 	cpu.reg(REG_SP) &= ~address_t(0xF);
 }
 
-template <int W>
+template <AddressType address_t>
 template <uint64_t MAXI, bool Throw, typename... Args> constexpr
-inline address_type<W> Machine<W>::vmcall(address_t pc, Args&&... args)
+inline address_t Machine<address_t>::vmcall(address_t pc, Args&&... args)
 {
 	// reset the stack pointer to an initial location (deliberately)
 	this->cpu.reset_stack_pointer();
@@ -59,19 +58,19 @@ inline address_type<W> Machine<W>::vmcall(address_t pc, Args&&... args)
 	return cpu.reg(REG_ARG0);
 }
 
-template <int W>
+template <AddressType address_t>
 template <uint64_t MAXI, bool Throw, typename... Args> constexpr
-inline address_type<W> Machine<W>::vmcall(const char* funcname, Args&&... args)
+inline address_t Machine<address_t>::vmcall(const char* funcname, Args&&... args)
 {
 	address_t call_addr = memory.resolve_address(funcname);
 	return vmcall<MAXI, Throw>(call_addr, std::forward<Args>(args)...);
 }
 
-template <int W>
+template <AddressType address_t>
 template <bool Throw, bool StoreRegs, typename... Args> inline
-address_type<W> Machine<W>::preempt(uint64_t max_instr, address_t call_addr, Args&&... args)
+address_t Machine<address_t>::preempt(uint64_t max_instr, address_t call_addr, Args&&... args)
 {
-	Registers<W> regs;
+	Registers<address_t> regs;
 	if constexpr (StoreRegs) {
 		regs = cpu.registers();
 	}
@@ -83,9 +82,9 @@ address_type<W> Machine<W>::preempt(uint64_t max_instr, address_t call_addr, Arg
 	return this->cpu.preempt_internal(regs, Throw, StoreRegs, call_addr, max_instr);
 }
 
-template <int W>
+template <AddressType address_t>
 template <bool Throw, bool StoreRegs, typename... Args> inline
-address_type<W> Machine<W>::preempt(uint64_t max_instr, const char* funcname, Args&&... args)
+address_t Machine<address_t>::preempt(uint64_t max_instr, const char* funcname, Args&&... args)
 {
 	address_t call_addr = memory.resolve_address(funcname);
 	return preempt<Throw, StoreRegs>(max_instr, call_addr, std::forward<Args>(args)...);

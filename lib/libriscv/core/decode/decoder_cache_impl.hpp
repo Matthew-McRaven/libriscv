@@ -11,14 +11,14 @@ namespace riscv {
 // cpu.cpp
 // A default empty execute segment used to enforce that the
 // current CPU execute segment is never null.
-template <int W> std::shared_ptr<DecodedExecuteSegment<W>> &CPU<W>::empty_execute_segment() noexcept {
-  static std::shared_ptr<DecodedExecuteSegment<W>> empty_shared =
-      std::make_shared<DecodedExecuteSegment<W>>(0, 0, 0, 0);
+template <AddressType address_t> std::shared_ptr<DecodedExecuteSegment<address_t>> &CPU<address_t>::empty_execute_segment() noexcept {
+  static std::shared_ptr<DecodedExecuteSegment<address_t>> empty_shared =
+      std::make_shared<DecodedExecuteSegment<address_t>>(0, 0, 0, 0);
   return empty_shared;
 }
 
-template <int W>
-DecodedExecuteSegment<W> &CPU<W>::init_execute_area(const void *vdata, address_t begin, address_t vlength,
+template <AddressType address_t>
+DecodedExecuteSegment<address_t> &CPU<address_t>::init_execute_area(const void *vdata, address_t begin, address_t vlength,
                                                     bool is_likely_jit) {
   if (vlength < 4) trigger_exception(EXECUTION_SPACE_PROTECTION_FAULT, begin);
   // Create a new *non-initial* execute segment
@@ -27,20 +27,20 @@ DecodedExecuteSegment<W> &CPU<W>::init_execute_area(const void *vdata, address_t
         &machine().memory.create_execute_segment(machine().options(), vdata, begin, vlength, false, is_likely_jit);
   else
     this->m_exec =
-        &machine().memory.create_execute_segment(MachineOptions<W>(), vdata, begin, vlength, false, is_likely_jit);
+        &machine().memory.create_execute_segment(MachineOptions<address_t>(), vdata, begin, vlength, false, is_likely_jit);
   return *this->m_exec;
 } // CPU::init_execute_area
 
-template <int W> DecoderData<W> &CPU<W>::create_block_ending_entry_at(DecodedExecuteSegment<W> &exec, address_t addr) {
+template <AddressType address_t> DecoderData<address_t> &CPU<address_t>::create_block_ending_entry_at(DecodedExecuteSegment<address_t> &exec, address_t addr) {
   if (!exec.is_within(addr)) {
     throw MachineException(EXECUTION_SPACE_PROTECTION_FAULT, "Breakpoint address is not within the execute segment",
                            addr);
   }
 
   auto *exec_decoder = exec.decoder_cache();
-  auto *decoder_begin = &exec_decoder[exec.exec_begin() / DecoderCache<W>::DIVISOR];
+  auto *decoder_begin = &exec_decoder[exec.exec_begin() / DecoderCache<address_t>::DIVISOR];
 
-  auto &cache_entry = exec_decoder[addr / DecoderCache<W>::DIVISOR];
+  auto &cache_entry = exec_decoder[addr / DecoderCache<address_t>::DIVISOR];
 
   // The last instruction will be the current entry
   // Later instructions will work as normal
@@ -63,7 +63,7 @@ template <int W> DecoderData<W> &CPU<W>::create_block_ending_entry_at(DecodedExe
   auto patched_addr = block_begin_addr;
   for (auto *dd = current; dd < last; dd++) {
     // Get the patched decoder entry
-    auto &p = exec_decoder[patched_addr / DecoderCache<W>::DIVISOR];
+    auto &p = exec_decoder[patched_addr / DecoderCache<address_t>::DIVISOR];
     p.idxend = last - dd;
 #ifdef RISCV_EXT_C
     p.icount = 0; // TODO: Implement C-ext icount for breakpoints
@@ -79,9 +79,9 @@ template <int W> DecoderData<W> &CPU<W>::create_block_ending_entry_at(DecodedExe
 }
 
 // Install an ebreak instruction at the given address
-template <int W> uint32_t CPU<W>::install_ebreak_for(DecodedExecuteSegment<W> &exec, address_t breakpoint_addr) {
+template <AddressType address_t> uint32_t CPU<address_t>::install_ebreak_for(DecodedExecuteSegment<address_t> &exec, address_t breakpoint_addr) {
   // Get a reference to the decoder cache
-  auto &cache_entry = CPU<W>::create_block_ending_entry_at(exec, breakpoint_addr);
+  auto &cache_entry = CPU<address_t>::create_block_ending_entry_at(exec, breakpoint_addr);
   const auto old_instruction = cache_entry.instr;
 
   // Install the new ebreak instruction at the breakpoint address
@@ -102,9 +102,9 @@ template <int W> uint32_t CPU<W>::install_ebreak_for(DecodedExecuteSegment<W> &e
   return old_instruction;
 }
 
-template <int W> uint32_t CPU<W>::install_ebreak_at(address_t addr) { return install_ebreak_for(*m_exec, addr); }
+template <AddressType address_t> uint32_t CPU<address_t>::install_ebreak_at(address_t addr) { return install_ebreak_for(*m_exec, addr); }
 
-template <int W> bool CPU<W>::create_fast_path_function(DecodedExecuteSegment<W> &exec, address_t block_pc) {
+template <AddressType address_t> bool CPU<address_t>::create_fast_path_function(DecodedExecuteSegment<address_t> &exec, address_t block_pc) {
   // First, find the end of the block that either returns or stops (ignore traps)
   // 1. Return: JALR reg
   // 2. Stop: STOP
@@ -115,13 +115,13 @@ template <int W> bool CPU<W>::create_fast_path_function(DecodedExecuteSegment<W>
 
   auto *exec_decoder = exec.decoder_cache();
   // The beginning of the function:
-  auto *cache_entry = &exec_decoder[block_pc / DecoderCache<W>::DIVISOR];
+  auto *cache_entry = &exec_decoder[block_pc / DecoderCache<address_t>::DIVISOR];
 
   const address_t current_end = exec.exec_end();
   while (block_pc < current_end) {
     // Move to the end of the block
     block_pc += cache_entry->block_bytes();
-    cache_entry += cache_entry->block_bytes() / DecoderCache<W>::DIVISOR;
+    cache_entry += cache_entry->block_bytes() / DecoderCache<address_t>::DIVISOR;
     // Check if we're still within the execute segment
     if (UNLIKELY(block_pc >= current_end)) {
       // TODO: Return false instead?
@@ -178,21 +178,21 @@ template <int W> bool CPU<W>::create_fast_path_function(DecodedExecuteSegment<W>
   return false;
 }
 
-template <int W> bool CPU<W>::create_fast_path_function(address_t addr) {
-  DecodedExecuteSegment<W> *exec = machine().memory.exec_segment_for(addr).get();
+template <AddressType address_t> bool CPU<address_t>::create_fast_path_function(address_t addr) {
+  DecodedExecuteSegment<address_t> *exec = machine().memory.exec_segment_for(addr).get();
   return create_fast_path_function(*exec, addr);
 }
 
 // decoder_cache.cpp
 
-template <int W> static SharedExecuteSegments<W> shared_execute_segments;
+template <AddressType address_t> static SharedExecuteSegments<address_t> shared_execute_segments;
 
-template <int W> static bool is_regular_compressed(uint16_t instr) {
+template <AddressType address_t> static bool is_regular_compressed(uint16_t instr) {
   const rv32c_instruction ci{instr};
 #define CI_CODE(x, y) ((x << 13) | (y))
   switch (ci.opcode()) {
   case CI_CODE(0b001, 0b01):
-    if constexpr (W >= 8) return true; // C.ADDIW
+    if constexpr (sizeof(address_t) == 8) return true; // C.ADDIW
     return false;                      // C.JAL 32-bit
   case CI_CODE(0b101, 0b01):           // C.JMP
   case CI_CODE(0b110, 0b01):           // C.BEQZ
@@ -211,17 +211,17 @@ template <int W> static bool is_regular_compressed(uint16_t instr) {
   }
 }
 
-template <int W>
-static inline void fill_entries(const std::array<DecoderEntryAndCount<W>, 256> &block_array, size_t block_array_count,
-                                address_type<W> block_pc, address_type<W> current_pc) {
+template <AddressType address_t>
+static inline void fill_entries(const std::array<DecoderEntryAndCount<address_t>, 256> &block_array,
+                                size_t block_array_count, address_t block_pc, address_t current_pc) {
   const unsigned last_count = block_array[block_array_count - 1].count;
   unsigned count = (current_pc - block_pc) >> 1;
   count -= last_count;
   if (count > 255) throw MachineException(INVALID_PROGRAM, "Too many non-branching instructions in a row");
 
   for (size_t i = 0; i < block_array_count; i++) {
-    const DecoderEntryAndCount<W> &tuple = block_array[i];
-    DecoderData<W> *entry = tuple.entry;
+    const DecoderEntryAndCount<address_t> &tuple = block_array[i];
+    DecoderData<address_t> *entry = tuple.entry;
     const int length = tuple.count;
 
     // Ends at instruction *before* last PC
@@ -236,9 +236,9 @@ static inline void fill_entries(const std::array<DecoderEntryAndCount<W>, 256> &
   }
 }
 
-template <int W>
-static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, const uint8_t *exec_segment,
-                            DecoderData<W> *exec_decoder) {
+template <AddressType address_t>
+static void realize_fastsim(address_t base_pc, address_t last_pc, const uint8_t *exec_segment,
+                            DecoderData<address_t> *exec_decoder) {
   if constexpr (compressed_enabled) {
     if (UNLIKELY(base_pc >= last_pc)) throw MachineException(INVALID_PROGRAM, "The execute segment has an overflow");
     if (UNLIKELY(base_pc & 0x1)) throw MachineException(INVALID_PROGRAM, "The execute segment is misaligned");
@@ -246,12 +246,12 @@ static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, co
     // Go through entire executable segment and measure lengths
     // Record entries while looking for jumping instruction, then
     // fill out data and opcode lengths previous instructions.
-    std::array<DecoderEntryAndCount<W>, 256> block_array;
-    address_type<W> pc = base_pc;
+    std::array<DecoderEntryAndCount<address_t>, 256> block_array;
+    address_t pc = base_pc;
     while (pc < last_pc) {
       size_t block_array_count = 0;
-      const address_type<W> block_pc = pc;
-      DecoderData<W> *entry = &exec_decoder[pc / DecoderCache<W>::DIVISOR];
+      const address_t block_pc = pc;
+      DecoderData<address_t> *entry = &exec_decoder[pc / DecoderCache<address_t>::DIVISOR];
       const AlignedLoad16 *iptr = (AlignedLoad16 *)&exec_segment[pc];
       const AlignedLoad16 *iptr_begin = iptr;
       while (true) {
@@ -265,7 +265,7 @@ static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, co
 #ifdef _MSC_VER
         if (pc + length < pc) throw MachineException(INVALID_PROGRAM, "PC overflow during execute segment decoding");
 #else
-        [[maybe_unused]] address_type<W> pc2;
+        [[maybe_unused]] address_t pc2;
         if (UNLIKELY(__builtin_add_overflow(pc, length, &pc2)))
           throw MachineException(INVALID_PROGRAM, "PC overflow during execute segment decoding");
 #endif
@@ -281,7 +281,7 @@ static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, co
 
         // All opcodes that can modify PC
         if (length == 2) {
-          if (!is_regular_compressed<W>(iptr->half())) break;
+          if (!is_regular_compressed<address_t>(iptr->half())) break;
         } else {
           const unsigned opcode = iptr->opcode();
           if (opcode == RV32I_BRANCH || opcode == RV32I_SYSTEM || opcode == RV32I_JAL || opcode == RV32I_JALR) break;
@@ -327,11 +327,11 @@ static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, co
     // 32-bits in size. We can use the idxend value for
     // instruction counting.
     unsigned idxend = 0;
-    address_type<W> pc = last_pc - 4;
+    address_t pc = last_pc - 4;
     // NOTE: The last check avoids overflow
     while (pc >= base_pc && pc < last_pc) {
       const rv32i_instruction instruction = read_instruction(exec_segment, pc, last_pc);
-      DecoderData<W> &entry = exec_decoder[pc / DecoderCache<W>::DIVISOR];
+      DecoderData<address_t> &entry = exec_decoder[pc / DecoderCache<address_t>::DIVISOR];
       const unsigned opcode = instruction.opcode();
 
       // All opcodes that can modify PC and stop the machine
@@ -354,7 +354,7 @@ static void realize_fastsim(address_type<W> base_pc, address_type<W> last_pc, co
   }
 }
 
-template <int W> RISCV_INTERNAL size_t DecoderData<W>::handler_index_for(Handler new_handler) {
+template <AddressType address_t> RISCV_INTERNAL size_t DecoderData<address_t>::handler_index_for(Handler new_handler) {
   std::scoped_lock lock(handler_idx_mutex);
 
   auto it = handler_cache.find(new_handler);
@@ -368,15 +368,15 @@ template <int W> RISCV_INTERNAL size_t DecoderData<W>::handler_index_for(Handler
   return idx;
 }
 
-template <int W> void Memory<W>::evict_execute_segments() {
+template <AddressType address_t> void Memory<address_t>::evict_execute_segments() {
   // destructor could throw, so let's invalidate early
-  machine().cpu.set_execute_segment(*CPU<W>::empty_execute_segment());
+  machine().cpu.set_execute_segment(*CPU<address_t>::empty_execute_segment());
 
   auto &main_segment = m_main_exec_segment;
   if (main_segment) {
     const SegmentKey key = SegmentKey::from(*main_segment, memory_arena_size());
     main_segment = nullptr;
-    shared_execute_segments<W>.remove_if_unique(key);
+    shared_execute_segments<address_t>.remove_if_unique(key);
   }
 
   while (!m_exec.empty()) {
@@ -385,7 +385,7 @@ template <int W> void Memory<W>::evict_execute_segments() {
       if (segment) {
         const SegmentKey key = SegmentKey::from(*segment, memory_arena_size());
         segment = nullptr;
-        shared_execute_segments<W>.remove_if_unique(key);
+        shared_execute_segments<address_t>.remove_if_unique(key);
       }
       m_exec.pop_back();
     } catch (...) {
@@ -394,7 +394,7 @@ template <int W> void Memory<W>::evict_execute_segments() {
   }
 }
 
-template <int W> void Memory<W>::evict_execute_segment(DecodedExecuteSegment<W> &segment) {
+template <AddressType address_t> void Memory<address_t>::evict_execute_segment(DecodedExecuteSegment<address_t> &segment) {
   const SegmentKey key = SegmentKey::from(segment, memory_arena_size());
   for (auto &seg : m_exec) {
     if (seg.get() == &segment) {
@@ -403,7 +403,7 @@ template <int W> void Memory<W>::evict_execute_segment(DecodedExecuteSegment<W> 
       break;
     }
   }
-  shared_execute_segments<W>.remove_if_unique(key);
+  shared_execute_segments<address_t>.remove_if_unique(key);
 }
 
 // An execute segment contains a sequential array of raw instruction bits
@@ -415,9 +415,9 @@ template <int W> void Memory<W>::evict_execute_segment(DecodedExecuteSegment<W> 
 // Crucially, because of page alignments and 4 extra bytes, the necessary checks
 // when reading from the execute segment is reduced. You can always read 4 bytes
 // no matter where you are in the segment, a whole instruction unchecked.
-template <int W>
-RISCV_INTERNAL DecodedExecuteSegment<W> &
-Memory<W>::create_execute_segment(const MachineOptions<W> &options, const void *vdata, address_t vaddr, size_t exlen,
+template <AddressType address_t>
+RISCV_INTERNAL DecodedExecuteSegment<address_t> &
+Memory<address_t>::create_execute_segment(const MachineOptions<address_t> &options, const void *vdata, address_t vaddr, size_t exlen,
                                   bool is_initial, bool is_likely_jit) {
   if (UNLIKELY(exlen % (compressed_enabled ? 2 : 4)))
     throw MachineException(INVALID_PROGRAM, "Misaligned execute segment length");
@@ -444,7 +444,7 @@ Memory<W>::create_execute_segment(const MachineOptions<W> &options, const void *
     throw MachineException(INVALID_PROGRAM, "Segment virtual base was bogus");
 #endif
   // Create the whole executable memory range
-  auto current_exec = std::make_shared<DecodedExecuteSegment<W>>(pbase, plen, vaddr, exlen);
+  auto current_exec = std::make_shared<DecodedExecuteSegment<address_t>>(pbase, plen, vaddr, exlen);
 
   auto *exec_data = current_exec->exec_data(pbase);
   // This is a zeroed prologue in order to be able to use whole pages
@@ -466,7 +466,7 @@ Memory<W>::create_execute_segment(const MachineOptions<W> &options, const void *
 
     // In order to prevent others from creating the same execute segment
     // we need to lock the shared execute segments mutex.
-    auto &segment = shared_execute_segments<W>.get_segment(key);
+    auto &segment = shared_execute_segments<address_t>.get_segment(key);
     std::scoped_lock lock(segment.mutex);
 
     if (segment.segment != nullptr) {
@@ -487,7 +487,7 @@ Memory<W>::create_execute_segment(const MachineOptions<W> &options, const void *
     this->generate_decoder_cache(options, free_slot, is_initial);
 
     // Share the execute segment
-    shared_execute_segments<W>.get_segment(key).unlocked_set(free_slot);
+    shared_execute_segments<address_t>.get_segment(key).unlocked_set(free_slot);
   } else {
     free_slot = std::move(current_exec);
     free_slot->set_likely_jit(is_likely_jit);
@@ -500,7 +500,7 @@ Memory<W>::create_execute_segment(const MachineOptions<W> &options, const void *
   return *free_slot;
 }
 
-template <int W> std::shared_ptr<DecodedExecuteSegment<W>> &Memory<W>::next_execute_segment() {
+template <AddressType address_t> std::shared_ptr<DecodedExecuteSegment<address_t>> &Memory<address_t>::next_execute_segment() {
   if (!m_main_exec_segment) {
     return m_main_exec_segment;
   }
@@ -511,11 +511,11 @@ template <int W> std::shared_ptr<DecodedExecuteSegment<W>> &Memory<W>::next_exec
   throw MachineException(INVALID_PROGRAM, "Max execute segments reached");
 }
 
-template <int W> const std::shared_ptr<DecodedExecuteSegment<W>> &Memory<W>::exec_segment_for(address_t vaddr) const {
-  return const_cast<Memory<W> *>(this)->exec_segment_for(vaddr);
+template <AddressType address_t> const std::shared_ptr<DecodedExecuteSegment<address_t>> &Memory<address_t>::exec_segment_for(address_t vaddr) const {
+  return const_cast<Memory<address_t> *>(this)->exec_segment_for(vaddr);
 }
 
-// The decoder cache is a sequential array of DecoderData<W> entries
+// The decoder cache is a sequential array of DecoderData<address_t> entries
 // each of which (currently) serves a dual purpose of enabling
 // threaded dispatch (m_bytecode) and fallback to callback function
 // (m_handler). This enables high-speed emulation, precise simulation,
@@ -528,9 +528,9 @@ template <int W> const std::shared_ptr<DecodedExecuteSegment<W>> &Memory<W>::exe
 // The goal of the decoder cache is to allow uninterrupted execution
 // with minimal bounds-checking, while also enabling accurate
 // instruction counting.
-template <int W>
-RISCV_INTERNAL void Memory<W>::generate_decoder_cache([[maybe_unused]] const MachineOptions<W> &options,
-                                                      std::shared_ptr<DecodedExecuteSegment<W>> &shared_segment,
+template <AddressType address_t>
+RISCV_INTERNAL void Memory<address_t>::generate_decoder_cache([[maybe_unused]] const MachineOptions<address_t> &options,
+                                                      std::shared_ptr<DecodedExecuteSegment<address_t>> &shared_segment,
                                                       [[maybe_unused]] bool is_initial) {
   TIME_POINT(t0);
   auto &exec = *shared_segment;
@@ -554,16 +554,16 @@ RISCV_INTERNAL void Memory<W>::generate_decoder_cache([[maybe_unused]] const Mac
     throw MachineException(INVALID_PROGRAM, "Program produced empty decoder cache");
   }
   // Here we allocate the decoder cache which is page-sized
-  auto *decoder_cache = exec.create_decoder_cache(new DecoderCache<W>[n_pages], n_pages);
+  auto *decoder_cache = exec.create_decoder_cache(new DecoderCache<address_t>[n_pages], n_pages);
   // Clear the decoder cache! (technically only needed when binary translation is enabled)
-  std::memset(decoder_cache, 0, n_pages * sizeof(DecoderCache<W>));
+  std::memset(decoder_cache, 0, n_pages * sizeof(DecoderCache<address_t>));
   // Get a base address relative pointer to the decoder cache
   // Eg. exec_decoder[pbase] is the first entry in the decoder cache
   // so that PC with a simple shift can be used as a direct index.
-  auto *exec_decoder = decoder_cache[0].get_base() - pbase / DecoderCache<W>::DIVISOR;
+  auto *exec_decoder = decoder_cache[0].get_base() - pbase / DecoderCache<address_t>::DIVISOR;
   exec.set_decoder(exec_decoder);
 
-  DecoderData<W> invalid_op;
+  DecoderData<address_t> invalid_op;
   invalid_op.set_handler(this->machine().cpu.decode({0}));
   if (UNLIKELY(invalid_op.m_handler != 0)) {
     throw MachineException(INVALID_PROGRAM, "The invalid instruction did not have the index zero",
@@ -585,7 +585,7 @@ RISCV_INTERNAL void Memory<W>::generate_decoder_cache([[maybe_unused]] const Mac
   address_t dst = addr;
   const address_t end_addr = addr + len;
   for (; dst < addr + len;) {
-    auto &entry = exec_decoder[dst / DecoderCache<W>::DIVISOR];
+    auto &entry = exec_decoder[dst / DecoderCache<address_t>::DIVISOR];
     entry.m_handler = 0;
     entry.idxend = 0;
 
@@ -595,7 +595,7 @@ RISCV_INTERNAL void Memory<W>::generate_decoder_cache([[maybe_unused]] const Mac
 
     if (!compressed_enabled || was_full_instruction) {
       // Cache the (modified) instruction bits
-      auto bytecode = CPU<W>::computed_index_for(instruction);
+      auto bytecode = CPU<address_t>::computed_index_for(instruction);
       // Threaded rewrites are **always** enabled
       bytecode = exec.threaded_rewrite(bytecode, dst, rewritten);
       entry.set_bytecode(bytecode);
@@ -633,22 +633,22 @@ RISCV_INTERNAL void Memory<W>::generate_decoder_cache([[maybe_unused]] const Mac
   }
   // Make sure the last entry is an invalid instruction
   // This simplifies many other sub-systems
-  auto &entry = exec_decoder[(addr + len) / DecoderCache<W>::DIVISOR];
+  auto &entry = exec_decoder[(addr + len) / DecoderCache<address_t>::DIVISOR];
   entry.set_bytecode(0);
   entry.m_handler = 0;
   entry.idxend = 0;
   TIME_POINT(t3);
 
-  realize_fastsim<W>(addr, dst, exec_segment, exec_decoder);
+  realize_fastsim<address_t>(addr, dst, exec_segment, exec_decoder);
 
   // Debugging: EBREAK locations
   for (auto &loc : options.ebreak_locations) {
     address_t addr = 0;
-    if (std::holds_alternative<address_type<W>>(loc)) addr = std::get<address_type<W>>(loc);
+    if (std::holds_alternative<address_t>(loc)) addr = std::get<address_t>(loc);
     else addr = machine().address_of(std::get<std::string>(loc));
 
     if (addr != 0x0 && addr >= exec.exec_begin() && addr < exec.exec_end()) {
-      CPU<W>::install_ebreak_for(exec, addr);
+      CPU<address_t>::install_ebreak_for(exec, addr);
       if (options.verbose_loader) {
         printf("libriscv: Added ebreak location at 0x%" PRIx64 "\n", uint64_t(addr));
       }

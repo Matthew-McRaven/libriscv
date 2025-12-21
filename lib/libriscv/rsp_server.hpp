@@ -48,27 +48,27 @@ namespace riscv {
 #else
     typedef uint64_t socket_fd_type;
 #endif
-template <int W> struct RSPClient;
+template <AddressType address_t> struct RSPClient;
 
-template <int W>
+template <AddressType address_t>
 struct RSP
 {
 	// Wait for a connection for @timeout_secs
-	std::unique_ptr<RSPClient<W>> accept(int timeout_secs = 30);
+	std::unique_ptr<RSPClient<address_t>> accept(int timeout_secs = 30);
     socket_fd_type  fd() const noexcept { return server_fd; }
 
-	RSP(riscv::Machine<W>&, uint16_t);
+	RSP(riscv::Machine<address_t>&, uint16_t);
 	~RSP();
 
 private:
-	riscv::Machine<W>& m_machine;
+	riscv::Machine<address_t>& m_machine;
     socket_fd_type server_fd;
 };
-template <int W>
+template <AddressType address_t>
 struct RSPClient
 {
-	using StopFunc = std::function<void(RSPClient<W>&)>;
-	using PrinterFunc = void(*)(const Machine<W>&, const char*, size_t);
+	using StopFunc = std::function<void(RSPClient<address_t>&)>;
+	using PrinterFunc = void(*)(const Machine<address_t>&, const char*, size_t);
 	bool is_closed() const noexcept { return m_closed; }
 
 	bool process_one();
@@ -80,7 +80,7 @@ struct RSPClient
 	void kill();
 
 	auto& machine() { return *m_machine; }
-	void set_machine(Machine<W>& m) { m_machine = &m; }
+	void set_machine(Machine<address_t>& m) { m_machine = &m; }
 	void set_instruction_limit(uint64_t limit) { m_ilimit = limit; }
 	void set_verbose(bool v) { m_verbose = v; }
 	void on_stopped(StopFunc f) { m_on_stopped = f; }
@@ -90,7 +90,7 @@ struct RSPClient
 	auto& get_debug_printer() const noexcept { return m_debug_printer; }
 	void set_debug_printer(PrinterFunc pf) noexcept { m_debug_printer = pf; }
 
-	RSPClient(riscv::Machine<W>& m, socket_fd_type fd);
+	RSPClient(riscv::Machine<address_t>& m, socket_fd_type fd);
 	~RSPClient();
 
 private:
@@ -115,20 +115,20 @@ private:
 	void report_gprs();
 	void report_status();
 	void close_now();
-	riscv::Machine<W>* m_machine;
+	riscv::Machine<address_t>* m_machine;
 	uint64_t m_ilimit = 16'000'000UL;
     socket_fd_type  sockfd;
 	bool m_closed  = false;
 	bool m_verbose = false;
 	std::string buffer;
-	std::array<riscv::address_type<W>, 8> m_bp {};
+	std::array<riscv::address_t, 8> m_bp {};
 	size_t m_bp_iterator = 0;
 	StopFunc m_on_stopped = nullptr;
-	mutable PrinterFunc m_debug_printer = [](const Machine<W>&, const char*, size_t) {};
+	mutable PrinterFunc m_debug_printer = [](const Machine<address_t>&, const char*, size_t) {};
 };
 } // riscv
 
-// The entire RSP<W> must be implemented per OS
+// The entire RSP<address_t> must be implemented per OS
 #ifndef WIN32
 #include "linux/rsp_server.hpp"
 #else
@@ -137,15 +137,15 @@ private:
 
 namespace riscv {
 
-template <int W> inline
-RSPClient<W>::RSPClient(riscv::Machine<W>& m, socket_fd_type fd)
+template <AddressType address_t> inline
+RSPClient<address_t>::RSPClient(riscv::Machine<address_t>& m, socket_fd_type fd)
 	: m_machine{&m}, sockfd(fd)
 {
 	m_machine->set_max_instructions(m_ilimit);
 }
 
-template <int W>
-int RSPClient<W>::forge_packet(
+template <AddressType address_t>
+int RSPClient<address_t>::forge_packet(
 	char* dst, size_t dstlen, const char* data, int datalen)
 {
 	char* d = dst;
@@ -172,8 +172,8 @@ int RSPClient<W>::forge_packet(
 	*d++ = lut[(csum >> 0) & 0xF];
 	return d - dst;
 }
-template <int W>
-int RSPClient<W>::forge_packet(
+template <AddressType address_t>
+int RSPClient<address_t>::forge_packet(
 	char* dst, size_t dstlen, const char* fmt, va_list args)
 {
 	char data[4 + 2*PACKET_SIZE];
@@ -181,8 +181,8 @@ int RSPClient<W>::forge_packet(
 	return forge_packet(dst, dstlen, data, datalen);
 }
 
-template <int W>
-void RSPClient<W>::process_data()
+template <AddressType address_t>
+void RSPClient<address_t>::process_data()
 {
 	switch (buffer[0]) {
 	case 'q':
@@ -233,8 +233,8 @@ void RSPClient<W>::process_data()
 		}
 	}
 }
-template <int W>
-void RSPClient<W>::handle_query()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_query()
 {
 	if (strncmp("qSupported", buffer.data(), strlen("qSupported")) == 0)
 	{
@@ -280,8 +280,8 @@ void RSPClient<W>::handle_query()
 		send("");
 	}
 }
-template <int W>
-void RSPClient<W>::handle_continue()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_continue()
 {
 	try {
 		for (auto bp : m_bp) {
@@ -320,8 +320,8 @@ void RSPClient<W>::handle_continue()
 	}
 	report_status();
 }
-template <int W>
-void RSPClient<W>::handle_step()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_step()
 {
 	try {
 		if (!m_machine->stopped()) {
@@ -336,8 +336,8 @@ void RSPClient<W>::handle_step()
 	}
 	report_status();
 }
-template <int W>
-void RSPClient<W>::handle_exception(const std::exception& e)
+template <AddressType address_t>
+void RSPClient<address_t>::handle_exception(const std::exception& e)
 {
 	char buffer[1024];
 	int len = snprintf(buffer, sizeof(buffer), "Exception: %s\n", e.what());
@@ -346,8 +346,8 @@ void RSPClient<W>::handle_exception(const std::exception& e)
 	m_machine->stop();
 	send("S01");
 }
-template <int W>
-void RSPClient<W>::handle_breakpoint()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_breakpoint()
 {
 	uint32_t type = 0;
 	uint64_t addr = 0;
@@ -362,8 +362,8 @@ void RSPClient<W>::handle_breakpoint()
 	}
 	reply_ok();
 }
-template <int W>
-void RSPClient<W>::handle_executing()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_executing()
 {
 	if (strncmp("vCont?", buffer.data(), strlen("vCont?")) == 0)
 	{
@@ -393,12 +393,12 @@ void RSPClient<W>::handle_executing()
 		send("");
 	}
 }
-template <int W>
-void RSPClient<W>::handle_multithread() {
+template <AddressType address_t>
+void RSPClient<address_t>::handle_multithread() {
 	reply_ok();
 }
-template <int W>
-void RSPClient<W>::handle_readmem()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_readmem()
 {
 	uint64_t addr = 0;
 	uint32_t len = 0;
@@ -424,8 +424,8 @@ void RSPClient<W>::handle_readmem()
 	*d++ = 0;
 	send(data);
 }
-template <int W>
-void RSPClient<W>::handle_writemem()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_writemem()
 {
 	uint64_t addr = 0;
 	uint32_t len = 0;
@@ -456,8 +456,8 @@ void RSPClient<W>::handle_writemem()
 		send("E01");
 	}
 }
-template <int W>
-void RSPClient<W>::report_status()
+template <AddressType address_t>
+void RSPClient<address_t>::report_status()
 {
 	if (!m_machine->stopped())
 		send("S05"); /* Just send TRAP */
@@ -470,9 +470,9 @@ void RSPClient<W>::report_status()
 		}
 	}
 }
-template <int W>
+template <AddressType address_t>
 template <typename T>
-void RSPClient<W>::putreg(char*& d, const char* end, const T& reg)
+void RSPClient<address_t>::putreg(char*& d, const char* end, const T& reg)
 {
 	for (auto j = 0u; j < sizeof(reg) && d < end; j++) {
 		*d++ = lut[(reg >> (j*8+4)) & 0xF];
@@ -480,8 +480,8 @@ void RSPClient<W>::putreg(char*& d, const char* end, const T& reg)
 	}
 }
 
-template <int W>
-void RSPClient<W>::handle_readreg()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_readreg()
 {
 	uint32_t idx = 0;
 	sscanf(buffer.c_str(), "p%x", &idx);
@@ -537,8 +537,8 @@ void RSPClient<W>::handle_readreg()
 	*d++ = 0;
 	send(data);
 }
-template <int W>
-void RSPClient<W>::handle_writereg()
+template <AddressType address_t>
+void RSPClient<address_t>::handle_writereg()
 {
 	uint64_t value = 0;
 	uint32_t idx = 0;
@@ -566,8 +566,8 @@ void RSPClient<W>::handle_writereg()
 	}
 }
 
-template <int W>
-void RSPClient<W>::report_gprs()
+template <AddressType address_t>
+void RSPClient<address_t>::report_gprs()
 {
 	auto& regs = m_machine->cpu.registers();
 	char data[1024];
@@ -582,17 +582,17 @@ void RSPClient<W>::report_gprs()
 	send(data);
 }
 
-template <int W> inline
-void RSPClient<W>::reply_ok() {
+template <AddressType address_t> inline
+void RSPClient<address_t>::reply_ok() {
 	send("OK");
 }
-template <int W>
-void RSPClient<W>::interrupt() {
+template <AddressType address_t>
+void RSPClient<address_t>::interrupt() {
 	send("S05");
 }
 
-template <int W>
-inline void RSPClient<W>::debug_print(const char* buffer, size_t len) const
+template <AddressType address_t>
+inline void RSPClient<address_t>::debug_print(const char* buffer, size_t len) const
 {
 	this->m_debug_printer(*m_machine, buffer, len);
 }

@@ -1,7 +1,7 @@
 //#define SYSPRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
 
-template <int W>
-static void syscall_eventfd2(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_eventfd2(Machine<address_t>& machine)
 {
 	const auto initval = machine.template sysarg<int>(0);
 	const auto flags = machine.template sysarg<int>(1);
@@ -16,8 +16,8 @@ static void syscall_eventfd2(Machine<W>& machine)
 		initval, flags, real_fd, machine.template return_value<int>());
 }
 
-template <int W>
-static void syscall_epoll_create(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_epoll_create(Machine<address_t>& machine)
 {
 	const auto flags = machine.template sysarg<int>(0);
 	int real_fd = -1;
@@ -31,8 +31,8 @@ static void syscall_epoll_create(Machine<W>& machine)
 		real_fd, flags, machine.template return_value<int>());
 }
 
-template <int W>
-static void syscall_epoll_ctl(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_epoll_ctl(Machine<address_t>& machine)
 {
 	// int epoll_ctl(int epfd, int op, int fd, struct epoll_event *event);
 	const auto vepoll_fd = machine.template sysarg<int>(0);
@@ -50,8 +50,8 @@ static void syscall_epoll_ctl(Machine<W>& machine)
 		vepoll_fd, op, vfd, real_fd, (long)g_event, (int)machine.return_value());
 }
 
-template <int W>
-static void syscall_epoll_pwait(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_epoll_pwait(Machine<address_t>& machine)
 {
 	//  int epoll_pwait(int epfd, struct epoll_event *events,
 	//  				int maxevents, int timeout,

@@ -26,8 +26,8 @@ using ScopedCppString = ScopedArenaObject<RISCV64, CppString>;
 template <typename T>
 using ScopedCppVector = ScopedArenaObject<RISCV64, CppVector<T>>;
 
-template <int W>
-static void setup_native_system_calls(riscv::Machine<W>& machine)
+template <AddressType address_t>
+static void setup_native_system_calls(riscv::Machine<address_t>& machine)
 {
 	// Syscall-backed heap
 	constexpr size_t heap_size = 65536;

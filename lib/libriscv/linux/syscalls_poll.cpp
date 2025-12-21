@@ -27,8 +27,8 @@ int poll_with_timeout(struct pollfd *fds, nfds_t nfds, const struct timespec *ti
 
 // int ppoll(struct pollfd *fds, nfds_t nfds,
 //        const struct timespec *timeout_ts, const sigset_t *sigmask);
-template <int W>
-static void syscall_ppoll(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_ppoll(Machine<address_t>& machine)
 {
 	const auto g_fds = machine.sysarg(0);
 	const auto nfds  = machine.template sysarg<unsigned>(1);

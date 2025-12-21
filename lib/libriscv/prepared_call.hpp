@@ -32,19 +32,19 @@ namespace riscv
 	 * stored calls in general, and they should not hog a lot of stack space.
 	 * 
 	**/
-	template <int W>
+	template <AddressType address_t>
 	struct StoredCall
 	{
-		using address_t = address_type<W>;
-		using saddr_t = signed_address_type<W>;
+		using address_t = address_t;
+		using saddr_t = signed_address_t;
 
 		saddr_t vmcall(uint64_t imax = UINT64_MAX);
 
 		template <typename... Args>
-		void store(Machine<W>&, const std::string& func, Args&&...);
+		void store(Machine<address_t>&, const std::string& func, Args&&...);
 
 		template <typename... Args>
-		void store(Machine<W>&, address_t call_addr, Args&&...);
+		void store(Machine<address_t>&, address_t call_addr, Args&&...);
 
 		bool is_stored() const noexcept {
 			return this->m_func != nullptr;
@@ -61,8 +61,8 @@ namespace riscv
 		std::function<saddr_t(uint64_t)> m_func;
 	};
 
-	template <int W>
-	inline signed_address_type<W> StoredCall<W>::vmcall(uint64_t imax)
+	template <AddressType address_t>
+	inline signed_address_t StoredCall<address_t>::vmcall(uint64_t imax)
 	{
 		if (UNLIKELY(!is_stored()))
 			throw MachineException(ILLEGAL_OPERATION,
@@ -71,9 +71,9 @@ namespace riscv
 		return m_func(imax);
 	}
 
-	template <int W>
+	template <AddressType address_t>
 	template <typename... Args>
-	void StoredCall<W>::store(Machine<W>& m, address_t call_addr, Args&&... args)
+	void StoredCall<address_t>::store(Machine<address_t>& m, address_t call_addr, Args&&... args)
 	{
 		if (UNLIKELY(call_addr == 0x0))
 			throw MachineException(ILLEGAL_OPERATION,
@@ -150,9 +150,9 @@ namespace riscv
 		};
 	}
 
-	template <int W>
+	template <AddressType address_t>
 	template <typename... Args>
-	void StoredCall<W>::store(Machine<W>& m, const std::string& func, Args&&... args)
+	void StoredCall<address_t>::store(Machine<address_t>& m, const std::string& func, Args&&... args)
 	{
 		this->store(m, m.address_of(func), std::forward<Args>(args)...);
 	}
@@ -168,11 +168,11 @@ namespace riscv
 	struct PreparedCall
 	{
 	public:
-		using address_t = address_type<W>;
+		using address_t = address_t;
 		using Ret = std::function<F>::result_type;
 
 		template <typename... Args>
-		auto call_with(Machine<W>& m, Args&&... args) const
+		auto call_with(Machine<address_t>& m, Args&&... args) const
 		{
 			static_assert(std::is_invocable_v<F, Args...>,
 				"PreparedCall: Invalid argument types for function call");
@@ -195,8 +195,8 @@ namespace riscv
 			return this->call_with(*m_machine, std::forward<Args>(args)...);
 		}
 
-		Machine<W>& machine() const noexcept { return *m_machine; }
-		Machine<W>& machine() noexcept { return *m_machine; }
+		Machine<address_t>& machine() const noexcept { return *m_machine; }
+		Machine<address_t>& machine() noexcept { return *m_machine; }
 
 		address_t address() const noexcept { return m_pc; }
 
@@ -208,7 +208,7 @@ namespace riscv
 		/// @return True if the call turned into a fast-path call.
 		/// @note The function will throw an exception if unsuccessful. A 'false' return value
 		/// indicates that the function did not get a fast-path, but was still prepared.
-		bool prepare(Machine<W>& m, address_t call_addr)
+		bool prepare(Machine<address_t>& m, address_t call_addr)
 		{
 			if (call_addr == 0x0)
 				throw MachineException(EXECUTION_SPACE_PROTECTION_FAULT,
@@ -232,24 +232,24 @@ namespace riscv
 			return true; // No fast path, but prepared
 		}
 
-		bool prepare(Machine<W>& m, const std::string& func)
+		bool prepare(Machine<address_t>& m, const std::string& func)
 		{
 			return this->prepare(m, m.address_of(func));
 		}
 
-		void prepare(Machine<W>& m)
+		void prepare(Machine<address_t>& m)
 		{
 			this->m_machine = &m;
 		}
 
-		PreparedCall(Machine<W>& m, const std::string& func, unsigned* stat = nullptr)
+		PreparedCall(Machine<address_t>& m, const std::string& func, unsigned* stat = nullptr)
 		{
 			bool is_fast = this->prepare(m, func);
 			if (stat && is_fast) {
 				*stat += 1; // Increment the fast-path stat
 			}
 		}
-		PreparedCall(Machine<W>& m, address_t call_addr, unsigned* stat = nullptr)
+		PreparedCall(Machine<address_t>& m, address_t call_addr, unsigned* stat = nullptr)
 			: m_machine(&m), m_pc(0)
 		{
 			bool is_fast = this->prepare(m, call_addr);
@@ -264,7 +264,7 @@ namespace riscv
 		~PreparedCall() = default;
 
 	private:
-		Machine<W>* m_machine = nullptr;
+		Machine<address_t>* m_machine = nullptr;
 		address_t   m_pc = 0;
 	};
 

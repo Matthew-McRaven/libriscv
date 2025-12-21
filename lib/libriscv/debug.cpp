@@ -30,8 +30,8 @@ static inline std::vector<std::string> split(const std::string& txt, char ch)
 	strs.push_back(txt.substr(initialPos, std::min(pos, txt.size()) - initialPos + 1));
 	return strs;
 }
-template <int W>
-void DebugMachine<W>::dprintf(const char* fmt, ...) const
+template <AddressType address_t>
+void DebugMachine<address_t>::dprintf(const char* fmt, ...) const
 {
 	char buffer[2048];
 
@@ -47,8 +47,8 @@ void DebugMachine<W>::dprintf(const char* fmt, ...) const
 	}
 }
 
-template <int W>
-void DebugMachine<W>::print_help() const
+template <AddressType address_t>
+void DebugMachine<address_t>::print_help() const
 {
 	const char* help_text = R"V0G0N(
   usage: command [options]
@@ -77,8 +77,8 @@ void DebugMachine<W>::print_help() const
 	dprintf("%s\n", help_text);
 }
 
-template <int W>
-bool DebugMachine<W>::execute_commands()
+template <AddressType address_t>
+bool DebugMachine<address_t>::execute_commands()
 {
 	auto& cpu = machine.cpu;
 
@@ -160,13 +160,13 @@ bool DebugMachine<W>::execute_commands()
 		if (addr != 0x0) {
 			this->dprintf("Watchpoint on %s with address 0x%lX\n",
 				params[1].c_str(), addr);
-			this->watchpoint(addr, W);
-		} else {
+      this->watchpoint(addr, sizeof(address_t));
+    } else {
 			unsigned long hex = std::strtoul(params[1].c_str(), 0, 16);
 			this->dprintf("Watchpoint on address 0x%lX\n", hex);
-			this->watchpoint(hex, W);
-		}
-		return true;
+      this->watchpoint(hex, sizeof(address_t));
+    }
+    return true;
 	}
 	else if (cmd == "a" || cmd == "addrof")
 	{
@@ -295,8 +295,8 @@ bool DebugMachine<W>::execute_commands()
 	return false;
 }
 
-template<int W>
-void DebugMachine<W>::print(const std::string& label, address_t override_pc)
+template<AddressType address_t>
+void DebugMachine<address_t>::print(const std::string& label, address_t override_pc)
 {
 	auto& cpu = machine.cpu;
 	auto old_pc = cpu.pc();
@@ -322,8 +322,8 @@ void DebugMachine<W>::print(const std::string& label, address_t override_pc)
 	}
 }
 
-template<int W>
-void DebugMachine<W>::print_and_pause()
+template<AddressType address_t>
+void DebugMachine<address_t>::print_and_pause()
 {
 	this->print();
 
@@ -331,8 +331,8 @@ void DebugMachine<W>::print_and_pause()
 		;
 } // print_and_pause(...)
 
-template<int W>
-bool DebugMachine<W>::break_time() const
+template<AddressType address_t>
+bool DebugMachine<address_t>::break_time() const
 {
 	if (UNLIKELY(m_break_steps_cnt != 0))
 	{
@@ -346,16 +346,16 @@ bool DebugMachine<W>::break_time() const
 	return false;
 }
 
-template<int W>
-void DebugMachine<W>::break_on_steps(int steps)
+template<AddressType address_t>
+void DebugMachine<address_t>::break_on_steps(int steps)
 {
 	assert(steps >= 0);
 	this->m_break_steps_cnt = steps;
 	this->m_break_steps = steps;
 }
 
-template<int W>
-void DebugMachine<W>::break_checks()
+template<AddressType address_t>
+void DebugMachine<address_t>::break_checks()
 {
 	if (UNLIKELY(this->break_time()))
 	{
@@ -398,8 +398,8 @@ void DebugMachine<W>::break_checks()
 	}
 }
 
-template<int W>
-void DebugMachine<W>::register_debug_logging() const
+template<AddressType address_t>
+void DebugMachine<address_t>::register_debug_logging() const
 {
 	auto regs = "\n" + machine.cpu.registers().to_string() + "\n\n";
 	this->debug_print(regs.data(), regs.size());
@@ -409,12 +409,12 @@ void DebugMachine<W>::register_debug_logging() const
 	}
 }
 
-template<int W>
-void DebugMachine<W>::simulate(std::function<void(DebugMachine<W>&)> callback, uint64_t imax)
+template<AddressType address_t>
+void DebugMachine<address_t>::simulate(std::function<void(DebugMachine<address_t>&)> callback, uint64_t imax)
 {
 	auto& cpu = machine.cpu;
 	address_t pc = cpu.pc();
-	DecodedExecuteSegment<W>* exec;
+	DecodedExecuteSegment<address_t>* exec;
 	auto new_values = cpu.next_execute_segment(pc);
 	exec = new_values.exec;
 	pc   = new_values.pc;
@@ -488,22 +488,22 @@ void DebugMachine<W>::simulate(std::function<void(DebugMachine<W>&)> callback, u
 
 } // DebugMachine::simulate
 
-template <int W>
-DebugMachine<W>::DebugMachine(Machine<W>& m) : machine(m) {
-	m_debug_printer = [](const Machine<W>&, const char* buffer, size_t len) {
+template <AddressType address_t>
+DebugMachine<address_t>::DebugMachine(Machine<address_t>& m) : machine(m) {
+	m_debug_printer = [](const Machine<address_t>&, const char* buffer, size_t len) {
 		fprintf(stderr, "[DebugMachine] %.*s\n", (int)len, buffer);
 	};
 }
 
-template <int W>
-void DebugMachine<W>::debug_print(const char* buffer, size_t len) const
+template <AddressType address_t>
+void DebugMachine<address_t>::debug_print(const char* buffer, size_t len) const
 {
 	if (m_debug_printer)
 		m_debug_printer(machine, buffer, len);
 }
 
-template<int W>
-void DebugMachine<W>::simulate(uint64_t imax)
+template<AddressType address_t>
+void DebugMachine<address_t>::simulate(uint64_t imax)
 {
 	this->simulate(nullptr, imax);
 }

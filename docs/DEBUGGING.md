@@ -59,11 +59,11 @@ Once you have a RISC-V aware GDB you can start it with `gdb-multiarch my.elf`. O
 ```C++
 #include <libriscv/rsp_server.hpp>
 ...
-template <int W>
-void gdb_listen(uint16_t port, Machine<W>& machine)
+template <AddressType address_t>
+void gdb_listen(uint16_t port, Machine<address_t>& machine)
 {
 	printf("GDB server is listening on localhost:%u\n", port);
-	riscv::RSP<W> server { machine, port };
+	riscv::RSP<address_t> server { machine, port };
 	auto client = server.accept();
 	if (client != nullptr) {
 		printf("GDB connected\n");

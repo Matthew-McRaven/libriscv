@@ -17,9 +17,9 @@
 #endif
 
 namespace riscv {
-template <int W> const riscv::Instruction<W> &decode_one(const riscv::instruction_format instruction) {
+template <AddressType address_t>
+const riscv::Instruction<address_t> &decode_one(const riscv::instruction_format instruction) {
   // -*-C++-*-
-  using address_t = riscv::address_type<W>;
   using namespace riscv;
 #ifdef RISCV_EXT_COMPRESSED
   if (instruction.is_long()) // RV32 IMAFD
@@ -32,102 +32,96 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
       if (LIKELY(instruction.Itype.rd != 0)) {
         switch (instruction.Itype.funct3) {
         case 0x0:
-          if constexpr (W == 4) return instr32i_LOAD_I8;
+          if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_I8;
           else return instr64i_LOAD_I8;
         case 0x1:
-          if constexpr (W == 4) return instr32i_LOAD_I16;
+          if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_I16;
           else return instr64i_LOAD_I16;
         case 0x2:
-          if constexpr (W == 4) return instr32i_LOAD_I32;
+          if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_I32;
           else return instr64i_LOAD_I32;
         case 0x3:
-          if constexpr (sizeof(address_t) >= 8) {
-            if constexpr (W == 4) return instr32i_LOAD_I64;
-            else return instr64i_LOAD_I64;
-          }
-          if constexpr (W == 4) return instr32i_ILLEGAL;
-          else return instr64i_ILLEGAL;
+          if constexpr (sizeof(address_t) == 8) return instr64i_LOAD_I64;
+          else return instr32i_ILLEGAL;
         case 0x4:
-          if constexpr (W == 4) return instr32i_LOAD_U8;
+          if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_U8;
           else return instr64i_LOAD_U8;
         case 0x5:
-          if constexpr (W == 4) return instr32i_LOAD_U16;
+          if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_U16;
           else return instr64i_LOAD_U16;
         case 0x6:
-          if constexpr (W == 4) return instr32i_LOAD_U32;
+          if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_U32;
           else return instr64i_LOAD_U32;
         case 0x7: [[fallthrough]];
         default:
-          if constexpr (W == 4) return instr32i_ILLEGAL;
+          if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
           else return instr64i_ILLEGAL;
         }
       }
-      if constexpr (W == 4) return instr32i_LOAD_X_DUMMY;
+      if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_X_DUMMY;
       else return instr64i_LOAD_X_DUMMY;
 
     case RV32I_STORE:
       switch (instruction.Stype.funct3) {
       case 0x0:
         if (instruction.Stype.signed_imm() == 0) {
-          if constexpr (W == 4) return instr32i_STORE_I8;
+          if constexpr (sizeof(address_t) == 4) return instr32i_STORE_I8;
           else return instr64i_STORE_I8;
         }
-        if constexpr (W == 4) return instr32i_STORE_I8_IMM;
+        if constexpr (sizeof(address_t) == 4) return instr32i_STORE_I8_IMM;
         else return instr64i_STORE_I8_IMM;
       case 0x1:
-        if constexpr (W == 4) return instr32i_STORE_I16_IMM;
+        if constexpr (sizeof(address_t) == 4) return instr32i_STORE_I16_IMM;
         else return instr64i_STORE_I16_IMM;
       case 0x2:
-        if constexpr (W == 4) return instr32i_STORE_I32_IMM;
+        if constexpr (sizeof(address_t) == 4) return instr32i_STORE_I32_IMM;
         else return instr64i_STORE_I32_IMM;
       case 0x3:
-        if constexpr (sizeof(address_t) >= 8) {
-          if constexpr (W == 4) return instr32i_STORE_I64_IMM;
-          else return instr64i_STORE_I64_IMM;
-        }
+        if constexpr (sizeof(address_t) == 8) return instr64i_STORE_I64_IMM;
+        else return instr32i_STORE_I64_IMM;
         [[fallthrough]];
       case 0x4: [[fallthrough]];
       default:; // fallthrough
       }
-      if constexpr (W == 4) return instr32i_ILLEGAL;
+      if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
       else return instr64i_ILLEGAL;
 
     case RV32I_BRANCH:
       switch (instruction.Btype.funct3) {
       case 0x0:
-        if constexpr (W == 4) return instr32i_BRANCH_EQ;
+        if constexpr (sizeof(address_t) == 4) return instr32i_BRANCH_EQ;
         else return instr64i_BRANCH_EQ;
       case 0x1:
-        if constexpr (W == 4) return instr32i_BRANCH_NE;
+        if constexpr (sizeof(address_t) == 4) return instr32i_BRANCH_NE;
         else return instr64i_BRANCH_NE;
       case 0x2: [[fallthrough]];
       case 0x3:
-        if constexpr (W == 4) return instr32i_ILLEGAL;
+        if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
         else return instr64i_ILLEGAL;
       case 0x4:
-        if constexpr (W == 4) return instr32i_BRANCH_LT;
+        if constexpr (sizeof(address_t) == 4) return instr32i_BRANCH_LT;
         else return instr64i_BRANCH_LT;
       case 0x5:
-        if constexpr (W == 4) return instr32i_BRANCH_GE;
+        if constexpr (sizeof(address_t) == 4) return instr32i_BRANCH_GE;
         else return instr64i_BRANCH_GE;
       case 0x6:
-        if constexpr (W == 4) return instr32i_BRANCH_LTU;
+        if constexpr (sizeof(address_t) == 4) return instr32i_BRANCH_LTU;
         else return instr64i_BRANCH_LTU;
       case 0x7:
-        if constexpr (W == 4) return instr32i_BRANCH_GEU;
+        if constexpr (sizeof(address_t) == 4) return instr32i_BRANCH_GEU;
         else return instr64i_BRANCH_GEU;
       }
 
     case RV32I_JALR:
-      if constexpr (W == 4) return instr32i_JALR;
+      if constexpr (sizeof(address_t) == 4) return instr32i_JALR;
       else return instr64i_JALR;
 
     case RV32I_JAL:
       if (instruction.Jtype.rd != 0) {
-        if constexpr (W == 4) return instr32i_JAL;
+        if constexpr (sizeof(address_t) == 4) return instr32i_JAL;
         else return instr64i_JAL;
       }
-      if constexpr (W == 4) return instr32i_JMPI;
+      if constexpr (sizeof(address_t) == 4) return instr32i_JMPI;
       else return instr64i_JMPI;
 
     case RV32I_OP_IMM:
@@ -135,139 +129,139 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
         switch (instruction.Itype.funct3) {
         case 0x0: // ADDI
           if (instruction.Itype.rs1 == 0) {
-            if constexpr (W == 4) return instr32i_OP_IMM_LI;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM_LI;
             else return instr64i_OP_IMM_LI;
           } else if (instruction.Itype.imm == 0) {
-            if constexpr (W == 4) return instr32i_OP_MV;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_MV;
             else return instr64i_OP_MV;
           }
-          if constexpr (W == 4) return instr32i_OP_IMM_ADDI;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM_ADDI;
           else return instr64i_OP_IMM_ADDI;
         case 0x1: // SLLI
           if (instruction.Itype.high_bits() == 0x0) {
-            if constexpr (W == 4) return instr32i_OP_IMM_SLLI;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM_SLLI;
             else return instr64i_OP_IMM_SLLI;
           }
-          if constexpr (W == 4) return instr32i_OP_IMM;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM;
           else return instr64i_OP_IMM;
         case 0x5: // SRLI / SRAI
           if (instruction.Itype.high_bits() == 0x0) {
-            if constexpr (W == 4) return instr32i_OP_IMM_SRLI;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM_SRLI;
             else return instr64i_OP_IMM_SRLI;
           } else {
-            if constexpr (W == 4) return instr32i_OP_IMM;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM;
             else return instr64i_OP_IMM;
           }
         case 0x7: // ANDI
-          if constexpr (W == 4) return instr32i_OP_IMM_ANDI;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM_ANDI;
           else return instr64i_OP_IMM_ANDI;
         default:
-          if constexpr (W == 4) return instr32i_OP_IMM;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM;
           else return instr64i_OP_IMM;
         }
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
 
     case RV32I_OP:
       if (LIKELY(instruction.Rtype.rd != 0)) {
         switch (instruction.Rtype.jumptable_friendly_op()) {
         case 0x0:
-          if constexpr (W == 4) return instr32i_OP_ADD;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP_ADD;
           else return instr64i_OP_ADD;
         case 0x200:
-          if constexpr (W == 4) return instr32i_OP_SUB;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP_SUB;
           else return instr64i_OP_SUB;
         default:
-          if constexpr (W == 4) return instr32i_OP;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP;
           else return instr64i_OP;
         }
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
 
     case RV32I_SYSTEM:
       if (LIKELY(instruction.Itype.funct3 == 0)) {
         if (instruction.Itype.imm == 0) {
-          if constexpr (W == 4) return instr32i_SYSCALL;
+          if constexpr (sizeof(address_t) == 4) return instr32i_SYSCALL;
           else return instr64i_SYSCALL;
         } else if (instruction.Itype.imm == 0x7FF) { // STOP
-          if constexpr (W == 4) return instr32i_WFI;
+          if constexpr (sizeof(address_t) == 4) return instr32i_WFI;
           else return instr64i_WFI;
         } else if (instruction.Itype.imm == 261) {
-          if constexpr (W == 4) return instr32i_WFI;
+          if constexpr (sizeof(address_t) == 4) return instr32i_WFI;
           else return instr64i_WFI;
         }
       }
-      if constexpr (W == 4) return instr32i_SYSTEM;
+      if constexpr (sizeof(address_t) == 4) return instr32i_SYSTEM;
       else return instr64i_SYSTEM;
     case RV32I_LUI:
       if (LIKELY(instruction.Utype.rd != 0)) {
-        if constexpr (W == 4) return instr32i_LUI;
+        if constexpr (sizeof(address_t) == 4) return instr32i_LUI;
         else return instr64i_LUI;
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
 
     case RV32I_AUIPC:
       if (LIKELY(instruction.Utype.rd != 0)) {
-        if constexpr (W == 4) return instr32i_AUIPC;
+        if constexpr (sizeof(address_t) == 4) return instr32i_AUIPC;
         else return instr64i_AUIPC;
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
 
     case RV64I_OP_IMM32:
       if (LIKELY(instruction.Itype.rd != 0)) {
         switch (instruction.Itype.funct3) {
         case 0x0: // ADDIW
-          if constexpr (W == 4) return instr32i_OP_IMM32_ADDIW;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM32_ADDIW;
           else return instr64i_OP_IMM32_ADDIW;
         case 0x1: // SLLIW
           if (instruction.Itype.high_bits() == 0x000) {
-            if constexpr (W == 4) return instr32i_OP_IMM32_SLLIW;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM32_SLLIW;
             else return instr64i_OP_IMM32_SLLIW;
           } else if (instruction.Itype.high_bits() == 0x080) {
-            if constexpr (W == 4) return instr32i_OP_IMM32_SLLI_UW;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM32_SLLI_UW;
             else return instr64i_OP_IMM32_SLLI_UW;
           } else {
-            if constexpr (W == 4) return instr32i_OP_IMM32;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM32;
             else return instr64i_OP_IMM32;
           }
         case 0x5: // SRLIW / SRAIW
           if (instruction.Itype.high_bits() == 0x000) {
-            if constexpr (W == 4) return instr32i_OP_IMM32_SRLIW;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM32_SRLIW;
             else return instr64i_OP_IMM32_SRLIW;
           } else if (instruction.Itype.high_bits() == 0x400) {
-            if constexpr (W == 4) return instr32i_OP_IMM32_SRAIW;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM32_SRAIW;
             else return instr64i_OP_IMM32_SRAIW;
           } else {
-            if constexpr (W == 4) return instr32i_OP_IMM32;
+            if constexpr (sizeof(address_t) == 4) return instr32i_OP_IMM32;
             else return instr64i_OP_IMM32;
           }
         }
-        if constexpr (W == 4) return instr32i_ILLEGAL;
+        if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
         else return instr64i_ILLEGAL;
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
 
     case RV64I_OP32:
       if (LIKELY(instruction.Rtype.rd != 0)) {
         switch (instruction.Rtype.jumptable_friendly_op()) {
         case 0x0: // ADDW
-          if constexpr (W == 4) return instr32i_OP32_ADDW;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP32_ADDW;
           else return instr64i_OP32_ADDW;
         default:
-          if constexpr (W == 4) return instr32i_OP32;
+          if constexpr (sizeof(address_t) == 4) return instr32i_OP32;
           else return instr64i_OP32;
         }
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
 
     case RV32I_FENCE:
-      if constexpr (W == 4) return instr32i_FENCE;
+      if constexpr (sizeof(address_t) == 4) return instr32i_FENCE;
       else return instr64i_FENCE;
 
       // RV32F & RV32D - Floating-point instructions
@@ -275,18 +269,18 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
       const riscv::rv32f_instruction fi{instruction};
       switch (fi.Itype.funct3) {
       case 0x2: // FLW
-        if constexpr (W == 4) return instr32i_FLW;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FLW;
         else return instr64i_FLW;
       case 0x3: // FLD
-        if constexpr (W == 4) return instr32i_FLD;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FLD;
         else return instr64i_FLD;
 #ifdef RISCV_EXT_VECTOR
       case 0x6: // VLE32
-        if constexpr (W == 4) return instr32i_VLE32;
+        if constexpr (sizeof(address_t) == 4) return instr32i_VLE32;
         else return instr64i_VLE32;
 #endif
       default:
-        if constexpr (W == 4) return instr32i_ILLEGAL;
+        if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
         else return instr64i_ILLEGAL;
       }
     }
@@ -294,89 +288,89 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
       const rv32f_instruction fi{instruction};
       switch (fi.Itype.funct3) {
       case 0x2: // FSW
-        if constexpr (W == 4) return instr32i_FSW;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FSW;
         else return instr64i_FSW;
       case 0x3: // FSD
-        if constexpr (W == 4) return instr32i_FSD;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FSD;
         else return instr64i_FSD;
 #ifdef RISCV_EXT_VECTOR
       case 0x6: // VSE32
-        if constexpr (W == 4) return instr32i_VSE32;
+        if constexpr (sizeof(address_t) == 4) return instr32i_VSE32;
         else return instr64i_VSE32;
 #endif
       default:
-        if constexpr (W == 4) return instr32i_ILLEGAL;
+        if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
         else return instr64i_ILLEGAL;
       }
     }
     case RV32F_FMADD:
-      if constexpr (W == 4) return instr32i_FMADD;
+      if constexpr (sizeof(address_t) == 4) return instr32i_FMADD;
       else return instr64i_FMADD;
     case RV32F_FMSUB:
-      if constexpr (W == 4) return instr32i_FMSUB;
+      if constexpr (sizeof(address_t) == 4) return instr32i_FMSUB;
       else return instr64i_FMSUB;
     case RV32F_FNMSUB:
-      if constexpr (W == 4) return instr32i_FNMSUB;
+      if constexpr (sizeof(address_t) == 4) return instr32i_FNMSUB;
       else return instr64i_FNMSUB;
     case RV32F_FNMADD:
-      if constexpr (W == 4) return instr32i_FNMADD;
+      if constexpr (sizeof(address_t) == 4) return instr32i_FNMADD;
       else return instr64i_FNMADD;
     case RV32F_FPFUNC:
       switch (instruction.fpfunc()) {
       case 0b00000:
-        if constexpr (W == 4) return instr32i_FADD;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FADD;
         else return instr64i_FADD;
       case 0b00001:
-        if constexpr (W == 4) return instr32i_FSUB;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FSUB;
         else return instr64i_FSUB;
       case 0b00010:
-        if constexpr (W == 4) return instr32i_FMUL;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FMUL;
         else return instr64i_FMUL;
       case 0b00011:
-        if constexpr (W == 4) return instr32i_FDIV;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FDIV;
         else return instr64i_FDIV;
       case 0b00100:
-        if constexpr (W == 4) return instr32i_FSGNJ_NX;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FSGNJ_NX;
         else return instr64i_FSGNJ_NX;
       case 0b00101:
-        if constexpr (W == 4) return instr32i_FMIN_FMAX;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FMIN_FMAX;
         else return instr64i_FMIN_FMAX;
       case 0b01011:
-        if constexpr (W == 4) return instr32i_FSQRT;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FSQRT;
         else return instr64i_FSQRT;
       case 0b10100:
         if (rv32f_instruction{instruction}.R4type.rd != 0) {
-          if constexpr (W == 4) return instr32i_FEQ_FLT_FLE;
+          if constexpr (sizeof(address_t) == 4) return instr32i_FEQ_FLT_FLE;
           else return instr64i_FEQ_FLT_FLE;
         }
-        if constexpr (W == 4) return instr32i_NOP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
         else return instr64i_NOP;
       case 0b01000:
-        if constexpr (W == 4) return instr32i_FCVT_SD_DS;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FCVT_SD_DS;
         else return instr64i_FCVT_SD_DS;
       case 0b11000:
         if (rv32f_instruction{instruction}.R4type.rd != 0) {
-          if constexpr (W == 4) return instr32i_FCVT_W_SD;
+          if constexpr (sizeof(address_t) == 4) return instr32i_FCVT_W_SD;
           else return instr64i_FCVT_W_SD;
         }
-        if constexpr (W == 4) return instr32i_NOP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
         else return instr64i_NOP;
       case 0b11010:
-        if constexpr (W == 4) return instr32i_FCVT_SD_W;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FCVT_SD_W;
         else return instr64i_FCVT_SD_W;
       case 0b11100:
         if (rv32f_instruction{instruction}.R4type.rd != 0) {
           if (rv32f_instruction{instruction}.R4type.funct3 == 0) {
-            if constexpr (W == 4) return instr32i_FMV_X_W;
+            if constexpr (sizeof(address_t) == 4) return instr32i_FMV_X_W;
             else return instr64i_FMV_X_W;
           }
-          if constexpr (W == 4) return instr32i_FCLASS;
+          if constexpr (sizeof(address_t) == 4) return instr32i_FCLASS;
           else return instr64i_FCLASS;
         }
-        if constexpr (W == 4) return instr32i_NOP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
         else return instr64i_NOP;
       case 0b11110:
-        if constexpr (W == 4) return instr32i_FMV_W_X;
+        if constexpr (sizeof(address_t) == 4) return instr32i_FMV_W_X;
         else return instr64i_FMV_W_X;
       }
       break;
@@ -385,31 +379,31 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
     case RV32V_OP:
       switch (instruction.vwidth()) {
       case 0x0: // OPI.VV
-        if constexpr (W == 4) return instr32i_VOPI_VV;
+        if constexpr (sizeof(address_t) == 4) return instr32i_VOPI_VV;
         else return instr64i_VOPI_VV;
       case 0x1: // OPF.VV
-        if constexpr (W == 4) return instr32i_VOPF_VV;
+        if constexpr (sizeof(address_t) == 4) return instr32i_VOPF_VV;
         else return instr64i_VOPF_VV;
       case 0x2: // OPM.VV
-        if constexpr (W == 4) return instr32i_VOPM_VV;
+        if constexpr (sizeof(address_t) == 4) return instr32i_VOPM_VV;
         else return instr64i_VOPM_VV;
       case 0x3: // OPI.VI
-        if constexpr (W == 4) return instr32i_VOPI_VI;
+        if constexpr (sizeof(address_t) == 4) return instr32i_VOPI_VI;
         else return instr64i_VOPI_VI;
       case 0x5: // OPF.VF
-        if constexpr (W == 4) return instr32i_VOPF_VF;
+        if constexpr (sizeof(address_t) == 4) return instr32i_VOPF_VF;
         else return instr64i_VOPF_VF;
       case 0x7: // Vector Configuration
         switch (instruction.vsetfunc()) {
         case 0x0: [[fallthrough]];
         case 0x1:
-          if constexpr (W == 4) return instr32i_VSETVLI;
+          if constexpr (sizeof(address_t) == 4) return instr32i_VSETVLI;
           else return instr64i_VSETVLI;
         case 0x2:
-          if constexpr (W == 4) return instr32i_VSETVL;
+          if constexpr (sizeof(address_t) == 4) return instr32i_VSETVL;
           else return instr64i_VSETVL;
         case 0x3:
-          if constexpr (W == 4) return instr32i_VSETIVLI;
+          if constexpr (sizeof(address_t) == 4) return instr32i_VSETIVLI;
           else return instr64i_VSETIVLI;
         }
       }
@@ -424,40 +418,40 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
         switch (instruction.Atype.funct5) {
         case 0b00010:
           if (instruction.Atype.rs2 == 0) {
-            if constexpr (W == 4) return instr32i_LOAD_RESV;
+            if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_RESV;
             else return instr64i_LOAD_RESV;
           }
-          if constexpr (W == 4) return instr32i_ILLEGAL;
+          if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
           else return instr64i_ILLEGAL;
         case 0b00011:
-          if constexpr (W == 4) return instr32i_STORE_COND;
+          if constexpr (sizeof(address_t) == 4) return instr32i_STORE_COND;
           else return instr64i_STORE_COND;
         case 0b00000:
-          if constexpr (W == 4) return instr32i_AMOADD_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOADD_W;
           else return instr64i_AMOADD_W;
         case 0b00001:
-          if constexpr (W == 4) return instr32i_AMOSWAP_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOSWAP_W;
           else return instr64i_AMOSWAP_W;
         case 0b00100:
-          if constexpr (W == 4) return instr32i_AMOXOR_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOXOR_W;
           else return instr64i_AMOXOR_W;
         case 0b01000:
-          if constexpr (W == 4) return instr32i_AMOOR_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOOR_W;
           else return instr64i_AMOOR_W;
         case 0b01100:
-          if constexpr (W == 4) return instr32i_AMOAND_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOAND_W;
           else return instr64i_AMOAND_W;
         case 0b10000:
-          if constexpr (W == 4) return instr32i_AMOMIN_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOMIN_W;
           else return instr64i_AMOMIN_W;
         case 0b10100:
-          if constexpr (W == 4) return instr32i_AMOMAX_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOMAX_W;
           else return instr64i_AMOMAX_W;
         case 0b11000:
-          if constexpr (W == 4) return instr32i_AMOMINU_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOMINU_W;
           else return instr64i_AMOMINU_W;
         case 0b11100:
-          if constexpr (W == 4) return instr32i_AMOMAXU_W;
+          if constexpr (sizeof(address_t) == 4) return instr32i_AMOMAXU_W;
           else return instr64i_AMOMAXU_W;
         }
         break;
@@ -466,40 +460,40 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
           switch (instruction.Atype.funct5) {
           case 0b00010:
             if (instruction.Atype.rs2 == 0) {
-              if constexpr (W == 4) return instr32i_LOAD_RESV;
+              if constexpr (sizeof(address_t) == 4) return instr32i_LOAD_RESV;
               else return instr64i_LOAD_RESV;
             }
-            if constexpr (W == 4) return instr32i_ILLEGAL;
+            if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
             else return instr64i_ILLEGAL;
           case 0b00011:
-            if constexpr (W == 4) return instr32i_STORE_COND;
+            if constexpr (sizeof(address_t) == 4) return instr32i_STORE_COND;
             else return instr64i_STORE_COND;
           case 0b00000:
-            if constexpr (W == 4) return instr32i_AMOSWAP_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOSWAP_D;
             else return instr64i_AMOSWAP_D;
           case 0b00001:
-            if constexpr (W == 4) return instr32i_AMOSWAP_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOSWAP_D;
             else return instr64i_AMOSWAP_D;
           case 0b00100:
-            if constexpr (W == 4) return instr32i_AMOXOR_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOXOR_D;
             else return instr64i_AMOXOR_D;
           case 0b01000:
-            if constexpr (W == 4) return instr32i_AMOOR_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOOR_D;
             else return instr64i_AMOOR_D;
           case 0b01100:
-            if constexpr (W == 4) return instr32i_AMOAND_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOAND_D;
             else return instr64i_AMOAND_D;
           case 0b10000:
-            if constexpr (W == 4) return instr32i_AMOMIN_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOMIN_D;
             else return instr64i_AMOMIN_D;
           case 0b10100:
-            if constexpr (W == 4) return instr32i_AMOMAX_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOMAX_D;
             else return instr64i_AMOMAX_D;
           case 0b11000:
-            if constexpr (W == 4) return instr32i_AMOMINU_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOMINU_D;
             else return instr64i_AMOMINU_D;
           case 0b11100:
-            if constexpr (W == 4) return instr32i_AMOMAXU_D;
+            if constexpr (sizeof(address_t) == 4) return instr32i_AMOMAXU_D;
             else return instr64i_AMOMAXU_D;
           }
           break;
@@ -516,26 +510,26 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
     case CI_CODE(0b000, 0b00):
       // if all bits are zero, it's an illegal instruction
       if (ci.whole != 0x0) {
-        if constexpr (W == 4) return instr32i_C0_ADDI4SPN;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C0_ADDI4SPN;
         else return instr64i_C0_ADDI4SPN;
       }
-      if constexpr (W == 4) return instr32i_ILLEGAL;
+      if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
       else return instr64i_ILLEGAL;
     case CI_CODE(0b001, 0b00): [[fallthrough]];
     case CI_CODE(0b010, 0b00): [[fallthrough]];
     case CI_CODE(0b011, 0b00):
       if (ci.CL.funct3 == 0x1) { // C.FLD
-        if constexpr (W == 4) return instr32i_C0_REG_FLD;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C0_REG_FLD;
         else return instr64i_C0_REG_FLD;
       } else if (ci.CL.funct3 == 0x2) { // C.LW
-        if constexpr (W == 4) return instr32i_C0_REG_LW;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C0_REG_LW;
         else return instr64i_C0_REG_LW;
       } else if (ci.CL.funct3 == 0x3) {
         // C.LD / // C.FLW
         if constexpr (sizeof(address_t) == 8) return instr64i_C0_REG_LD;
         else return instr32i_C0_REG_FLW;
       }
-      if constexpr (W == 4) return instr32i_ILLEGAL;
+      if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
       else return instr64i_ILLEGAL;
     // RESERVED: 0b100, 0b00
     case CI_CODE(0b101, 0b00): [[fallthrough]];
@@ -543,27 +537,27 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
     case CI_CODE(0b111, 0b00):
       switch (ci.CS.funct3) {
       case 4:
-        if constexpr (W == 4) return instr32i_UNIMPLEMENTED;
+        if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
         else return instr64i_UNIMPLEMENTED;
       case 5: // C.FSD
-        if constexpr (W == 4) return instr32i_C0_REG_FSD;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C0_REG_FSD;
         else return instr64i_C0_REG_FSD;
       case 6: // C.SW
-        if constexpr (W == 4) return instr32i_C0_REG_SW;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C0_REG_SW;
         else return instr64i_C0_REG_SW;
       case 7: // C.SD / C.FSW
         if constexpr (sizeof(address_t) == 8) return instr64i_C0_REG_SD;
         else return instr32i_C0_REG_FSW;
       }
-      if constexpr (W == 4) return instr32i_ILLEGAL;
+      if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
       else return instr64i_ILLEGAL;
     // Quadrant 1
     case CI_CODE(0b000, 0b01): // C.ADDI
       if (ci.CI.rd != 0) {
-        if constexpr (W == 4) return instr32i_C1_ADDI;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C1_ADDI;
         else return instr64i_C1_ADDI;
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
     case CI_CODE(0b001, 0b01): // C.ADDIW / C.JAL
       if constexpr (sizeof(address_t) == 8) {
@@ -573,32 +567,32 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
 
     case CI_CODE(0b010, 0b01):
       if (ci.CI.rd != 0) {
-        if constexpr (W == 4) return instr32i_C1_LI;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C1_LI;
         else return instr64i_C1_LI;
       }
-      if constexpr (W == 4) return instr32i_NOP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
       else return instr64i_NOP;
     case CI_CODE(0b011, 0b01):
       if (ci.CI.rd == 2) {
-        if constexpr (W == 4) return instr32i_C1_ADDI16SP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C1_ADDI16SP;
         else return instr64i_C1_ADDI16SP;
       } else if (ci.CI.rd != 0) {
-        if constexpr (W == 4) return instr32i_C1_LUI;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C1_LUI;
         else return instr64i_C1_LUI;
       }
-      if constexpr (W == 4) return instr32i_ILLEGAL;
+      if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
       else return instr64i_ILLEGAL;
     case CI_CODE(0b100, 0b01):
-      if constexpr (W == 4) return instr32i_C1_ALU_OPS;
+      if constexpr (sizeof(address_t) == 4) return instr32i_C1_ALU_OPS;
       else return instr64i_C1_ALU_OPS;
     case CI_CODE(0b101, 0b01):
-      if constexpr (W == 4) return instr32i_C1_JUMP;
+      if constexpr (sizeof(address_t) == 4) return instr32i_C1_JUMP;
       else return instr64i_C1_JUMP;
     case CI_CODE(0b110, 0b01):
-      if constexpr (W == 4) return instr32i_C1_BEQZ;
+      if constexpr (sizeof(address_t) == 4) return instr32i_C1_BEQZ;
       else return instr64i_C1_BEQZ;
     case CI_CODE(0b111, 0b01):
-      if constexpr (W == 4) return instr32i_C1_BNEZ;
+      if constexpr (sizeof(address_t) == 4) return instr32i_C1_BNEZ;
       else return instr64i_C1_BNEZ;
     // Quadrant 2
     case CI_CODE(0b000, 0b10): [[fallthrough]];
@@ -606,13 +600,13 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
     case CI_CODE(0b010, 0b10): [[fallthrough]];
     case CI_CODE(0b011, 0b10):
       if (ci.CI.funct3 == 0x0 && ci.CI.rd != 0) { // C.SLLI
-        if constexpr (W == 4) return instr32i_C2_SLLI;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_SLLI;
         else return instr64i_C2_SLLI;
       } else if (ci.CI2.funct3 == 0x1) { // C.FLDSP
-        if constexpr (W == 4) return instr32i_C2_FLDSP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_FLDSP;
         else return instr64i_C2_FLDSP;
       } else if (ci.CI2.funct3 == 0x2 && ci.CI2.rd != 0) { // C.LWSP
-        if constexpr (W == 4) return instr32i_C2_LWSP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_LWSP;
         else return instr64i_C2_LWSP;
       } else if (ci.CI2.funct3 == 0x3) {
         // // C.LDSP / C.FLWSP
@@ -620,61 +614,61 @@ template <int W> const riscv::Instruction<W> &decode_one(const riscv::instructio
           if (ci.CI2.rd != 0) return instr64i_C2_LDSP;
         } else return instr32i_C2_FLWSP;
       } else if (ci.CI.rd == 0) { // C.HINT
-        if constexpr (W == 4) return instr32i_NOP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_NOP;
         else return instr64i_NOP;
       }
-      if constexpr (W == 4) return instr32i_UNIMPLEMENTED;
+      if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
       else return instr64i_UNIMPLEMENTED;
     case CI_CODE(0b100, 0b10): {
       const bool topbit = ci.whole & (1 << 12);
       if (!topbit && ci.CR.rd != 0 && ci.CR.rs2 == 0) { // JR rd
-        if constexpr (W == 4) return instr32i_C2_JR;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_JR;
         else return instr64i_C2_JR;
       } else if (topbit && ci.CR.rd != 0 && ci.CR.rs2 == 0) { // JALR ra, rd+0
-        if constexpr (W == 4) return instr32i_C2_JALR;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_JALR;
         else return instr64i_C2_JALR;
       } else if (!topbit && ci.CR.rd != 0 && ci.CR.rs2 != 0) { // MV rd, rs2
-        if constexpr (W == 4) return instr32i_C2_MV;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_MV;
         else return instr64i_C2_MV;
       } else if (ci.CR.rd != 0) { // ADD rd, rd + rs2
-        if constexpr (W == 4) return instr32i_C2_ADD;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_ADD;
         else return instr64i_C2_ADD;
       } else if (topbit && ci.CR.rd == 0 && ci.CR.rs2 == 0) { // EBREAK
-        if constexpr (W == 4) return instr32i_C2_EBREAK;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_EBREAK;
         else return instr64i_C2_EBREAK;
       }
-      if constexpr (W == 4) return instr32i_UNIMPLEMENTED;
+      if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
       else return instr64i_UNIMPLEMENTED;
     }
     case CI_CODE(0b101, 0b10): [[fallthrough]];
     case CI_CODE(0b110, 0b10): [[fallthrough]];
     case CI_CODE(0b111, 0b10):
       if (ci.CSS.funct3 == 5) { // FSDSP
-        if constexpr (W == 4) return instr32i_C2_FSDSP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_FSDSP;
         else return instr64i_C2_FSDSP;
       } else if (ci.CSS.funct3 == 6) { // SWSP
-        if constexpr (W == 4) return instr32i_C2_SWSP;
+        if constexpr (sizeof(address_t) == 4) return instr32i_C2_SWSP;
         else return instr64i_C2_SWSP;
       } else if (ci.CSS.funct3 == 7) {
         // SDSP / FSWP
         if constexpr (sizeof(address_t) == 8) return instr64i_C2_SDSP;
         else return instr32i_C2_FSWSP;
       }
-      if constexpr (W == 4) return instr32i_UNIMPLEMENTED;
+      if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
       else return instr64i_UNIMPLEMENTED;
     }
   }
 #endif
   // all zeroes: illegal instruction
   if (instruction.whole == 0x0) {
-    if constexpr (W == 4) return instr32i_ILLEGAL;
+    if constexpr (sizeof(address_t) == 4) return instr32i_ILLEGAL;
     else return instr64i_ILLEGAL;
   }
 
-  if (CPU<W>::on_unimplemented_instruction != nullptr) {
-    return (CPU<W>::on_unimplemented_instruction(instruction));
+  if (CPU<address_t>::on_unimplemented_instruction != nullptr) {
+    return (CPU<address_t>::on_unimplemented_instruction(instruction));
   }
-  if constexpr (W == 4) return instr32i_UNIMPLEMENTED;
+  if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
   else return instr64i_UNIMPLEMENTED;
 }
 } // namespace riscv

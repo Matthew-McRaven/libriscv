@@ -5,27 +5,27 @@
 
 namespace riscv
 {
-	template<int W>
+	template<AddressType address_t>
 	struct testable_insn {
 		const char* name;     // test name
-		address_type<W> bits; // the instruction bits
+		address_t bits; // the instruction bits
 		const int reg;        // which register this insn affects
 		const int index;      // test loop index
-		address_type<W> initial_value; // start value of register
+		address_t initial_value; // start value of register
 	};
 
-	template <int W>
+	template <AddressType address_t>
 	static bool
-	validate(Machine<W>& machine, const testable_insn<W>& insn,
-			std::function<bool(CPU<W>&, const testable_insn<W>&)> callback)
+	validate(Machine<address_t>& machine, const testable_insn<address_t>& insn,
+			std::function<bool(CPU<address_t>&, const testable_insn<address_t>&)> callback)
 	{
-		static const address_type<W> MEMBASE = 0x1000;
+		static const address_t MEMBASE = 0x1000;
 
 		const std::array<uint32_t, 1> instr_page = {
 			insn.bits
 		};
 
-		DecodedExecuteSegment<W> &des = machine.cpu.init_execute_area(&instr_page[0], MEMBASE, sizeof(instr_page));
+		DecodedExecuteSegment<address_t> &des = machine.cpu.init_execute_area(&instr_page[0], MEMBASE, sizeof(instr_page));
 		// jump to page containing instruction
 		machine.cpu.jump(MEMBASE);
 		// execute instruction

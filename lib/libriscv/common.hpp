@@ -46,111 +46,76 @@
 
 namespace riscv
 {
-	template <int W> struct Memory;
+template <AddressType> struct Memory;
 
-	struct MachineTranslationCrossOptions
-	{
-		/// @brief Provide a custom binary-translation compiler in order
-		/// to produce a secondary binary that can be loaded on Windows machines.
-		/// @example "x86_64-w64-mingw32-gcc"
-		std::string cross_compiler = "x86_64-w64-mingw32-gcc";
+/// @brief Options passed to Machine constructor
+/// @tparam W The RISC-V architecture
+template <AddressType address_t> struct MachineOptions {
+  /// @brief Maximum memory used by the machine, rounded down to
+  /// the current page size (4kb).
+  uint64_t memory_max = 64ull << 20; // 64MB
 
-		/// @brief Provide a custom prefix for the mingw PE-dll output.
-		/// @example "rvbintr-"
-		std::string cross_prefix = "rvbintr-";
+  /// @brief Virtual memory allocated for the main stack at construction.
+  uint32_t stack_size = 1ul << 20; // 1MB default stack
 
-		/// @brief Provide a custom suffix for the mingw PE-dll output.
-		/// @example ".dll"
-		std::string cross_suffix = ".dll";
-	};
-	/// @brief Options for generating embeddable C99 code into a C or C++ program.
-	struct MachineTranslationEmbeddableCodeOptions
-	{
-		/// @brief Provide a filename prefix for the embedded code output.
-		/// @example "mycode-"
-		std::string prefix = "mycode-";
+  /// @brief Setting this option will load the binary at construction as if it
+  /// was a RISC-V ELF binary. When disabled, no loading occurs.
+  bool load_program = true;
 
-		/// @brief Provide a filename suffix for the embedded code output.
-		/// @example ".c" or ".cpp"
-		std::string suffix = ".cpp";
+  /// @brief Setting this option will apply page protections based on ELF segments
+  /// from the program loaded at construction.
+  bool protect_segments = true;
 
-		/// @brief An optional std::string pointer to write the output code to,
-		/// instead of writing to a file.
-		/// @details Puts freestanding C99 code into the std::string pointer.
-		std::string* result_c99 = nullptr;
-	};
-	using MachineTranslationOptions = std::variant<MachineTranslationCrossOptions, MachineTranslationEmbeddableCodeOptions>;
+  /// @brief Enabling this will allow unsafe RWX segments (read-write-execute).
+  bool allow_write_exec_segment = false;
 
-	/// @brief Options passed to Machine constructor
-	/// @tparam W The RISC-V architecture
-	template <int W>
-	struct MachineOptions
-	{
-		/// @brief Maximum memory used by the machine, rounded down to
-		/// the current page size (4kb).
-		uint64_t memory_max = 64ull << 20; // 64MB
+  /// @brief Enabling this will enforce execute-only segments (X ^ R).
+  bool enforce_exec_only = false;
 
-		/// @brief Virtual memory allocated for the main stack at construction.
-		uint32_t stack_size = 1ul << 20; // 1MB default stack
+  /// @brief Ignore .text section, as if not all executable code is in it.
+  /// Instead, load all executable segments as normal. Some programs require using
+  /// the .text section in order to get correctly aligned instructions.
+  bool ignore_text_section = false;
 
-		/// @brief Setting this option will load the binary at construction as if it
-		/// was a RISC-V ELF binary. When disabled, no loading occurs.
-		bool load_program = true;
+  /// @brief Print some verbose loader information to stdout.
+  /// @details If binary translation is enabled, this will also make the
+  /// binary translation process print verbose information.
+  bool verbose_loader = false;
 
-		/// @brief Setting this option will apply page protections based on ELF segments
-		/// from the program loaded at construction.
-		bool protect_segments = true;
+  /// @brief Enabling this will skip assignment of copy-on-write pages
+  /// to forked machines from the main machine, making fork operations faster,
+  /// but requires the forks to fault in pages instead (slower).
+  bool minimal_fork = false;
 
-		/// @brief Enabling this will allow unsafe RWX segments (read-write-execute).
-		bool allow_write_exec_segment = false;
+  /// @brief Create a linear memory arena for main memory, increasing memory
+  /// locality and also enables read-write arena if the CMake option is ON.
+  bool use_memory_arena = true;
 
-		/// @brief Enabling this will enforce execute-only segments (X ^ R).
-		bool enforce_exec_only = false;
+  /// @brief Enable sharing of execute segments between machines.
+  /// @details This will allow multiple machines to share the same execute
+  /// segment, reducing memory usage and increasing performance.
+  /// When binary translation is enabled, this will also share the dynamically
+  /// translated code between machines. (Prevents some optimizations)
+  bool use_shared_execute_segments = true;
 
-		/// @brief Ignore .text section, as if not all executable code is in it.
-		/// Instead, load all executable segments as normal. Some programs require using
-		/// the .text section in order to get correctly aligned instructions.
-		bool ignore_text_section = false;
+  /// @brief Override a default-injected exit function with another function
+  /// that is found by looking up the provided symbol name in the current program.
+  /// Eg. if default_exit_function is "fast_exit", then the ELF binary must have
+  /// that symbol visible in its .symbtab ELF section.
+  std::string_view default_exit_function{};
 
-		/// @brief Print some verbose loader information to stdout.
-		/// @details If binary translation is enabled, this will also make the
-		/// binary translation process print verbose information.
-		bool verbose_loader = false;
+  /// @brief Provide a custom page-fault handler at construction.
+  riscv::Function<struct Page &(Memory<address_t> &, address_t, bool)> page_fault_handler = nullptr;
 
-		/// @brief Enabling this will skip assignment of copy-on-write pages
-		/// to forked machines from the main machine, making fork operations faster,
-		/// but requires the forks to fault in pages instead (slower).
-		bool minimal_fork = false;
+  /// @brief Call ebreak for each of the addresses in the vector.
+  /// @details This is useful for debugging and live-patching programs.
+  std::vector<std::variant<address_t, std::string>> ebreak_locations{};
+};
 
-		/// @brief Create a linear memory arena for main memory, increasing memory
-		/// locality and also enables read-write arena if the CMake option is ON.
-		bool use_memory_arena = true;
+static constexpr int SYSCALL_EBREAK = RISCV_SYSCALL_EBREAK_NR;
 
-		/// @brief Enable sharing of execute segments between machines.
-		/// @details This will allow multiple machines to share the same execute
-		/// segment, reducing memory usage and increasing performance.
-		/// When binary translation is enabled, this will also share the dynamically
-		/// translated code between machines. (Prevents some optimizations)
-		bool use_shared_execute_segments = true;
-
-		/// @brief Override a default-injected exit function with another function
-		/// that is found by looking up the provided symbol name in the current program.
-		/// Eg. if default_exit_function is "fast_exit", then the ELF binary must have
-		/// that symbol visible in its .symbtab ELF section.
-		std::string_view default_exit_function {};
-
-		/// @brief Provide a custom page-fault handler at construction.
-		riscv::Function<struct Page&(Memory<W>&, address_type<W>, bool)> page_fault_handler = nullptr;
-
-		/// @brief Call ebreak for each of the addresses in the vector.
-		/// @details This is useful for debugging and live-patching programs.
-		std::vector<std::variant<address_type<W>, std::string>> ebreak_locations {};
-	};
-
-	static constexpr int SYSCALL_EBREAK = RISCV_SYSCALL_EBREAK_NR;
-
-	static constexpr size_t PageSize = RISCV_PAGE_SIZE;
-	static constexpr size_t PageMask = RISCV_PAGE_SIZE-1;
+static constexpr size_t PageSize = RISCV_PAGE_SIZE;
+static constexpr size_t PageMask = RISCV_PAGE_SIZE - 1;
 
 #ifdef RISCV_MEMORY_TRAPS
 	static constexpr bool memory_traps_enabled = true;
@@ -212,10 +177,9 @@ namespace riscv
 #endif
 	static constexpr bool libtcc_enabled = false;
 
-
-	template <int W> struct MultiThreading;
-	template <int W> struct SerializedMachine;
-	struct Arena;
+  template <AddressType address_t> struct MultiThreading;
+  template <AddressType address_t> struct SerializedMachine;
+  struct Arena;
 
 	template <typename T>
 	using remove_cvref = std::remove_cv_t<std::remove_reference_t<T>>;
@@ -313,13 +277,13 @@ namespace riscv
 #endif
 
 #ifdef RISCV_32I
-#define INSTANTIATE_32_IF_ENABLED(x) template struct x<4>
+#define INSTANTIATE_32_IF_ENABLED(x) template struct x<uint32_t>
 #else
 #define INSTANTIATE_32_IF_ENABLED(x) /* */
 #endif
 
 #ifdef RISCV_64I
-#define INSTANTIATE_64_IF_ENABLED(x) template struct x<8>
+#define INSTANTIATE_64_IF_ENABLED(x) template struct x<uint64_t>
 #else
 #define INSTANTIATE_64_IF_ENABLED(x) /* */
 #endif

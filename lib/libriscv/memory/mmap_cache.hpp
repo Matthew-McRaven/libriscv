@@ -5,11 +5,9 @@
 
 namespace riscv
 {
-	template <int W>
+	template <AddressType address_t>
 	struct MMapCache
 	{
-		using address_t = address_type<W>;
-
 		struct Range {
 			address_t addr = 0x0;
 			address_t size = 0u;

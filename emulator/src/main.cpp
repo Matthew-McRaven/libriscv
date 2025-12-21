@@ -251,10 +251,10 @@ static int parse_arguments(int argc, const char** argv, Arguments& args)
 
 #endif
 
-template <int W>
-static void run_sighandler(riscv::Machine<W>&);
+template <AddressType address_t>
+static void run_sighandler(riscv::Machine<address_t>&);
 
-template <int W>
+template <AddressType address_t>
 static void run_program(
 	const Arguments& cli_args,
 	const std::string_view binary,
@@ -274,7 +274,7 @@ static void run_program(
 		cc.push_back(riscv::MachineTranslationEmbeddableCodeOptions{cli_args.output_file});
 	}
 
-	auto options = std::make_shared<riscv::MachineOptions<W>>(riscv::MachineOptions<W>{
+	auto options = std::make_shared<riscv::MachineOptions<address_t>>(riscv::MachineOptions<address_t>{
 		.memory_max = cli_args.max_memory ? cli_args.max_memory : MAX_MEMORY,
 		.enforce_exec_only = cli_args.execute_only,
 		.ignore_text_section = cli_args.ignore_text,
@@ -299,7 +299,7 @@ static void run_program(
 		.translation_prefix = "translations/rvbintr-",
 		.translation_suffix = ".dll",
 #else
-		.translator_jump_hints = load_jump_hints<W>(cli_args.jump_hints_file, cli_args.verbose),
+		.translator_jump_hints = load_jump_hints<address_t>(cli_args.jump_hints_file, cli_args.verbose),
 		.translate_background_callback = cli_args.background ?
 			[] (auto& compilation_step) {
 				std::thread([compilation_step = std::move(compilation_step)] {
@@ -313,7 +313,7 @@ static void run_program(
 
 	// Create a RISC-V machine with the binary as input program
 	auto st0 = std::chrono::high_resolution_clock::now();
-	riscv::Machine<W> machine { binary, *options };
+	riscv::Machine<address_t> machine { binary, *options };
 	if (cli_args.verbose) {
 		auto st1 = std::chrono::high_resolution_clock::now();
 		printf("* Loaded in %.3f ms\n", std::chrono::duration<double, std::milli>(st1 - st0).count());
@@ -330,11 +330,11 @@ static void run_program(
 
 	// A helper system call to ask for symbols that is possibly only known at runtime
 	// Used by testing executables
-	riscv::address_type<W> symbol_function = 0;
+	riscv::address_t symbol_function = 0;
 	machine.set_userdata(&symbol_function);
 	machine.install_syscall_handler(500,
 		[] (auto& machine) {
-			auto [addr] = machine.template sysargs<riscv::address_type<W>>();
+			auto [addr] = machine.template sysargs<riscv::address_t>();
 			auto& symfunc = *machine.template get_userdata<decltype(symbol_function)>();
 			symfunc = addr;
 			printf("Introduced to symbol function: 0x%" PRIX64 "\n", uint64_t(addr));
@@ -343,7 +343,7 @@ static void run_program(
 	// Enable stdin when in proxy mode
 	if (cli_args.proxy_mode) {
 		machine.set_stdin(
-		[](const riscv::Machine<W> &machine, char *buf, size_t size) -> long {
+		[](const riscv::Machine<address_t> &machine, char *buf, size_t size) -> long {
 			return read(0, buf, size);
 		});
 	}
@@ -452,7 +452,7 @@ static void run_program(
 		machine.fds().permit_filesystem = !cli_args.sandbox;
 		machine.setup_argv(args);
 		machine.on_unhandled_syscall =
-		[] (riscv::Machine<W>& machine, size_t num) {
+		[] (riscv::Machine<address_t>& machine, size_t num) {
 			if (num == 1024) { // newlib_open()
 #include "newlib_open.hpp"
 			}
@@ -532,7 +532,7 @@ static void run_program(
 		// with gdb-multiarch using target remote localhost:2159.
 		if (cli_args.gdb) {
 			printf("GDB server is listening on localhost:2159\n");
-			riscv::RSP<W> server { machine, 2159 };
+			riscv::RSP<address_t> server { machine, 2159 };
 			auto client = server.accept();
 			if (client != nullptr) {
 				printf("GDB is connected\n");
@@ -651,7 +651,7 @@ static void run_program(
 	if (!cli_args.jump_hints_file.empty()) {
 		const auto jump_hints = machine.memory.gather_jump_hints();
 		if (jump_hints.size() > machine.options().translator_jump_hints.size()) {
-			store_jump_hints<W>(cli_args.jump_hints_file, jump_hints);
+			store_jump_hints<address_t>(cli_args.jump_hints_file, jump_hints);
 			if (cli_args.verbose)
 				printf("%zu jump hints were saved to %s\n",
 					jump_hints.size(), cli_args.jump_hints_file.c_str());
@@ -782,8 +782,8 @@ int main(int argc, const char** argv)
 	return 0;
 }
 
-template <int W>
-void run_sighandler(riscv::Machine<W>& machine)
+template <AddressType address_t>
+void run_sighandler(riscv::Machine<address_t>& machine)
 {
 	constexpr int SIG_SEGV = 11;
 	auto& action = machine.sigaction(SIG_SEGV);
@@ -817,10 +817,10 @@ std::vector<uint8_t> load_file(const std::string& filename)
 	return std::vector<uint8_t> (std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
 }
 
-template <int W>
-std::vector<riscv::address_type<W>> load_jump_hints(const std::string& filename, bool verbose)
+template <AddressType address_t>
+std::vector<riscv::address_t> load_jump_hints(const std::string& filename, bool verbose)
 {
-	std::vector<riscv::address_type<W>> hints;
+	std::vector<riscv::address_t> hints;
 	if (filename.empty())
 		return hints;
 
@@ -841,8 +841,8 @@ std::vector<riscv::address_type<W>> load_jump_hints(const std::string& filename,
 	return hints;
 }
 
-template <int W>
-void store_jump_hints(const std::string& filename, const std::vector<riscv::address_type<W>>& hints)
+template <AddressType address_t>
+void store_jump_hints(const std::string& filename, const std::vector<riscv::address_t>& hints)
 {
 	std::ofstream file(filename);
 	if (!file.is_open()) {

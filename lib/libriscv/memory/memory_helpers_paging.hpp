@@ -1,7 +1,7 @@
 #pragma once
 
-template <int W> inline
-void Memory<W>::memset(address_t dst, uint8_t value, size_t len)
+template <AddressType address_t> inline
+void Memory<address_t>::memset(address_t dst, uint8_t value, size_t len)
 {
 	while (len > 0)
 	{
@@ -16,8 +16,8 @@ void Memory<W>::memset(address_t dst, uint8_t value, size_t len)
 	}
 }
 
-template <int W> inline
-void Memory<W>::memcpy(address_t dst, const void* vsrc, size_t len)
+template <AddressType address_t> inline
+void Memory<address_t>::memcpy(address_t dst, const void* vsrc, size_t len)
 {
 	auto* src = (uint8_t*) vsrc;
 	while (len != 0)
@@ -34,8 +34,8 @@ void Memory<W>::memcpy(address_t dst, const void* vsrc, size_t len)
 	}
 }
 
-template <int W> inline
-void Memory<W>::memcpy_out(void* vdst, address_t src, size_t len) const
+template <AddressType address_t> inline
+void Memory<address_t>::memcpy_out(void* vdst, address_t src, size_t len) const
 {
 	auto* dst = (uint8_t*) vdst;
 	while (len != 0)
@@ -54,8 +54,8 @@ void Memory<W>::memcpy_out(void* vdst, address_t src, size_t len) const
 	}
 }
 
-template <int W> inline
-bool Memory<W>::try_memmove(address_t dst, address_t src, size_t len)
+template <AddressType address_t> inline
+bool Memory<address_t>::try_memmove(address_t dst, address_t src, size_t len)
 {
 	if (dst == src || len == 0)
 		return true;
@@ -73,8 +73,8 @@ bool Memory<W>::try_memmove(address_t dst, address_t src, size_t len)
 	return false;
 }
 
-template <int W> inline
-std::string Memory<W>::memstring(address_t addr, const size_t max_len) const
+template <AddressType address_t> inline
+std::string Memory<address_t>::memstring(address_t addr, const size_t max_len) const
 {
 	std::string result;
 	address_t pageno = page_number(addr);
@@ -112,8 +112,8 @@ std::string Memory<W>::memstring(address_t addr, const size_t max_len) const
 	return result;
 }
 
-template <int W> inline
-std::string_view Memory<W>::memstring_view(address_t addr, size_t max_len) const
+template <AddressType address_t> inline
+std::string_view Memory<address_t>::memstring_view(address_t addr, size_t max_len) const
 {
 	if constexpr (flat_readwrite_arena) {
 		if (LIKELY(addr < memory_arena_size())) {
@@ -129,8 +129,8 @@ std::string_view Memory<W>::memstring_view(address_t addr, size_t max_len) const
 	protection_fault(addr);
 }
 
-template <int W> inline
-riscv::Buffer Memory<W>::membuffer(address_t addr,
+template <AddressType address_t> inline
+riscv::Buffer Memory<address_t>::membuffer(address_t addr,
 	const size_t datalen, const size_t maxlen) const
 {
 	riscv::Buffer result;
@@ -166,8 +166,8 @@ riscv::Buffer Memory<W>::membuffer(address_t addr,
 	return result;
 }
 
-template <int W> inline
-std::string_view Memory<W>::memview(address_t addr, size_t len, size_t maxlen) const
+template <AddressType address_t> inline
+std::string_view Memory<address_t>::memview(address_t addr, size_t len, size_t maxlen) const
 {
 	if (UNLIKELY(len > maxlen))
 		protection_fault(addr);
@@ -188,8 +188,8 @@ std::string_view Memory<W>::memview(address_t addr, size_t len, size_t maxlen) c
 	return {(const char *)buffers[0].ptr, buffers[0].len};
 }
 
-template <int W> inline
-std::string_view Memory<W>::writable_memview(address_t addr, size_t len, size_t maxlen) const
+template <AddressType address_t> inline
+std::string_view Memory<address_t>::writable_memview(address_t addr, size_t len, size_t maxlen) const
 {
 	if (UNLIKELY(len > maxlen))
 		protection_fault(addr);
@@ -206,13 +206,13 @@ std::string_view Memory<W>::writable_memview(address_t addr, size_t len, size_t 
 
 	// Fallback: Try gathering a single buffer, which throws OUT_OF_MEMORY if it fails
 	std::array<vBuffer, 1> buffers;
-	const_cast<Memory<W>*> (this)->gather_writable_buffers_from_range(1, buffers.data(), addr, len);
+	const_cast<Memory<address_t>*> (this)->gather_writable_buffers_from_range(1, buffers.data(), addr, len);
 	return {(char *)buffers[0].ptr, buffers[0].len};
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename T, size_t N>
-std::array<T, N>* Memory<W>::memarray(address_t addr) const
+std::array<T, N>* Memory<address_t>::memarray(address_t addr) const
 {
 	// Special case: empty array - NOT DEREFERENCABLE
 	if (N != 0 && addr % alignof(T) != 0)
@@ -230,9 +230,9 @@ std::array<T, N>* Memory<W>::memarray(address_t addr) const
 	return (std::array<T, N>*) view.data();
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename T>
-T* Memory<W>::memarray(address_t addr, size_t count, size_t maxbytes) const
+T* Memory<address_t>::memarray(address_t addr, size_t count, size_t maxbytes) const
 {
 	// Special case: empty array - NOT DEREFERENCABLE
 	if (count != 0 && addr % alignof(T) != 0)
@@ -251,9 +251,9 @@ T* Memory<W>::memarray(address_t addr, size_t count, size_t maxbytes) const
 	return (T*) view.data();
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename T>
-T* Memory<W>::try_memarray(address_t addr, size_t count, size_t maxbytes) const
+T* Memory<address_t>::try_memarray(address_t addr, size_t count, size_t maxbytes) const
 {
 	if (count == 0)
 		return nullptr;
@@ -283,9 +283,9 @@ T* Memory<W>::try_memarray(address_t addr, size_t count, size_t maxbytes) const
 
 #ifdef RISCV_SPAN_AVAILABLE
 
-template <int W>
+template <AddressType address_t>
 template <typename T> inline
-std::span<T> Memory<W>::memspan(address_t addr, size_t count, size_t maxlen) const
+std::span<T> Memory<address_t>::memspan(address_t addr, size_t count, size_t maxlen) const
 {
 	if (addr % alignof(T) != 0)
 		protection_fault(addr);
@@ -309,8 +309,8 @@ std::span<T> Memory<W>::memspan(address_t addr, size_t count, size_t maxlen) con
 
 #endif // RISCV_SPAN_AVAILABLE
 
-template <int W> inline
-size_t Memory<W>::strlen(address_t addr, size_t maxlen) const
+template <AddressType address_t> inline
+size_t Memory<address_t>::strlen(address_t addr, size_t maxlen) const
 {
 	size_t len = 0;
 
@@ -330,8 +330,8 @@ size_t Memory<W>::strlen(address_t addr, size_t maxlen) const
 	return (len <= maxlen) ? len : maxlen;
 }
 
-template <int W> inline
-int Memory<W>::memcmp(address_t p1, address_t p2, size_t len) const
+template <AddressType address_t> inline
+int Memory<address_t>::memcmp(address_t p1, address_t p2, size_t len) const
 {
 	if (UNLIKELY(p1 + len < p1))
 		protection_fault(p1);
@@ -370,8 +370,8 @@ int Memory<W>::memcmp(address_t p1, address_t p2, size_t len) const
 		return len == 0 ? 0 : (v1 - v2);
 	}
 }
-template <int W> inline
-int Memory<W>::memcmp(const void* ptr1, address_t p2, size_t len) const
+template <AddressType address_t> inline
+int Memory<address_t>::memcmp(const void* ptr1, address_t p2, size_t len) const
 {
 	if (UNLIKELY(p2 + len < p2))
 		protection_fault(p2);
@@ -402,12 +402,13 @@ int Memory<W>::memcmp(const void* ptr1, address_t p2, size_t len) const
 	}
 }
 
-template <int W> inline
-void Memory<W>::memcpy(
-	address_t dst, Machine<W>& srcm, address_t src, address_t len)
+template <AddressType address_t> inline
+void Memory<address_t>::memcpy(
+	address_t dst, Machine<address_t>& srcm, address_t src, address_t len)
 {
-	if constexpr (riscv::flat_readwrite_arena) {
-		// Fast-path: Find the entire source and destination buffers in the memory arena
+  auto W = sizeof(address_t);
+  if constexpr (riscv::flat_readwrite_arena) {
+    // Fast-path: Find the entire source and destination buffers in the memory arena
 		if (uint8_t* srcptr = srcm.memory.template try_memarray<uint8_t> (src, len)) {
 			if (uint8_t* dstptr = this->template try_memarray<uint8_t> (dst, len)) {
 				std::memcpy(dstptr, srcptr, len);
@@ -416,46 +417,43 @@ void Memory<W>::memcpy(
 			this->memcpy(dst, srcptr, len);
 			return;
 		}
-	}
-	if ((dst & (W-1)) == (src & (W-1))) {
-		while ((src & (W-1)) != 0 && len > 0) {
-			this->template write<uint8_t> (dst++,
-				srcm.memory.template read<uint8_t> (src++));
-			len --;
-		}
-		while (len >= 4*W) {
-			if constexpr (riscv::flat_readwrite_arena) {
-				// Fast-path: Find the entire source buffer in the memory arena using memarray()
-				if (uint8_t* srcptr = srcm.memory.template try_memarray<uint8_t> (src, len)) {
-					this->memcpy(dst, srcptr, len);
-					return;
-				}
-			}
-			this->template write<address_t> (dst + 0,
-				srcm.memory.template read<address_t> (src + 0));
-			this->template write<address_t> (dst + 1*W,
-				srcm.memory.template read<address_t> (src + 1*W));
-			this->template write<address_t> (dst + 2*W,
-				srcm.memory.template read<address_t> (src + 2*W));
-			this->template write<address_t> (dst + 3*W,
-				srcm.memory.template read<address_t> (src + 3*W));
-			dst += 4*W; src += 4*W; len -= 4*W;
-		}
-		while (len >= W) {
-			this->template write<address_t> (dst,
-				srcm.memory.template read<address_t> (src));
-			dst += W; src += W; len -= W;
-		}
-	}
-	while (len > 0) {
-		this->template write<uint8_t> (dst++,
-			srcm.memory.template read<uint8_t> (src++));
-		len --;
-	}
+  }
+  if ((dst & (sizeof(address_t) - 1)) == (src & (sizeof(address_t) - 1))) {
+    while ((src & (sizeof(address_t) - 1)) != 0 && len > 0) {
+      this->template write<uint8_t>(dst++, srcm.memory.template read<uint8_t>(src++));
+      len--;
+    }
+    while (len >= 4 * sizeof(address_t)) {
+      if constexpr (riscv::flat_readwrite_arena) {
+        // Fast-path: Find the entire source buffer in the memory arena using memarray()
+        if (uint8_t *srcptr = srcm.memory.template try_memarray<uint8_t>(src, len)) {
+          this->memcpy(dst, srcptr, len);
+          return;
+        }
+      }
+      this->template write<address_t>(dst + 0, srcm.memory.template read<address_t>(src + 0));
+      this->template write<address_t>(dst + 1 * W, srcm.memory.template read<address_t>(src + 1 * W));
+      this->template write<address_t>(dst + 2 * W, srcm.memory.template read<address_t>(src + 2 * W));
+      this->template write<address_t>(dst + 3 * W, srcm.memory.template read<address_t>(src + 3 * W));
+      dst += 4 * W;
+      src += 4 * W;
+      len -= 4 * W;
+    }
+    while (len >= W) {
+      this->template write<address_t>(dst, srcm.memory.template read<address_t>(src));
+      dst += W;
+      src += W;
+      len -= W;
+    }
+  }
+  while (len > 0) {
+    this->template write<uint8_t>(dst++, srcm.memory.template read<uint8_t>(src++));
+    len--;
+  }
 }
 
-template <int W> inline
-size_t Memory<W>::gather_buffers_from_range(
+template <AddressType address_t> inline
+size_t Memory<address_t>::gather_buffers_from_range(
 	size_t cnt, vBuffer buffers[], address_t addr, size_t len) const
 {
 	size_t index = 0;
@@ -484,8 +482,8 @@ size_t Memory<W>::gather_buffers_from_range(
 	return index;
 }
 
-template <int W> inline
-size_t Memory<W>::gather_writable_buffers_from_range(
+template <AddressType address_t> inline
+size_t Memory<address_t>::gather_writable_buffers_from_range(
 	size_t cnt, vBuffer buffers[], address_t addr, size_t len)
 {
 	size_t index = 0;

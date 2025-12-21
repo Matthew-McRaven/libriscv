@@ -11,11 +11,9 @@
 namespace riscv
 {
 	static const uint64_t MAGiC_V4LUE = 0x9c36ab9301aed873;
-	template <int W>
+	template <AddressType address_t>
 	struct SerializedMachine
 	{
-		using address_t = address_type<W>;
-
 		uint64_t magic;
 		uint32_t n_pages;
 		uint32_t n_datapages;
@@ -27,7 +25,7 @@ namespace riscv
 		uint16_t cpu_offset;
 		uint32_t mem_offset;
 
-		Registers<W> registers;
+		Registers<address_t> registers;
 		uint64_t     counter;
 
 		address_t start_address = 0;
@@ -44,8 +42,8 @@ namespace riscv
 		uint8_t padding[3] {0};
 	} RISCV_PACKED;
 
-	template <int W>
-	size_t Machine<W>::serialize_to(std::vector<uint8_t>& vec) const
+	template <AddressType address_t>
+	size_t Machine<address_t>::serialize_to(std::vector<uint8_t>& vec) const
 	{
 		const size_t before = vec.size();
 
@@ -54,17 +52,17 @@ namespace riscv
 			if (!it.second.is_cow_page()) datapage_count++;
 		}
 
-		const SerializedMachine<W> header {
+		const SerializedMachine<address_t> header {
 			.magic    = MAGiC_V4LUE,
 			.n_pages  = (unsigned) memory.pages().size(),
 			.n_datapages = datapage_count,
-			.reg_size = sizeof(Registers<W>),
+			.reg_size = sizeof(Registers<address_t>),
 			.page_size = Page::size(),
 			.attr_size = sizeof(PageAttributes),
 			.serp_size = sizeof(SerializedPage),
 			.reserved = 0,
-			.cpu_offset = sizeof(SerializedMachine<W>),
-			.mem_offset = sizeof(SerializedMachine<W>) + 0x0,
+			.cpu_offset = sizeof(SerializedMachine<address_t>),
+			.mem_offset = sizeof(SerializedMachine<address_t>) + 0x0,
 
 			.registers = cpu.registers(),
 			.counter   = this->instruction_counter(),
@@ -83,12 +81,12 @@ namespace riscv
 		const size_t after = vec.size();
 		return after - before;
 	}
-	template <int W>
-	void CPU<W>::serialize_to(std::vector<uint8_t>& /* vec */) const
+	template <AddressType address_t>
+	void CPU<address_t>::serialize_to(std::vector<uint8_t>& /* vec */) const
 	{
 	}
-	template <int W>
-	size_t Memory<W>::serialize_to(std::vector<uint8_t>& vec) const
+	template <AddressType address_t>
+	size_t Memory<address_t>::serialize_to(std::vector<uint8_t>& vec) const
 	{
 		const size_t before = vec.size();
 		if (this->m_arena.pages > 0 && riscv::flat_readwrite_arena) {
@@ -130,16 +128,16 @@ namespace riscv
 		return after - before;
 	}
 
-	template <int W>
-	int Machine<W>::deserialize_from(const std::vector<uint8_t>& vec)
+	template <AddressType address_t>
+	int Machine<address_t>::deserialize_from(const std::vector<uint8_t>& vec)
 	{
-		if (vec.size() < sizeof(SerializedMachine<W>)) {
+		if (vec.size() < sizeof(SerializedMachine<address_t>)) {
 			return -1;
 		}
-		const auto& header = *(const SerializedMachine<W>*) vec.data();
+		const auto& header = *(const SerializedMachine<address_t>*) vec.data();
 		if (header.magic != MAGiC_V4LUE)
 			return -1;
-		if (header.reg_size != sizeof(Registers<W>))
+		if (header.reg_size != sizeof(Registers<address_t>))
 			return -2;
 		if (header.page_size != Page::size())
 			return -3;
@@ -153,17 +151,17 @@ namespace riscv
 		memory.deserialize_from(vec, header);
 		return 0;
 	}
-	template <int W>
-	void CPU<W>::deserialize_from(const std::vector<uint8_t>& /* vec */,
-					const SerializedMachine<W>& state)
+	template <AddressType address_t>
+	void CPU<address_t>::deserialize_from(const std::vector<uint8_t>& /* vec */,
+					const SerializedMachine<address_t>& state)
 	{
 		// restore CPU registers and counters
 		this->m_regs = state.registers;
 		this->m_exec = CPU::empty_execute_segment().get();
 	}
-	template <int W>
-	void Memory<W>::deserialize_from(const std::vector<uint8_t>& vec,
-					const SerializedMachine<W>& state)
+	template <AddressType address_t>
+	void Memory<address_t>::deserialize_from(const std::vector<uint8_t>& vec,
+					const SerializedMachine<address_t>& state)
 	{
 		this->m_start_address = state.start_address;
 		this->m_stack_address = state.stack_address;

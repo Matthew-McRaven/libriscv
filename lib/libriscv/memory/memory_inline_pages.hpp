@@ -1,5 +1,5 @@
 #pragma once
-template <int W> inline const PageData &Memory<W>::cached_readable_page(address_t address, size_t len) const {
+template <AddressType address_t> inline const PageData &Memory<address_t>::cached_readable_page(address_t address, size_t len) const {
   const auto pageno = page_number(address);
   auto &entry = m_rd_cache;
   if (entry.pageno == pageno)
@@ -16,8 +16,8 @@ template <int W> inline const PageData &Memory<W>::cached_readable_page(address_
 	return page.page();
 }
 
-template <int W> inline
-PageData& Memory<W>::cached_writable_page(address_t address)
+template <AddressType address_t> inline
+PageData& Memory<address_t>::cached_writable_page(address_t address)
 {
 	const auto pageno = page_number(address);
 	auto& entry = m_wr_cache;
@@ -29,25 +29,25 @@ PageData& Memory<W>::cached_writable_page(address_t address)
 	return page.page();
 }
 
-template <int W>
-inline const Page& Memory<W>::get_page(const address_t address) const
+template <AddressType address_t>
+inline const Page& Memory<address_t>::get_page(const address_t address) const
 {
 	const auto page = page_number(address);
 	return get_pageno(page);
 }
 
-template <int W>
-inline const Page& Memory<W>::get_exec_pageno(const address_t pageno) const
+template <AddressType address_t>
+inline const Page& Memory<address_t>::get_exec_pageno(const address_t pageno) const
 {
 	auto it = m_pages.find(pageno);
 	if (LIKELY(it != m_pages.end())) {
 		return it->second;
 	}
-	CPU<W>::trigger_exception(EXECUTION_SPACE_PROTECTION_FAULT, pageno * Page::size());
+	CPU<address_t>::trigger_exception(EXECUTION_SPACE_PROTECTION_FAULT, pageno * Page::size());
 }
 
-template <int W>
-inline const Page& Memory<W>::get_pageno(const address_t pageno) const
+template <AddressType address_t>
+inline const Page& Memory<address_t>::get_pageno(const address_t pageno) const
 {
 	auto it = m_pages.find(pageno);
 	if (LIKELY(it != m_pages.end())) {
@@ -57,8 +57,8 @@ inline const Page& Memory<W>::get_pageno(const address_t pageno) const
 	return m_page_readf_handler(*this, pageno);
 }
 
-template <int W> inline void
-Memory<W>::invalidate_cache(address_t pageno, Page* page) const noexcept
+template <AddressType address_t> inline void
+Memory<address_t>::invalidate_cache(address_t pageno, Page* page) const noexcept
 {
 	// NOTE: It is only possible to keep the write page as long as
 	// the page tables are node-based. In that case, we only have
@@ -68,16 +68,16 @@ Memory<W>::invalidate_cache(address_t pageno, Page* page) const noexcept
 	}
 	(void)page;
 }
-template <int W> inline void
-Memory<W>::invalidate_reset_cache() const noexcept
+template <AddressType address_t> inline void
+Memory<address_t>::invalidate_reset_cache() const noexcept
 {
 	m_rd_cache.pageno = (address_t)-1;
 	m_wr_cache.pageno = (address_t)-1;
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename... Args> inline
-Page& Memory<W>::allocate_page(const address_t page, Args&&... args)
+Page& Memory<address_t>::allocate_page(const address_t page, Args&&... args)
 {
 	const auto it = m_pages.try_emplace(
 		page,
@@ -89,8 +89,8 @@ Page& Memory<W>::allocate_page(const address_t page, Args&&... args)
 	return it.first->second;
 }
 
-template <int W>
-inline size_t Memory<W>::owned_pages_active() const noexcept
+template <AddressType address_t>
+inline size_t Memory<address_t>::owned_pages_active() const noexcept
 {
 	size_t count = 0;
 	for (const auto& it : m_pages) {
@@ -99,8 +99,8 @@ inline size_t Memory<W>::owned_pages_active() const noexcept
 	return count;
 }
 
-template <int W>
-inline void Memory<W>::trap(address_t page_addr, mmio_cb_t callback)
+template <AddressType address_t>
+inline void Memory<address_t>::trap(address_t page_addr, mmio_cb_t callback)
 {
 	// This can probably be improved, but this will force-create
 	// a page if it doesn't exist. At least this way the trap will

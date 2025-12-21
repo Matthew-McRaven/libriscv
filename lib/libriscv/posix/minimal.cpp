@@ -4,29 +4,29 @@
 
 namespace riscv
 {
-	template <int W>
-	static void syscall_stub_zero(Machine<W>& machine)
+	template <AddressType address_t>
+	static void syscall_stub_zero(Machine<address_t>& machine)
 	{
 		SYSPRINT("SYSCALL stubbed (zero): %d\n", (int)machine.cpu.reg(17));
 		machine.set_result(0);
 	}
 
-	template <int W>
-	static void syscall_stub_nosys(Machine<W>& machine)
+	template <AddressType address_t>
+	static void syscall_stub_nosys(Machine<address_t>& machine)
 	{
 		SYSPRINT("SYSCALL stubbed (nosys): %d\n", (int)machine.cpu.reg(17));
 		machine.set_result(-38); // ENOSYS
 	}
 
-	template <int W>
-	static void syscall_ebreak(riscv::Machine<W>& machine)
+	template <AddressType address_t>
+	static void syscall_ebreak(riscv::Machine<address_t>& machine)
 	{
 		printf("\n>>> EBREAK at %#lX\n", (long)machine.cpu.pc());
 		throw MachineException(UNHANDLED_SYSCALL, "EBREAK instruction");
 	}
 
-	template<int W>
-	static void syscall_write(Machine<W>& machine)
+	template<AddressType address_t>
+	static void syscall_write(Machine<address_t>& machine)
 	{
 		const int vfd = machine.template sysarg<int>(0);
 		const auto address = machine.sysarg(1);
@@ -48,8 +48,8 @@ namespace riscv
 		machine.set_result(-EBADF);
 	}
 
-	template <int W>
-	static void syscall_exit(Machine<W>& machine)
+	template <AddressType address_t>
+	static void syscall_exit(Machine<address_t>& machine)
 	{
 		// Stop sets the max instruction counter to zero, allowing most
 		// instruction loops to end. It is, however, not the only way
@@ -58,12 +58,12 @@ namespace riscv
 		machine.stop();
 	}
 
-	template <int W>
-	static void syscall_brk(Machine<W>& machine)
+	template <AddressType address_t>
+	static void syscall_brk(Machine<address_t>& machine)
 	{
 		auto new_end = machine.sysarg(0);
-		if (new_end > machine.memory.heap_address() + Memory<W>::BRK_MAX) {
-			new_end = machine.memory.heap_address() + Memory<W>::BRK_MAX;
+		if (new_end > machine.memory.heap_address() + Memory<address_t>::BRK_MAX) {
+			new_end = machine.memory.heap_address() + Memory<address_t>::BRK_MAX;
 		} else if (new_end < machine.memory.heap_address()) {
 			new_end = machine.memory.heap_address();
 		}
@@ -72,22 +72,22 @@ namespace riscv
 		machine.set_result(new_end);
 	}
 
-	template <int W>
-	void Machine<W>::setup_minimal_syscalls()
+	template <AddressType address_t>
+	void Machine<address_t>::setup_minimal_syscalls()
 	{
-		install_syscall_handler(SYSCALL_EBREAK, syscall_ebreak<W>);
-		install_syscall_handler(57, syscall_stub_zero<W>);  // close
-		install_syscall_handler(62, syscall_stub_nosys<W>); // lseek
-		install_syscall_handler(64, syscall_write<W>);
-		install_syscall_handler(80, syscall_stub_nosys<W>); // fstat
-		install_syscall_handler(93, syscall_exit<W>);
-		install_syscall_handler(214, syscall_brk<W>);
+		install_syscall_handler(SYSCALL_EBREAK, syscall_ebreak<address_t>);
+		install_syscall_handler(57, syscall_stub_zero<address_t>);  // close
+		install_syscall_handler(62, syscall_stub_nosys<address_t>); // lseek
+		install_syscall_handler(64, syscall_write<address_t>);
+		install_syscall_handler(80, syscall_stub_nosys<address_t>); // fstat
+		install_syscall_handler(93, syscall_exit<address_t>);
+		install_syscall_handler(214, syscall_brk<address_t>);
 	}
 
 #ifdef RISCV_32I
-	template void Machine<4>::setup_minimal_syscalls();
+  template void Machine<uint32_t>::setup_minimal_syscalls();
 #endif
 #ifdef RISCV_64I
-	template void Machine<8>::setup_minimal_syscalls();
+  template void Machine<uint64_t>::setup_minimal_syscalls();
 #endif
 } // riscv

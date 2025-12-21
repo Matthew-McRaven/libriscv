@@ -4,12 +4,11 @@
 
 namespace riscv
 {
-	template <int W>
+	template <AddressType address_t>
 	struct DebugMachine
 	{
-		using address_t = address_type<W>;
-		using breakpoint_t = std::function<void(DebugMachine<W> &)>;
-		using printer_func_t = void(*)(const Machine<W>&, const char*, size_t);
+		using breakpoint_t = std::function<void(DebugMachine<address_t> &)>;
+		using printer_func_t = void(*)(const Machine<address_t>&, const char*, size_t);
 		struct Watchpoint {
 			address_t addr;
 			size_t    len;
@@ -33,7 +32,7 @@ namespace riscv
 		auto& breakpoints() { return this->m_breakpoints; }
 		void break_on_steps(int steps);
 		void break_checks();
-		static void default_pausepoint(DebugMachine<W>&);
+		static void default_pausepoint(DebugMachine<address_t>&);
 
 		void watchpoint(address_t address, size_t len, breakpoint_t = default_pausepoint);
 		void erase_watchpoint(address_t address) { watchpoint(address, 0, nullptr); }
@@ -43,8 +42,8 @@ namespace riscv
 		auto& get_debug_printer() const noexcept { return m_debug_printer; }
 		void set_debug_printer(printer_func_t pf) noexcept { m_debug_printer = pf; }
 
-		Machine<W>& machine;
-		DebugMachine(Machine<W>& m);
+		Machine<address_t>& machine;
+		DebugMachine(Machine<address_t>& m);
 	private:
 		void print_help() const;
 		void dprintf(const char* fmt, ...) const;
@@ -59,8 +58,8 @@ namespace riscv
 		void register_debug_logging() const;
 	};
 
-	template <int W>
-	inline void DebugMachine<W>::breakpoint(address_t addr, breakpoint_t func)
+	template <AddressType address_t>
+	inline void DebugMachine<address_t>::breakpoint(address_t addr, breakpoint_t func)
 	{
 		if (func)
 			this->m_breakpoints[addr] = func;
@@ -68,8 +67,8 @@ namespace riscv
 			this->m_breakpoints.erase(addr);
 	}
 
-	template <int W>
-	inline void DebugMachine<W>::watchpoint(address_t addr, size_t len, breakpoint_t func)
+	template <AddressType address_t>
+	inline void DebugMachine<address_t>::watchpoint(address_t addr, size_t len, breakpoint_t func)
 	{
 		if (func) {
 			this->m_watchpoints.push_back(Watchpoint{
@@ -88,8 +87,8 @@ namespace riscv
 		}
 	}
 
-	template <int W>
-	inline void DebugMachine<W>::default_pausepoint(DebugMachine& debug)
+	template <AddressType address_t>
+	inline void DebugMachine<address_t>::default_pausepoint(DebugMachine& debug)
 	{
 		debug.print_and_pause();
 	}

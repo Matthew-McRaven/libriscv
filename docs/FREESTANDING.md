@@ -87,8 +87,8 @@ extern "C" {
 You will need to handle the EXIT system call on the outside of the machine as well, to stop the machine. If you don't handle the EXIT system call and stop the machine, it will continue executing instructions past the function, which does not return. A one-argument system call can be implemented like this:
 
 ```C++
-template <int W>
-void syscall_exit(riscv::Machine<W>& machine)
+template <AddressType address_t>
+void syscall_exit(riscv::Machine<address_t>& machine)
 {
 	printf(">>> Program exited, exit code = %d\n", machine.template sysarg<int> (0));
 	machine.stop();

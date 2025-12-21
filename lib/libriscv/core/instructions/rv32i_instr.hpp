@@ -51,20 +51,13 @@ namespace riscv
 				return imm & 0x7F;
 			}
 
-			template <int W>
-			auto is_rev8() const noexcept {
-				if constexpr (W == 8)
-					return imm == 0b011010111000;
-				else
-					return imm == 0b011010011000;
-			}
-			auto high_bits() const noexcept {
-				return imm & 0xFC0;
-			}
-			bool is_srai() const noexcept {
-				return (imm & 0xFC0) == 0x400;
-			}
-			bool is_rori() const noexcept {
+      template <AddressType address_t> auto is_rev8() const noexcept {
+        if constexpr (sizeof(address_t) == 8) return imm == 0b011010111000;
+        else return imm == 0b011010011000;
+      }
+      auto high_bits() const noexcept { return imm & 0xFC0; }
+      bool is_srai() const noexcept { return (imm & 0xFC0) == 0x400; }
+      bool is_rori() const noexcept {
 				return (imm & 0xFC0) == 0x600;
 			}
 		} Itype;
@@ -183,106 +176,106 @@ namespace riscv
 	static_assert(sizeof(rv32i_instruction) == 4, "Instruction is 4 bytes");
 } // riscv
 
-extern const riscv::Instruction<4> instr32i_NOP;
-extern const riscv::Instruction<4> instr32i_UNIMPLEMENTED;
-extern const riscv::Instruction<4> instr32i_ILLEGAL;
-extern const riscv::Instruction<4> instr32i_LOAD_I8;
-extern const riscv::Instruction<4> instr32i_LOAD_I16;
-extern const riscv::Instruction<4> instr32i_LOAD_I32;
-extern const riscv::Instruction<4> instr32i_LOAD_I64;
-extern const riscv::Instruction<4> instr32i_LOAD_U8;
-extern const riscv::Instruction<4> instr32i_LOAD_U16;
-extern const riscv::Instruction<4> instr32i_LOAD_U32;
-extern const riscv::Instruction<4> instr32i_LOAD_U64;
-extern const riscv::Instruction<4> instr32i_LOAD_X_DUMMY;
-extern const riscv::Instruction<4> instr32i_STORE_I8_IMM;
-extern const riscv::Instruction<4> instr32i_STORE_I8;
-extern const riscv::Instruction<4> instr32i_STORE_I16_IMM;
-extern const riscv::Instruction<4> instr32i_STORE_I32_IMM;
-extern const riscv::Instruction<4> instr32i_STORE_I64_IMM;
-extern const riscv::Instruction<4> instr32i_STORE_I128_IMM;
-extern const riscv::Instruction<4> instr32i_BRANCH_EQ;
-extern const riscv::Instruction<4> instr32i_BRANCH_NE;
-extern const riscv::Instruction<4> instr32i_BRANCH_LT;
-extern const riscv::Instruction<4> instr32i_BRANCH_GE;
-extern const riscv::Instruction<4> instr32i_BRANCH_LTU;
-extern const riscv::Instruction<4> instr32i_BRANCH_GEU;
-extern const riscv::Instruction<4> instr32i_JALR;
-extern const riscv::Instruction<4> instr32i_JAL;
-extern const riscv::Instruction<4> instr32i_JMPI;
-extern const riscv::Instruction<4> instr32i_OP_IMM;
-extern const riscv::Instruction<4> instr32i_OP_IMM_ADDI;
-extern const riscv::Instruction<4> instr32i_OP_IMM_LI;
-extern const riscv::Instruction<4> instr32i_OP_MV;
-extern const riscv::Instruction<4> instr32i_OP_IMM_SLLI;
-extern const riscv::Instruction<4> instr32i_OP_IMM_SRLI;
-extern const riscv::Instruction<4> instr32i_OP_IMM_ANDI;
-extern const riscv::Instruction<4> instr32i_OP;
-extern const riscv::Instruction<4> instr32i_OP_ADD;
-extern const riscv::Instruction<4> instr32i_OP_SUB;
-extern const riscv::Instruction<4> instr32i_SYSTEM;
-extern const riscv::Instruction<4> instr32i_SYSCALL;
-extern const riscv::Instruction<4> instr32i_WFI;
-extern const riscv::Instruction<4> instr32i_LUI;
-extern const riscv::Instruction<4> instr32i_AUIPC;
-extern const riscv::Instruction<4> instr32i_OP_IMM32_ADDIW;
-extern const riscv::Instruction<4> instr32i_OP_IMM32_SLLIW;
-extern const riscv::Instruction<4> instr32i_OP_IMM32_SRLIW;
-extern const riscv::Instruction<4> instr32i_OP_IMM32_SRAIW;
-extern const riscv::Instruction<4> instr32i_OP_IMM32_SLLI_UW;
-extern const riscv::Instruction<4> instr32i_OP_IMM32;
-extern const riscv::Instruction<4> instr32i_OP32;
-extern const riscv::Instruction<4> instr32i_OP32_ADDW;
-extern const riscv::Instruction<4> instr32i_FENCE;
+extern const riscv::Instruction<uint32_t> instr32i_NOP;
+extern const riscv::Instruction<uint32_t> instr32i_UNIMPLEMENTED;
+extern const riscv::Instruction<uint32_t> instr32i_ILLEGAL;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_I8;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_I16;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_I32;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_I64;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_U8;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_U16;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_U32;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_U64;
+extern const riscv::Instruction<uint32_t> instr32i_LOAD_X_DUMMY;
+extern const riscv::Instruction<uint32_t> instr32i_STORE_I8_IMM;
+extern const riscv::Instruction<uint32_t> instr32i_STORE_I8;
+extern const riscv::Instruction<uint32_t> instr32i_STORE_I16_IMM;
+extern const riscv::Instruction<uint32_t> instr32i_STORE_I32_IMM;
+extern const riscv::Instruction<uint32_t> instr32i_STORE_I64_IMM;
+extern const riscv::Instruction<uint32_t> instr32i_STORE_I128_IMM;
+extern const riscv::Instruction<uint32_t> instr32i_BRANCH_EQ;
+extern const riscv::Instruction<uint32_t> instr32i_BRANCH_NE;
+extern const riscv::Instruction<uint32_t> instr32i_BRANCH_LT;
+extern const riscv::Instruction<uint32_t> instr32i_BRANCH_GE;
+extern const riscv::Instruction<uint32_t> instr32i_BRANCH_LTU;
+extern const riscv::Instruction<uint32_t> instr32i_BRANCH_GEU;
+extern const riscv::Instruction<uint32_t> instr32i_JALR;
+extern const riscv::Instruction<uint32_t> instr32i_JAL;
+extern const riscv::Instruction<uint32_t> instr32i_JMPI;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM_ADDI;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM_LI;
+extern const riscv::Instruction<uint32_t> instr32i_OP_MV;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM_SLLI;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM_SRLI;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM_ANDI;
+extern const riscv::Instruction<uint32_t> instr32i_OP;
+extern const riscv::Instruction<uint32_t> instr32i_OP_ADD;
+extern const riscv::Instruction<uint32_t> instr32i_OP_SUB;
+extern const riscv::Instruction<uint32_t> instr32i_SYSTEM;
+extern const riscv::Instruction<uint32_t> instr32i_SYSCALL;
+extern const riscv::Instruction<uint32_t> instr32i_WFI;
+extern const riscv::Instruction<uint32_t> instr32i_LUI;
+extern const riscv::Instruction<uint32_t> instr32i_AUIPC;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM32_ADDIW;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM32_SLLIW;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM32_SRLIW;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM32_SRAIW;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM32_SLLI_UW;
+extern const riscv::Instruction<uint32_t> instr32i_OP_IMM32;
+extern const riscv::Instruction<uint32_t> instr32i_OP32;
+extern const riscv::Instruction<uint32_t> instr32i_OP32_ADDW;
+extern const riscv::Instruction<uint32_t> instr32i_FENCE;
 
-extern const riscv::Instruction<8> instr64i_NOP;
-extern const riscv::Instruction<8> instr64i_UNIMPLEMENTED;
-extern const riscv::Instruction<8> instr64i_ILLEGAL;
-extern const riscv::Instruction<8> instr64i_LOAD_I8;
-extern const riscv::Instruction<8> instr64i_LOAD_I16;
-extern const riscv::Instruction<8> instr64i_LOAD_I32;
-extern const riscv::Instruction<8> instr64i_LOAD_I64;
-extern const riscv::Instruction<8> instr64i_LOAD_U8;
-extern const riscv::Instruction<8> instr64i_LOAD_U16;
-extern const riscv::Instruction<8> instr64i_LOAD_U32;
-extern const riscv::Instruction<8> instr64i_LOAD_U64;
-extern const riscv::Instruction<8> instr64i_LOAD_X_DUMMY;
-extern const riscv::Instruction<8> instr64i_STORE_I8_IMM;
-extern const riscv::Instruction<8> instr64i_STORE_I8;
-extern const riscv::Instruction<8> instr64i_STORE_I16_IMM;
-extern const riscv::Instruction<8> instr64i_STORE_I32_IMM;
-extern const riscv::Instruction<8> instr64i_STORE_I64_IMM;
-extern const riscv::Instruction<8> instr64i_STORE_I128_IMM;
-extern const riscv::Instruction<8> instr64i_BRANCH_EQ;
-extern const riscv::Instruction<8> instr64i_BRANCH_NE;
-extern const riscv::Instruction<8> instr64i_BRANCH_LT;
-extern const riscv::Instruction<8> instr64i_BRANCH_GE;
-extern const riscv::Instruction<8> instr64i_BRANCH_LTU;
-extern const riscv::Instruction<8> instr64i_BRANCH_GEU;
-extern const riscv::Instruction<8> instr64i_JALR;
-extern const riscv::Instruction<8> instr64i_JAL;
-extern const riscv::Instruction<8> instr64i_JMPI;
-extern const riscv::Instruction<8> instr64i_OP_IMM;
-extern const riscv::Instruction<8> instr64i_OP_IMM_ADDI;
-extern const riscv::Instruction<8> instr64i_OP_IMM_LI;
-extern const riscv::Instruction<8> instr64i_OP_MV;
-extern const riscv::Instruction<8> instr64i_OP_IMM_SLLI;
-extern const riscv::Instruction<8> instr64i_OP_IMM_SRLI;
-extern const riscv::Instruction<8> instr64i_OP_IMM_ANDI;
-extern const riscv::Instruction<8> instr64i_OP;
-extern const riscv::Instruction<8> instr64i_OP_ADD;
-extern const riscv::Instruction<8> instr64i_OP_SUB;
-extern const riscv::Instruction<8> instr64i_SYSTEM;
-extern const riscv::Instruction<8> instr64i_SYSCALL;
-extern const riscv::Instruction<8> instr64i_WFI;
-extern const riscv::Instruction<8> instr64i_LUI;
-extern const riscv::Instruction<8> instr64i_AUIPC;
-extern const riscv::Instruction<8> instr64i_OP_IMM32_ADDIW;
-extern const riscv::Instruction<8> instr64i_OP_IMM32_SLLIW;
-extern const riscv::Instruction<8> instr64i_OP_IMM32_SRLIW;
-extern const riscv::Instruction<8> instr64i_OP_IMM32_SRAIW;
-extern const riscv::Instruction<8> instr64i_OP_IMM32_SLLI_UW;
-extern const riscv::Instruction<8> instr64i_OP_IMM32;
-extern const riscv::Instruction<8> instr64i_OP32;
-extern const riscv::Instruction<8> instr64i_OP32_ADDW;
-extern const riscv::Instruction<8> instr64i_FENCE;
+extern const riscv::Instruction<uint64_t> instr64i_NOP;
+extern const riscv::Instruction<uint64_t> instr64i_UNIMPLEMENTED;
+extern const riscv::Instruction<uint64_t> instr64i_ILLEGAL;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_I8;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_I16;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_I32;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_I64;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_U8;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_U16;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_U32;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_U64;
+extern const riscv::Instruction<uint64_t> instr64i_LOAD_X_DUMMY;
+extern const riscv::Instruction<uint64_t> instr64i_STORE_I8_IMM;
+extern const riscv::Instruction<uint64_t> instr64i_STORE_I8;
+extern const riscv::Instruction<uint64_t> instr64i_STORE_I16_IMM;
+extern const riscv::Instruction<uint64_t> instr64i_STORE_I32_IMM;
+extern const riscv::Instruction<uint64_t> instr64i_STORE_I64_IMM;
+extern const riscv::Instruction<uint64_t> instr64i_STORE_I128_IMM;
+extern const riscv::Instruction<uint64_t> instr64i_BRANCH_EQ;
+extern const riscv::Instruction<uint64_t> instr64i_BRANCH_NE;
+extern const riscv::Instruction<uint64_t> instr64i_BRANCH_LT;
+extern const riscv::Instruction<uint64_t> instr64i_BRANCH_GE;
+extern const riscv::Instruction<uint64_t> instr64i_BRANCH_LTU;
+extern const riscv::Instruction<uint64_t> instr64i_BRANCH_GEU;
+extern const riscv::Instruction<uint64_t> instr64i_JALR;
+extern const riscv::Instruction<uint64_t> instr64i_JAL;
+extern const riscv::Instruction<uint64_t> instr64i_JMPI;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM_ADDI;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM_LI;
+extern const riscv::Instruction<uint64_t> instr64i_OP_MV;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM_SLLI;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM_SRLI;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM_ANDI;
+extern const riscv::Instruction<uint64_t> instr64i_OP;
+extern const riscv::Instruction<uint64_t> instr64i_OP_ADD;
+extern const riscv::Instruction<uint64_t> instr64i_OP_SUB;
+extern const riscv::Instruction<uint64_t> instr64i_SYSTEM;
+extern const riscv::Instruction<uint64_t> instr64i_SYSCALL;
+extern const riscv::Instruction<uint64_t> instr64i_WFI;
+extern const riscv::Instruction<uint64_t> instr64i_LUI;
+extern const riscv::Instruction<uint64_t> instr64i_AUIPC;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM32_ADDIW;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM32_SLLIW;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM32_SRLIW;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM32_SRAIW;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM32_SLLI_UW;
+extern const riscv::Instruction<uint64_t> instr64i_OP_IMM32;
+extern const riscv::Instruction<uint64_t> instr64i_OP32;
+extern const riscv::Instruction<uint64_t> instr64i_OP32_ADDW;
+extern const riscv::Instruction<uint64_t> instr64i_FENCE;

@@ -2,7 +2,7 @@
 
 namespace riscv
 {
-    template <int W> struct Machine;
+    template <AddressType address_t> struct Machine;
 
 	// In fastsim mode the instruction counter becomes a register
 	// the function, and we only update m_counter in Machine on exit
@@ -15,28 +15,28 @@ namespace riscv
 		{}
 		~InstrCounter() = default;
 
-		template <int W>
-		void apply(Machine<W>& machine) {
+		template <AddressType address_t>
+		void apply(Machine<address_t>& machine) {
 			machine.set_instruction_counter(m_counter);
 			machine.set_max_instructions(m_max);
 		}
-		template <int W>
-		void apply_counter(Machine<W>& machine) {
+		template <AddressType address_t>
+		void apply_counter(Machine<address_t>& machine) {
 			machine.set_instruction_counter(m_counter);
 		}
 		// Used by binary translator to compensate for its own function already being counted
 		// TODO: Account for this inside the binary translator instead. Very minor impact.
-		template <int W>
-		void apply_counter_minus_1(Machine<W>& machine) {
+		template <AddressType address_t>
+		void apply_counter_minus_1(Machine<address_t>& machine) {
 			machine.set_instruction_counter(m_counter-1);
 			machine.set_max_instructions(m_max);
 		}
-		template <int W>
-		void retrieve_max_counter(Machine<W>& machine) {
+		template <AddressType address_t>
+		void retrieve_max_counter(Machine<address_t>& machine) {
 			m_max     = machine.max_instructions();
 		}
-		template <int W>
-		void retrieve_counters(Machine<W>& machine) {
+		template <AddressType address_t>
+		void retrieve_counters(Machine<address_t>& machine) {
 			m_counter = machine.instruction_counter();
 			m_max     = machine.max_instructions();
 		}

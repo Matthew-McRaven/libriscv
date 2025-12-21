@@ -6,57 +6,50 @@
 #include "../types.hpp"
 
 namespace riscv {
-template <int W> struct Machine;
-template <int W> struct Registers;
+template <AddressType> struct Machine;
+template <AddressType> struct Registers;
 
-template <int W>
-struct SignalStack {
-	address_type<W> ss_sp = 0x0;
-	int             ss_flags = 0x0;
-	address_type<W> ss_size = 0;
+template <AddressType address_t> struct SignalStack {
+  address_t ss_sp = 0x0;
+  int ss_flags = 0x0;
+  address_t ss_size = 0;
 };
 
-template <int W>
-struct SignalAction {
-	static constexpr address_type<W> SIG_UNSET = ~(address_type<W>)0x0;
-	bool is_unset() const noexcept {
-		return handler == 0x0 || handler == SIG_UNSET;
-	}
-	address_type<W> handler = SIG_UNSET;
-	bool altstack = false;
-	unsigned mask = 0x0;
+template <AddressType address_t> struct SignalAction {
+  static constexpr address_t SIG_UNSET = ~(address_t)0x0;
+  bool is_unset() const noexcept { return handler == 0x0 || handler == SIG_UNSET; }
+  address_t handler = SIG_UNSET;
+  bool altstack = false;
+  unsigned mask = 0x0;
 };
 
-template <int W>
-struct SignalReturn {
-	Registers<W> regs;
+template <AddressType address_t> struct SignalReturn {
+  Registers<address_t> regs;
 };
 
-template <int W>
-struct SignalPerThread {
-	SignalStack<W> stack;
-	SignalReturn<W> sigret;
+template <AddressType address_t> struct SignalPerThread {
+  SignalStack<address_t> stack;
+  SignalReturn<address_t> sigret;
 };
 
-template <int W>
-struct Signals {
-	SignalAction<W>& get(int sig);
-	void enter(Machine<W>&, int sig);
+template <AddressType address_t> struct Signals {
+  SignalAction<address_t> &get(int sig);
+  void enter(Machine<address_t> &, int sig);
 
-	// TODO: Lock this in the future, for multiproessing
-	auto& per_thread(int tid) { return m_per_thread[tid]; }
+  // TODO: Lock this in the future, for multiproessing
+  auto& per_thread(int tid) { return m_per_thread[tid]; }
 
 	Signals();
 	~Signals();
 private:
-	std::array<SignalAction<W>, 64> signals {};
-	std::map<int, SignalPerThread<W>> m_per_thread;
+  std::array<SignalAction<address_t>, 64> signals{};
+  std::map<int, SignalPerThread<address_t>> m_per_thread;
 };
 
-template <int W> Signals<W>::Signals() {}
-template <int W> Signals<W>::~Signals() {}
+template <AddressType address_t> Signals<address_t>::Signals() {}
+template <AddressType address_t> Signals<address_t>::~Signals() {}
 
-template <int W> SignalAction<W> &Signals<W>::get(int sig) {
+template <AddressType address_t> SignalAction<address_t> &Signals<address_t>::get(int sig) {
   if (sig > 0) return signals.at(sig - 1);
   throw MachineException(ILLEGAL_OPERATION, "Signal 0 invoked");
 }

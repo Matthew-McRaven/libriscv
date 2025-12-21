@@ -11,16 +11,16 @@
 #include <vector>
 
 namespace riscv {
-template <int W> struct Machine;
-template <int W> struct DecodedExecuteSegment;
+template <AddressType address_t> struct Machine;
+template <AddressType address_t> struct DecodedExecuteSegment;
 
-template <int W> struct alignas(32) CPU {
-  using address_t = address_type<W>;   // one unsigned memory address
+template <AddressType address_type> struct alignas(32) CPU {
+  using address_t = address_type;
   using format_t = instruction_format; // machine instruction format
-  using breakpoint_t = std::function<void(CPU<W> &)>;
-  using execute_fault_t = void (*)(CPU<W> &, const Page &);
-  using override_execute_segment_t = DecodedExecuteSegment<W> &(*)(CPU<W> &);
-  using instruction_t = Instruction<W>;
+  using breakpoint_t = std::function<void(CPU<address_t> &)>;
+  using execute_fault_t = void (*)(CPU<address_t> &, const Page &);
+  using override_execute_segment_t = DecodedExecuteSegment<address_t> &(*)(CPU<address_t> &);
+  using instruction_t = Instruction<address_t>;
 
   // Dispatch modes (determined at configure-time):
   // 1. Switch-case: Uses a big switch-case for bytecodes. Works and runs everywhere.
@@ -70,11 +70,11 @@ template <int W> struct alignas(32) CPU {
   const auto &cireg(uint16_t idx) const noexcept { return registers().get(idx + 0x8); }
   auto &ciflp(uint16_t idx) noexcept { return registers().getfl(idx + 0x8); }
 
-  Machine<W> &machine() noexcept;
-  const Machine<W> &machine() const noexcept;
+  Machine<address_t> &machine() noexcept;
+  const Machine<address_t> &machine() const noexcept;
 
-  Memory<W> &memory() noexcept;
-  const Memory<W> &memory() const noexcept;
+  Memory<address_t> &memory() noexcept;
+  const Memory<address_t> &memory() const noexcept;
 
 #ifdef RISCV_EXT_ATOMICS
 		auto& atomics() noexcept { return memory().atomics(); }
@@ -93,11 +93,12 @@ template <int W> struct alignas(32) CPU {
 		// Read the next instruction bits
 		format_t read_next_instruction() const;
 		// Internal preempt() implementation that executes and restores old registers
-		address_t preempt_internal(Registers<W>& old_regs, bool Throw, bool store_regs, address_t pc, uint64_t max_instr);
+    address_t preempt_internal(Registers<address_t> &old_regs, bool Throw, bool store_regs, address_t pc,
+                               uint64_t max_instr);
 
-		// Pretty print instructions
-		std::string to_string(format_t format) const;
-		std::string to_string(format_t format, const instruction_t &instr) const;
+    // Pretty print instructions
+    std::string to_string(format_t format) const;
+    std::string to_string(format_t format, const instruction_t &instr) const;
 
 		/// @brief Pretty-print the current instruction
 		/// @return Returns a formatted string of the current instruction
@@ -115,28 +116,31 @@ template <int W> struct alignas(32) CPU {
 		/// @brief Returns the CPU to a previously stored state. Used by Machine::deserialize_from.
 		/// @param vec The vector to deserialize from
 		/// @param sm The serialized machine header to get metadata from
-		void deserialize_from(const std::vector<uint8_t>& vec, const SerializedMachine<W>& sm);
+    void deserialize_from(const std::vector<uint8_t> &vec, const SerializedMachine<address_t> &sm);
 
-		// Binary translation functions
-		int  load_translation(const MachineOptions<W>&, std::string* filename, DecodedExecuteSegment<W>&) const;
-		void try_translate(const MachineOptions<W>&, const std::string&, std::shared_ptr<DecodedExecuteSegment<W>>&) const;
+    // Binary translation functions
+    int load_translation(const MachineOptions<address_t> &, std::string *filename,
+                         DecodedExecuteSegment<address_t> &) const;
+    void try_translate(const MachineOptions<address_t> &, const std::string &,
+                       std::shared_ptr<DecodedExecuteSegment<address_t>> &) const;
 
-		void reset();
-		void reset_stack_pointer() noexcept;
+    void reset();
+    void reset_stack_pointer() noexcept;
 
-		CPU(Machine<W>&);
-		CPU(Machine<W>&, const Machine<W>& other); // Fork
+    CPU(Machine<address_t> &);
+    CPU(Machine<address_t> &, const Machine<address_t> &other); // Fork
 
-		DecodedExecuteSegment<W>& init_execute_area(const void* data, address_t begin, address_t length, bool is_likely_jit = false);
-		void set_execute_segment(DecodedExecuteSegment<W>& seg) noexcept { m_exec = &seg; }
-		auto& current_execute_segment() noexcept { return *m_exec; }
-		auto& current_execute_segment() const noexcept { return *m_exec; }
-		struct NextExecuteReturn {
-			DecodedExecuteSegment<W>* exec;
-			address_t pc;
-		};
-		NextExecuteReturn next_execute_segment(address_t pc);
-    static std::shared_ptr<DecodedExecuteSegment<W>> &empty_execute_segment() noexcept;
+    DecodedExecuteSegment<address_t> &init_execute_area(const void *data, address_t begin, address_t length,
+                                                        bool is_likely_jit = false);
+    void set_execute_segment(DecodedExecuteSegment<address_t> &seg) noexcept { m_exec = &seg; }
+    auto &current_execute_segment() noexcept { return *m_exec; }
+    auto &current_execute_segment() const noexcept { return *m_exec; }
+    struct NextExecuteReturn {
+      DecodedExecuteSegment<address_t> *exec;
+      address_t pc;
+    };
+    NextExecuteReturn next_execute_segment(address_t pc);
+    static std::shared_ptr<DecodedExecuteSegment<address_t>> &empty_execute_segment() noexcept;
     bool is_executable(address_t addr) const noexcept;
 
     //-- Debugging functions --//
@@ -147,27 +151,27 @@ template <int W> struct alignas(32) CPU {
 		/// @param exec The execute segment in which to install the EBREAK instruction
 		/// @param addr The address to install the EBREAK instruction
 		/// @return The original instruction at the address
-		static uint32_t install_ebreak_for(DecodedExecuteSegment<W>& exec, address_t addr);
+    static uint32_t install_ebreak_for(DecodedExecuteSegment<address_t> &exec, address_t addr);
 
-		/// @brief Call a function for a decoder entry at a specific address
-		/// @param exec The execute segment where the address is located
-		/// @param addr The address to call the function for
-		/// @return The decoder entry at the address
-		/// @note This function allows you to retrieve the decoder entry for an executable address
-		/// which can be used to modify the instruction itself and decoder data at that address.
-		/// @note At the end of the call, a block-ending instruction must have been installed.
-		static DecoderData<W>& create_block_ending_entry_at(DecodedExecuteSegment<W>& exec, address_t addr);
+    /// @brief Call a function for a decoder entry at a specific address
+    /// @param exec The execute segment where the address is located
+    /// @param addr The address to call the function for
+    /// @return The decoder entry at the address
+    /// @note This function allows you to retrieve the decoder entry for an executable address
+    /// which can be used to modify the instruction itself and decoder data at that address.
+    /// @note At the end of the call, a block-ending instruction must have been installed.
+    static DecoderData<address_t> &create_block_ending_entry_at(DecodedExecuteSegment<address_t> &exec, address_t addr);
 
-		/// @brief Modify existing function by making calls to it faster
-		/// @param exec The execute segment where the address is located
-		/// @param addr The address where a function already exists
-		/// @return True if the fast path was created, otherwise false
-		static bool create_fast_path_function(DecodedExecuteSegment<W>& exec, address_t addr);
-		bool create_fast_path_function(address_t addr);
+    /// @brief Modify existing function by making calls to it faster
+    /// @param exec The execute segment where the address is located
+    /// @param addr The address where a function already exists
+    /// @return True if the fast path was created, otherwise false
+    static bool create_fast_path_function(DecodedExecuteSegment<address_t> &exec, address_t addr);
+    bool create_fast_path_function(address_t addr);
 
-		// Override the function that gets called when the CPU
-		// throws an execute space protection fault.
-		void set_fault_handler(execute_fault_t func) noexcept { m_fault = func; }
+    // Override the function that gets called when the CPU
+    // throws an execute space protection fault.
+    void set_fault_handler(execute_fault_t func) noexcept { m_fault = func; }
 
 		// Override how to produce the next active execute segment
 		void set_override_new_execute_segment(override_execute_segment_t func) noexcept { m_override_exec = func; }
@@ -184,24 +188,24 @@ template <int W> struct alignas(32) CPU {
 		auto& current_exception() const noexcept { return m_current_exception; }
 
 	private:
-		Registers<W> m_regs;
-		Machine<W>&  m_machine;
+    Registers<address_t> m_regs;
+    Machine<address_t> &m_machine;
 
-		// ELF programs linear .text segment (initialized as empty segment)
-		DecodedExecuteSegment<W>* m_exec;
+    // ELF programs linear .text segment (initialized as empty segment)
+    DecodedExecuteSegment<address_t> *m_exec;
 
-		// The current exception (used by eg. TCC which doesn't create unwinding tables)
-		std::exception_ptr m_current_exception = nullptr;
+    // The current exception (used by eg. TCC which doesn't create unwinding tables)
+    std::exception_ptr m_current_exception = nullptr;
 
-		// The default execute fault simply triggers the exception
+    // The default execute fault simply triggers the exception
 		execute_fault_t m_fault = [] (auto& cpu, auto&) {
 			trigger_exception(EXECUTION_SPACE_PROTECTION_FAULT, cpu.pc());
 		};
 
 		// The default execute override returns no new execute segment
-		override_execute_segment_t m_override_exec = [] (auto&) -> DecodedExecuteSegment<W>& {
-			return *empty_execute_segment();
-		};
-		static_assert((W == 4 || W == 8 || W == 16), "Must be either 32-bit, 64-bit or 128-bit ISA");
+    override_execute_segment_t m_override_exec = [](auto &) -> DecodedExecuteSegment<address_t> & {
+      return *empty_execute_segment();
+    };
+    static_assert((sizeof(address_t) == 4 || sizeof(address_t) == 8), "Must be either 32-bit or64-bit ISA");
 };
 } // namespace riscv

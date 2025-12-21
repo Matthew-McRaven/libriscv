@@ -6,36 +6,36 @@
 namespace riscv {
 // Use a trick to access the Machine directly on g++/clang, Linux-only for now
 #if (defined(__GNUG__) || defined(__clang__)) && defined(__linux__)
-template <int W> RISCV_ALWAYS_INLINE inline
-Machine<W>& CPU<W>::machine() noexcept { return *reinterpret_cast<Machine<W>*> (this); }
-template <int W> RISCV_ALWAYS_INLINE inline
-const Machine<W>& CPU<W>::machine() const noexcept { return *reinterpret_cast<const Machine<W>*> (this); }
+template <AddressType address_t> RISCV_ALWAYS_INLINE inline
+Machine<address_t>& CPU<address_t>::machine() noexcept { return *reinterpret_cast<Machine<address_t>*> (this); }
+template <AddressType address_t> RISCV_ALWAYS_INLINE inline
+const Machine<address_t>& CPU<address_t>::machine() const noexcept { return *reinterpret_cast<const Machine<address_t>*> (this); }
 #else
-template <int W> RISCV_ALWAYS_INLINE inline
-Machine<W>& CPU<W>::machine() noexcept { return this->m_machine; }
-template <int W> RISCV_ALWAYS_INLINE inline
-const Machine<W>& CPU<W>::machine() const noexcept { return this->m_machine; }
+template <AddressType address_t> RISCV_ALWAYS_INLINE inline
+Machine<address_t>& CPU<address_t>::machine() noexcept { return this->m_machine; }
+template <AddressType address_t> RISCV_ALWAYS_INLINE inline
+const Machine<address_t>& CPU<address_t>::machine() const noexcept { return this->m_machine; }
 #endif
 
-template <int W> RISCV_ALWAYS_INLINE inline
-Memory<W>& CPU<W>::memory() noexcept { return machine().memory; }
-template <int W> RISCV_ALWAYS_INLINE inline
-const Memory<W>& CPU<W>::memory() const noexcept { return machine().memory; }
+template <AddressType address_t> RISCV_ALWAYS_INLINE inline
+Memory<address_t>& CPU<address_t>::memory() noexcept { return machine().memory; }
+template <AddressType address_t> RISCV_ALWAYS_INLINE inline
+const Memory<address_t>& CPU<address_t>::memory() const noexcept { return machine().memory; }
 
-template <int W>
-inline CPU<W>::CPU(Machine<W>& machine)
+template <AddressType address_t>
+inline CPU<address_t>::CPU(Machine<address_t>& machine)
 	: m_machine { machine }, m_exec(empty_execute_segment().get())
 {
 }
-template <int W>
-inline void CPU<W>::reset_stack_pointer() noexcept
+template <AddressType address_t>
+inline void CPU<address_t>::reset_stack_pointer() noexcept
 {
 	// initial stack location
 	this->reg(2) = machine().memory.stack_initial();
 }
 
-template<int W>
-inline void CPU<W>::jump(const address_t dst)
+template<AddressType address_t>
+inline void CPU<address_t>::jump(const address_t dst)
 {
 	// it's possible to jump to a misaligned address
 	if constexpr (!compressed_enabled) {
@@ -50,22 +50,22 @@ inline void CPU<W>::jump(const address_t dst)
 	this->registers().pc = dst;
 }
 
-template<int W>
-inline void CPU<W>::aligned_jump(const address_t dst) noexcept
+template<AddressType address_t>
+inline void CPU<address_t>::aligned_jump(const address_t dst) noexcept
 {
 	this->registers().pc = dst;
 }
 
-template <int W> inline void CPU<W>::increment_pc(int delta) noexcept { registers().pc += delta; }
+template <AddressType address_t> inline void CPU<address_t>::increment_pc(int delta) noexcept { registers().pc += delta; }
 
 // cpu.cpp
-template <int W>
-CPU<W>::CPU(Machine<W> &machine, const Machine<W> &other) : m_machine{machine}, m_exec(other.cpu.m_exec) {
+template <AddressType address_t>
+CPU<address_t>::CPU(Machine<address_t> &machine, const Machine<address_t> &other) : m_machine{machine}, m_exec(other.cpu.m_exec) {
   // Copy all registers except vectors
   // Users can still copy vector registers by assigning to registers().rvv().
-  this->registers().copy_from(Registers<W>::Options::NoVectors, other.cpu.registers());
+  this->registers().copy_from(Registers<address_t>::Options::NoVectors, other.cpu.registers());
 }
-template <int W> void CPU<W>::reset() {
+template <AddressType address_t> void CPU<address_t>::reset() {
   this->m_regs = {};
   this->reset_stack_pointer();
   // We can't jump if there's been no ELF loader
@@ -82,7 +82,7 @@ template <int W> void CPU<W>::reset() {
   }
 }
 
-template <int W> RISCV_NOINLINE typename CPU<W>::NextExecuteReturn CPU<W>::next_execute_segment(address_t pc) {
+template <AddressType address_t> RISCV_NOINLINE typename CPU<address_t>::NextExecuteReturn CPU<address_t>::next_execute_segment(address_t pc) {
   static constexpr int MAX_RESTARTS = 4;
   int restarts = 0;
 restart_next_execute_segment:
@@ -190,8 +190,8 @@ restart_next_execute_segment:
   }
 } // CPU::next_execute_segment
 
-template <int W>
-RISCV_NOINLINE RISCV_INTERNAL typename CPU<W>::format_t CPU<W>::read_next_instruction_slowpath() const {
+template <AddressType address_t>
+RISCV_NOINLINE RISCV_INTERNAL typename CPU<address_t>::format_t CPU<address_t>::read_next_instruction_slowpath() const {
   // Fallback: Read directly from page memory
   const auto pageno = this->pc() / address_t(Page::size());
   const auto &page = machine().memory.get_exec_pageno(pageno);
@@ -219,9 +219,9 @@ RISCV_NOINLINE RISCV_INTERNAL typename CPU<W>::format_t CPU<W>::read_next_instru
   return instruction;
 }
 
-template <int W> bool CPU<W>::is_executable(address_t addr) const noexcept { return m_exec->is_within(addr); }
+template <AddressType address_t> bool CPU<address_t>::is_executable(address_t addr) const noexcept { return m_exec->is_within(addr); }
 
-template <int W> typename CPU<W>::format_t CPU<W>::read_next_instruction() const {
+template <AddressType address_t> typename CPU<address_t>::format_t CPU<address_t>::read_next_instruction() const {
   if (LIKELY(this->is_executable(this->pc()))) {
     auto *exd = m_exec->exec_data(this->pc());
     return format_t{*(uint32_t *)exd};
@@ -230,7 +230,7 @@ template <int W> typename CPU<W>::format_t CPU<W>::read_next_instruction() const
   return read_next_instruction_slowpath();
 }
 
-template <int W> static inline rv32i_instruction decode_safely(const uint8_t *exec_seg_data, address_type<W> pc) {
+template <AddressType address_t> static inline rv32i_instruction decode_safely(const uint8_t *exec_seg_data, address_t pc) {
   // Instructions may be unaligned with C-extension
   // On amd64 we take the cost, because it's faster
 #if defined(RISCV_EXT_COMPRESSED) && !defined(__x86_64__)
@@ -240,7 +240,7 @@ template <int W> static inline rv32i_instruction decode_safely(const uint8_t *ex
 #endif // aligned/unaligned loads
 }
 
-template <int W> RISCV_HOT_PATH() void CPU<W>::simulate_precise() {
+template <AddressType address_t> RISCV_HOT_PATH() void CPU<address_t>::simulate_precise() {
   // Decoded segments are always faster
   // So, always have at least the current segment
   if (!is_executable(this->pc())) {
@@ -265,7 +265,7 @@ restart_precise_sim:
       goto restart_precise_sim;
     }
 
-    auto instruction = decode_safely<W>(exec_seg_data, pc);
+    auto instruction = decode_safely<address_t>(exec_seg_data, pc);
     this->execute(instruction);
 
     // increment PC
@@ -275,7 +275,7 @@ restart_precise_sim:
 
 } // CPU::simulate_precise
 
-template <int W> void CPU<W>::step_one(bool use_instruction_counter) {
+template <AddressType address_t> void CPU<address_t>::step_one(bool use_instruction_counter) {
   // Read, decode & execute instructions directly
   auto instruction = this->read_next_instruction();
   this->execute(instruction);
@@ -286,8 +286,8 @@ template <int W> void CPU<W>::step_one(bool use_instruction_counter) {
   machine().increment_counter(use_instruction_counter ? 1 : 0);
 }
 
-template <int W>
-address_type<W> CPU<W>::preempt_internal(Registers<W> &old_regs, bool Throw, bool store_regs, address_t pc,
+template <AddressType address_t>
+address_t CPU<address_t>::preempt_internal(Registers<address_t> &old_regs, bool Throw, bool store_regs, address_t pc,
                                          uint64_t max_instr) {
   auto &m = machine();
   const auto prev_max = m.max_instructions();
@@ -313,7 +313,7 @@ address_type<W> CPU<W>::preempt_internal(Registers<W> &old_regs, bool Throw, boo
   return retval;
 }
 
-template <int W> RISCV_COLD_PATH() void CPU<W>::trigger_exception(int intr, address_t data) {
+template <AddressType address_t> RISCV_COLD_PATH() void CPU<address_t>::trigger_exception(int intr, address_t data) {
   switch (intr) {
   case INVALID_PROGRAM: throw MachineException(intr, "Machine not initialized", data);
   case ILLEGAL_OPCODE: throw MachineException(intr, "Illegal opcode executed", data);
@@ -333,11 +333,11 @@ template <int W> RISCV_COLD_PATH() void CPU<W>::trigger_exception(int intr, addr
   }
 }
 
-template <int W> RISCV_COLD_PATH() std::string CPU<W>::to_string(format_t bits) const {
+template <AddressType address_t> RISCV_COLD_PATH() std::string CPU<address_t>::to_string(format_t bits) const {
   return to_string(bits, decode(bits));
 }
 
-template <int W> RISCV_COLD_PATH() std::string CPU<W>::current_instruction_to_string() const {
+template <AddressType address_t> RISCV_COLD_PATH() std::string CPU<address_t>::current_instruction_to_string() const {
   format_t instruction;
   try {
     instruction = this->read_next_instruction();
@@ -347,7 +347,7 @@ template <int W> RISCV_COLD_PATH() std::string CPU<W>::current_instruction_to_st
   return to_string(instruction, decode(instruction));
 }
 
-template <int W> RISCV_COLD_PATH() std::string Registers<W>::flp_to_string() const {
+template <AddressType address_t> RISCV_COLD_PATH() std::string Registers<address_t>::flp_to_string() const {
   char buffer[800];
   int len = 0;
   for (int i = 0; i < 32; i++) {
@@ -374,7 +374,7 @@ template <int W> RISCV_COLD_PATH() std::string Registers<W>::flp_to_string() con
 }
 
 // decode_bytecodes.cpp
-template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noexcept {
+template <AddressType address_t> size_t CPU<address_t>::computed_index_for(rv32i_instruction instr) noexcept {
 #ifdef RISCV_EXT_COMPRESSED
   if (instr.length() == 2) {
     // RISC-V Compressed Extension
@@ -438,11 +438,9 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
       }
       return RV32C_BC_FUNCTION; // ILLEGAL
     case CI_CODE(0b001, 0b01):
-      if constexpr (W >= 8) {
-        return RV32C_BC_JAL_ADDIW; // C.ADDIW
-      } else {
-        return RV32C_BC_JAL_ADDIW; // C.JAL
-      }
+      if constexpr (sizeof(address_t) == 8) return RV32C_BC_JAL_ADDIW; // C.ADDIW
+      else return RV32C_BC_JAL_ADDIW;                                  // C.JAL
+
     case CI_CODE(0b101, 0b01): // C.JMP
       return RV32C_BC_JMP;
     case CI_CODE(0b110, 0b01): // C.BEQZ
@@ -512,7 +510,7 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
       } else if (ci.CSS.funct3 == 6) {
         return RV32C_BC_STW; // SWSP
       } else if (ci.CSS.funct3 == 7) {
-        if constexpr (W == 8) {
+        if constexpr (sizeof(address_t) == 8) {
           return RV32C_BC_STD; // SDSP
         } else {
           return RV32C_BC_FUNCTION; // FSWSP
@@ -538,7 +536,7 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
       return RV32I_BC_LDW;
 #ifdef RISCV_64I
     case 0x3:
-      if constexpr (W >= 8) {
+      if constexpr (sizeof(address_t) >= 8) {
         return RV32I_BC_LDD;
       }
       return RV32I_BC_INVALID;
@@ -549,7 +547,7 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
       return RV32I_BC_LDHU;
 #ifdef RISCV_64I
     case 0x6: // LD.WU
-      if constexpr (W >= 8) {
+      if constexpr (sizeof(address_t) >= 8) {
         return RV32I_BC_LDWU;
       }
       return RV32I_BC_INVALID;
@@ -566,7 +564,7 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
       return RV32I_BC_STW;
 #ifdef RISCV_64I
     case 0x3:
-      if constexpr (W >= 8) {
+      if constexpr (sizeof(address_t) >= 8) {
         return RV32I_BC_STD;
       }
       return RV32I_BC_INVALID;
@@ -669,7 +667,7 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
     }
 #ifdef RISCV_64I
   case RV64I_OP32:
-    if constexpr (W < 8) return RV32I_BC_INVALID;
+    if constexpr (sizeof(address_t) < 8) return RV32I_BC_INVALID;
 
     switch (instr.Rtype.jumptable_friendly_op()) {
     case 0x0: // ADD.W
@@ -685,7 +683,7 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
     default: return RV32I_BC_FUNCTION;
     }
   case RV64I_OP_IMM32:
-    if constexpr (W < 8) return RV32I_BC_INVALID;
+    if constexpr (sizeof(address_t) < 8) return RV32I_BC_INVALID;
 
     if (instr.Itype.rd == 0) return RV32I_BC_FUNCTION;
     switch (instr.Itype.funct3) {
@@ -789,29 +787,29 @@ template <int W> size_t CPU<W>::computed_index_for(rv32i_instruction instr) noex
 } // computed_index_for()
 
 // rv32i/rv64i.cpp
-template <int W> RISCV_INTERNAL const CPU<W>::instruction_t &CPU<W>::decode(const format_t instruction) {
-  return decode_one<W>(instruction);
+template <AddressType address_t> RISCV_INTERNAL const CPU<address_t>::instruction_t &CPU<address_t>::decode(const format_t instruction) {
+  return decode_one<address_t>(instruction);
 }
 
-template <int W> RISCV_INTERNAL void CPU<W>::execute(const format_t instruction) {
+template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(const format_t instruction) {
   auto dec = decode(instruction);
   dec.handler(*this, instruction);
 }
 
-template <int W> RISCV_INTERNAL void CPU<W>::execute(uint8_t &handler_idx, uint32_t instr) {
+template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(uint8_t &handler_idx, uint32_t instr) {
   if (handler_idx == 0 && instr != 0) {
     [[unlikely]];
-    handler_idx = DecoderData<W>::handler_index_for(decode(instr).handler);
+    handler_idx = DecoderData<address_t>::handler_index_for(decode(instr).handler);
   }
-  DecoderData<W>::get_handlers()[handler_idx](*this, instr);
+  DecoderData<address_t>::get_handlers()[handler_idx](*this, instr);
 }
 
-template <int W> const Instruction<W> &CPU<W>::get_unimplemented_instruction() noexcept {
-  if constexpr (W == 4) return instr32i_UNIMPLEMENTED;
+template <AddressType address_t> const Instruction<address_t> &CPU<address_t>::get_unimplemented_instruction() noexcept {
+  if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
   else return instr64i_UNIMPLEMENTED;
 }
 
-template <int W> RISCV_COLD_PATH() std::string Registers<W>::to_string() const {
+template <AddressType address_t> RISCV_COLD_PATH() std::string Registers<address_t>::to_string() const {
   char buffer[600];
   int len = 0;
   for (int i = 1; i < 32; i++) {
@@ -821,9 +819,9 @@ template <int W> RISCV_COLD_PATH() std::string Registers<W>::to_string() const {
   return std::string(buffer, len);
 }
 
-template <int W>
+template <AddressType address_t>
 RISCV_COLD_PATH()
-std::string CPU<W>::to_string(instruction_format format, const instruction_t &instr) const {
+std::string CPU<address_t>::to_string(instruction_format format, const instruction_t &instr) const {
   char buffer[256];
   char ibuffer[128];
   int ibuflen = instr.printer(ibuffer, sizeof(ibuffer), *this, format);

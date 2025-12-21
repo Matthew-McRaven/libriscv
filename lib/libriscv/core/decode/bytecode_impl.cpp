@@ -634,7 +634,7 @@ INSTRUCTION(RV32I_BC_OP_DIV, rv32i_op_div) {
 	OP_INSTR();
 	// division by zero is not an exception
 	if (LIKELY(saddr_t(src2) != 0)) {
-		if constexpr (W == 8) {
+		if constexpr (sizeof(address_t) == 8) {
 			// vi_instr.cpp:444:2: runtime error:
 			// division of -9223372036854775808 by -1 cannot be represented in type 'long'
 			if (LIKELY(!((int64_t)src1 == INT64_MIN && (int64_t)src2 == -1ll)))
@@ -662,10 +662,10 @@ INSTRUCTION(RV32I_BC_OP_DIVU, rv32i_op_divu) {
 INSTRUCTION(RV32I_BC_OP_REM, rv32i_op_rem) {
 	OP_INSTR();
 	if (LIKELY(src2 != 0)) {
-		if constexpr(W == 4) {
+		if constexpr(sizeof(address_t) == 4) {
 			if (LIKELY(!(src1 == 2147483648 && src2 == 4294967295)))
 				dst = saddr_t(src1) % saddr_t(src2);
-		} else if constexpr (W == 8) {
+		} else if constexpr (sizeof(address_t) == 8) {
 			if (LIKELY(!((int64_t)src1 == INT64_MIN && (int64_t)src2 == -1ll)))
 				dst = saddr_t(src1) % saddr_t(src2);
 		} else {

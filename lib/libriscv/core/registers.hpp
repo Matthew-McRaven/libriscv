@@ -66,21 +66,18 @@ namespace riscv
 		}
 	};
 
-	template <int W>
-	struct alignas(RISCV_MACHINE_ALIGNMENT) Registers
-	{
-		using address_t  = address_type<W>;   // one unsigned memory address
-		using register_t = register_type<W>;  // integer register
-		union FCSR {
-			uint32_t whole = 0;
+  template <AddressType address_t> struct alignas(RISCV_MACHINE_ALIGNMENT) Registers {
+    using register_t = register_type<address_t>; // integer register
+    union FCSR {
+      uint32_t whole = 0;
 			struct {
 				uint32_t fflags : 5;
 				uint32_t frm    : 3;
 				uint32_t resv24 : 24;
 			};
-		};
+    };
 
-		RISCV_ALWAYS_INLINE auto& get() noexcept { return m_reg; }
+    RISCV_ALWAYS_INLINE auto& get() noexcept { return m_reg; }
 		RISCV_ALWAYS_INLINE const auto& get() const noexcept { return m_reg; }
 
 		RISCV_ALWAYS_INLINE register_t& get(uint32_t idx) noexcept { return m_reg[idx]; }
@@ -145,9 +142,9 @@ namespace riscv
 		// General FP registers
 		std::array<fp64reg, 32> m_regfl {};
 #ifdef RISCV_EXT_VECTOR
-		VectorRegisters<W> m_rvv;
+    VectorRegisters<address_t> m_rvv;
 #endif
-	};
+  };
 
-	static_assert(sizeof(fp64reg) == 8, "FP-register is 64-bit");
+  static_assert(sizeof(fp64reg) == 8, "FP-register is 64-bit");
 } // riscv

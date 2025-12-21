@@ -26,8 +26,8 @@ If you want to see the stdout output from your hello world, you will also want t
 
 Let's start with an example of handling exit:
 ```C++
-template <int W>
-void syscall_exit(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_exit(Machine<address_t>& machine)
 {
 	// Get the first (and only) argument as a 32-bit integer
 	auto [exit_code] = machine.template sysargs <int> ();
@@ -62,11 +62,11 @@ If we want stdout from the VM printed in our terminal, we should handle `write`:
 ```C++
 #include <unistd.h>
 
-template <int W>
-void syscall_write(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_write(Machine<address_t>& machine)
 {
 	const auto [fd, address, len] =
-		machine.template sysargs <int, address_type<W>, address_type<W>> ();
+		machine.template sysargs <int, address_t, address_t> ();
 	// We only accept standard output pipes, for now :)
 	if (fd == 1 || fd == 2) {
 		char buffer[1024];
@@ -90,11 +90,11 @@ The return value of a call into a kernel is usually a success or error indicatio
 ```C++
 #include <unistd.h>
 
-template <int W>
-void syscall_write(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_write(Machine<address_t>& machine)
 {
 	const auto [fd, address, len] =
-		machine.template sysargs <int, address_type<W>, address_type<W>> ();
+		machine.template sysargs <int, address_t, address_t> ();
 	// We only accept standard output pipes, for now :)
 	if (fd == 1 || fd == 2) {
 		// Zero-copy buffers pointing into guest memory
@@ -123,11 +123,11 @@ A fictive system call that has a single string as system call argument can be im
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions apply, but not invalid lengths. If the length is 256GB, `copy_from_guest()` *will* attempt to copy that, and will only fail when running out of memory. All memory operations in _libriscv_ are strictly bounds-checked, but if there really is 256GB of memory in the guest, the copy operation will try to copy all 256GB out.
 
 ```C++
-template <int W>
-void syscall_string(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_string(Machine<address_t>& machine)
 {
 	const auto [address, len] =
-		machine.template sysargs <address_type<W>, address_type<W>> ();
+		machine.template sysargs <address_t, address_t> ();
 
 	// Create a buffer and copy into it. Page protections apply.
 	std::vector<uint8_t> buffer(len);
@@ -141,11 +141,11 @@ The helpers `machine.copy_from_guest` and `machine.copy_to_guest` work in all co
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions apply. The operation is unbounded, meaning that if, for example, we attempt to fill iovec buffers with 32GB of memory, and that memory is sequential in the guest, it only needs 1 iovec entry to represent that, and so it *will* return a single buffer that is 32GB long. It will only fail if there are not enough buffers to represent the entire data.
 
 ```C++
-template <int W>
-void syscall_string(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_string(Machine<address_t>& machine)
 {
 	const auto [address, len] =
-		machine.template sysargs <address_type<W>, address_type<W>> ();
+		machine.template sysargs <address_t, address_t> ();
 
 	riscv::vBuffer buffers[16];
 	size_t cnt =
@@ -158,11 +158,11 @@ void syscall_string(Machine<W>& machine)
 3. Directly read a zero-terminated string. Page protections apply.
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions apply. The operation is bounded by a second argument `memstring(addr, maxlen)` that limits the operation to by default 16MB. This acts as a preventative measure against invalid strings, and simplifies API usage.
 ```C++
-template <int W>
-void syscall_string(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_string(Machine<address_t>& machine)
 {
 	const auto [address] =
-		machine.template sysargs <address_type<W>> ();
+		machine.template sysargs <address_t> ();
 
 	const auto string = machine.memory.memstring(address);
 }
@@ -171,8 +171,8 @@ It uses `strnlen` from your C++ library under the hood, making it very effective
 
 4. Using `std::string` directly is a shortcut for example 3, shown above. The same rules apply.
 ```C++
-template <int W>
-void syscall_string(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_string(Machine<address_t>& machine)
 {
 	const auto [string] =
 		machine.template sysargs <std::string> (); // Consumes 1 register
@@ -183,11 +183,11 @@ void syscall_string(Machine<W>& machine)
 5. Resolve an address and a length (2 registers) to a `std::string_view`.
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions *do not* apply, but read-write arena rules apply (eg. cannot write to read-only program area). The operation has a default hard 16MB limit (third argument to `memview(addr, len, maxlen)`). This acts as a defensive measure against invalid lengths, and simplifies API usage.
 ```C++
-template <int W>
-void syscall_string(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_string(Machine<address_t>& machine)
 {
 	const auto [address, len] =
-		machine.template sysargs <address_type<W>, address_type<W>> ();
+		machine.template sysargs <address_t, address_t> ();
 
 	const auto strview = machine.memory.memview(address, len);
 }
@@ -196,8 +196,8 @@ Using a `std::string_view` is only possible when memory is sequential, and requi
 
 6. Using `std::string_view` directly is a shortcut for example 5, shown above. The same rules apply.
 ```C++
-template <int W>
-void syscall_string(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_string(Machine<address_t>& machine)
 {
 	const auto [view] =
 		machine.template sysargs <std::string_view> (); // Consumes 2 registers
@@ -210,8 +210,8 @@ void syscall_string(Machine<W>& machine)
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions apply. Uses `memcpy_out(&t, addr, sizeof(T))` behind the scenes.
 
 ```C++
-template <int W>
-void syscall_struct(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_struct(Machine<address_t>& machine)
 {
 	struct MyStruct {
 		std::array<int, 44> mydata;
@@ -226,8 +226,8 @@ void syscall_struct(Machine<W>& machine)
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions *do not* apply, instead read-write arena rules apply. Uses `memarray<T> (addr, 1)` behind the scenes.
 
 ```C++
-template <int W>
-void syscall_struct(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_struct(Machine<address_t>& machine)
 {
 	struct MyStruct {
 		std::array<int, 44> mydata;
@@ -243,8 +243,8 @@ Notice how the type is _a pointer_. If instead you want a fixed-size span of T, 
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions *do not* apply, instead read-write arena rules apply. Uses `memspan<T> (addr, n)` behind the scenes.
 
 ```C++
-template <int W>
-void syscall_struct(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_struct(Machine<address_t>& machine)
 {
 	struct MyStruct {
 		int value;
@@ -258,8 +258,8 @@ void syscall_struct(Machine<W>& machine)
 > Note: This function will throw an exception under all circumstances if it cannot complete successfully. Page permissions *do not* apply, instead read-write arena rules apply. Uses `memarray<T, N> (addr)` behind the scenes.
 
 ```C++
-template <int W>
-void syscall_struct(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_struct(Machine<address_t>& machine)
 {
 	struct MyStruct {
 		int value;
@@ -304,11 +304,11 @@ To handle this system call, we will need to copy into the guest:
 ```C++
 #include <unistd.h>
 
-template <int W>
-void syscall_getcwd(Machine<W>& machine)
+template <AddressType address_t>
+void syscall_getcwd(Machine<address_t>& machine)
 {
 	const auto [address, len] =
-		machine.template sysargs <address_type<W>, address_type<W>> ();
+		machine.template sysargs <address_t, address_t> ();
 	// make something up! :)
 	const char path[] = "/home/vmguest";
 	// we only accept lengths of at least sizeof(path)
@@ -322,7 +322,7 @@ void syscall_getcwd(Machine<W>& machine)
 }
 ```
 
-If in doubt, just use `address_type<W>` for the syscall argument, and it will be the same size as a register, which all system call arguments are anyway.
+If in doubt, just use `address_t` for the syscall argument, and it will be the same size as a register, which all system call arguments are anyway.
 
 ## The RISC-V system call ABI
 
@@ -341,8 +341,8 @@ If you are doing a low-latency implementation of the emulator in eg. a game engi
 Let's take as an example a system call that normalizes a f32 vec2. In order to lower latency, we will take x and y as float arguments in FA0 and FA1, modify them and return them in the same registers.
 
 ```C++
-template <int W>
-void api_vector_normalize(Machine<W>& machine)
+template <AddressType address_t>
+void api_vector_normalize(Machine<address_t>& machine)
 {
 	auto [dx, dy] = machine.sysargs<float, float>();
 	glm::vec2 vec = glm::normalize(glm::vec2(dx, dy));

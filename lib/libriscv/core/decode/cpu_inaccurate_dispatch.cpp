@@ -47,18 +47,18 @@ namespace riscv
 
 #define NEXT_BLOCK(len, OF)                                    \
 	pc += len;                                                 \
-	decoder += len >> DecoderCache<W>::SHIFT;                  \
+	decoder += len >> DecoderCache<address_t>::SHIFT;                  \
 	if constexpr (FUZZING) /* Give OOB-aid to ASAN */          \
-		decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT]; \
+		decoder = &exec_decoder[pc >> DecoderCache<address_t>::SHIFT]; \
 	pc += decoder->block_bytes();                              \
 	EXECUTE_INSTR();
 
 #define SAFE_INSTR_NEXT(len)                  \
 	pc += len;                                \
-	decoder += len >> DecoderCache<W>::SHIFT;
+	decoder += len >> DecoderCache<address_t>::SHIFT;
 
 #define NEXT_SEGMENT()                                       \
-	decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];   \
+	decoder = &exec_decoder[pc >> DecoderCache<address_t>::SHIFT];   \
 	pc += decoder->block_bytes();                            \
 	EXECUTE_INSTR();
 
@@ -75,12 +75,11 @@ namespace riscv
 	else                                                          \
 		goto new_execute_segment;
 
-	template <int W>
-	DISPATCH_ATTR void CPU<W>::simulate_inaccurate(address_t pc)
-	{
-		static constexpr uint32_t XLEN = W * 8;
-		using addr_t = address_type<W>;
-		using saddr_t = signed_address_type<W>;
+template <AddressType address_t> DISPATCH_ATTR void CPU<address_t>::simulate_inaccurate(address_t pc) {
+  static constexpr auto W = sizeof(address_t);
+  static constexpr uint32_t XLEN = W * 8;
+  using addr_t = address_t;
+  using saddr_t = std::make_signed<addr_t>;
 
 #ifdef DISPATCH_MODE_THREADED
 #include "threaded_bytecode_array.hpp"
@@ -89,16 +88,16 @@ namespace riscv
 		machine().set_instruction_counter(0);
 		machine().set_max_instructions(UINT64_MAX);
 
-		DecodedExecuteSegment<W> *exec = this->m_exec;
-		DecoderData<W> *exec_decoder = exec->decoder_cache();
-		DecoderData<W> *decoder;
+		DecodedExecuteSegment<address_t> *exec = this->m_exec;
+		DecoderData<address_t> *exec_decoder = exec->decoder_cache();
+		DecoderData<address_t> *decoder;
 
 		// We need an execute segment matching current PC
 		if (UNLIKELY(!(pc >= exec->exec_begin() && pc < exec->exec_end())))
 			goto new_execute_segment;
 
 	continue_segment:
-		decoder = &exec_decoder[pc >> DecoderCache<W>::SHIFT];
+		decoder = &exec_decoder[pc >> DecoderCache<address_t>::SHIFT];
 
 		pc += decoder->block_bytes();
 
@@ -198,7 +197,7 @@ INSTRUCTION(RV32I_BC_STOP, rv32i_stop)
 
 	execute_invalid:
 		// Calculate the current PC from the decoder pointer
-		pc = (decoder - exec_decoder) << DecoderCache<W>::SHIFT;
+		pc = (decoder - exec_decoder) << DecoderCache<address_t>::SHIFT;
 		// Check if the instruction is still invalid
 		try {
 			if (decoder->instr == 0 && MACHINE().memory.template read<uint16_t>(pc) != 0) {
@@ -208,6 +207,6 @@ INSTRUCTION(RV32I_BC_STOP, rv32i_stop)
 		} catch (...) {}
 		registers().pc = pc;
 		trigger_exception(ILLEGAL_OPCODE, decoder->instr);
-	} // CPU::simulate_inaccurate()
+  } // CPU::simulate_inaccurate()
 
 } // riscv

@@ -28,35 +28,35 @@ static constexpr bool verbose_syscalls = false;
 #define SA_ONSTACK	0x08000000
 
 namespace riscv {
-template<int W>
-void add_socket_syscalls(Machine<W> &);
+template<AddressType address_t>
+void add_socket_syscalls(Machine<address_t> &);
 
-template<int W>
+template<AddressType address_t>
 struct guest_iovec {
-	address_type<W> iov_base;
-	address_type<W> iov_len;
+	address_t iov_base;
+	address_t iov_len;
 };
 
-template<int W>
-static void syscall_stub_zero(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_stub_zero(Machine<address_t> &machine) {
 	SYSPRINT("SYSCALL stubbed (zero): %d\n", (int) machine.cpu.reg(17));
 	machine.set_result(0);
 }
 
-template<int W>
-static void syscall_stub_nosys(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_stub_nosys(Machine<address_t> &machine) {
 	SYSPRINT("SYSCALL stubbed (nosys): %d\n", (int) machine.cpu.reg(17));
 	machine.set_result(-ENOSYS);
 }
 
-template<int W>
-static void syscall_exit(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_exit(Machine<address_t> &machine) {
 	// Stop sets the max instruction counter to zero, making the instruction loop end.
 	machine.stop();
 }
 
-template<int W>
-static void syscall_ebreak(riscv::Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_ebreak(riscv::Machine<address_t> &machine) {
 	printf("\n>>> EBREAK at %#lX\n", (long) machine.cpu.pc());
 #ifdef RISCV_DEBUG
 	machine.print_and_pause();
@@ -65,8 +65,8 @@ static void syscall_ebreak(riscv::Machine<W> &machine) {
 #endif
 }
 
-template<int W>
-static void syscall_sigaltstack(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_sigaltstack(Machine<address_t> &machine) {
 	const auto ss = machine.sysarg(0);
 	const auto old_ss = machine.sysarg(1);
 	SYSPRINT("SYSCALL sigaltstack, tid=%d ss: 0x%lX old_ss: 0x%lX\n",
@@ -87,8 +87,8 @@ static void syscall_sigaltstack(Machine<W> &machine) {
 	machine.set_result(0);
 }
 
-template<int W>
-static void syscall_sigaction(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_sigaction(Machine<address_t> &machine) {
 	const int sig = machine.sysarg(0);
 	const auto action = machine.sysarg(1);
 	const auto old_action = machine.sysarg(2);
@@ -99,12 +99,12 @@ static void syscall_sigaction(Machine<W> &machine) {
 	auto& sigact = machine.sigaction(sig);
 
 	struct kernel_sigaction {
-		address_type<W> sa_handler;
-		address_type<W> sa_flags;
-		address_type<W> sa_mask;
+		address_t sa_handler;
+		address_t sa_flags;
+		address_t sa_mask;
 	} sa{};
 	if (old_action != 0x0) {
-		sa.sa_handler = sigact.handler & ~address_type<W>(0xF);
+		sa.sa_handler = sigact.handler & ~address_t(0xF);
 		sa.sa_flags = (sigact.altstack ? SA_ONSTACK : 0x0);
 		sa.sa_mask = sigact.mask;
 		machine.copy_to_guest(old_action, &sa, sizeof(sa));
@@ -121,8 +121,8 @@ static void syscall_sigaction(Machine<W> &machine) {
 	machine.set_result(0);
 }
 
-template<int W>
-void syscall_lseek(Machine<W> &machine) {
+template<AddressType address_t>
+void syscall_lseek(Machine<address_t> &machine) {
 	const int fd = machine.template sysarg<int>(0);
 	const auto offset = machine.template sysarg<int64_t>(1);
 	const int whence = machine.template sysarg<int>(2);
@@ -142,8 +142,8 @@ void syscall_lseek(Machine<W> &machine) {
 	}
 }
 
-template<int W>
-static void syscall_read(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_read(Machine<address_t> &machine) {
 	const int fd = machine.template sysarg<int>(0);
 	const auto address = machine.sysarg(1);
 	const size_t len = machine.sysarg(2);
@@ -190,8 +190,8 @@ static void syscall_read(Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-static void syscall_write(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_write(Machine<address_t> &machine) {
 	const int vfd = machine.template sysarg<int>(0);
 	const auto address = machine.sysarg(1);
 	const size_t len = machine.sysarg(2);
@@ -243,8 +243,8 @@ static void syscall_write(Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-static void syscall_writev(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_writev(Machine<address_t> &machine) {
 	const int fd = machine.template sysarg<int>(0);
 	const auto iov_g = machine.sysarg(1);
 	const auto count = machine.template sysarg<int>(2);
@@ -257,14 +257,14 @@ static void syscall_writev(Machine<W> &machine) {
 	}
 	// We only accept standard output pipes, for now :)
 	if (fd == 1 || fd == 2) {
-		const size_t size = sizeof(guest_iovec<W>) * count;
+		const size_t size = sizeof(guest_iovec<address_t>) * count;
 
-		std::vector<guest_iovec<W>> vec(count);
+		std::vector<guest_iovec<address_t>> vec(count);
 		machine.memory.memcpy_out(vec.data(), iov_g, size);
 
 		ssize_t res = 0;
 		for (const auto &iov: vec) {
-			auto src_g = (address_type<W>) iov.iov_base;
+			auto src_g = (address_t) iov.iov_base;
 			auto len_g = (size_t) iov.iov_len;
 			/* Zero-copy retrieval of buffers */
 			riscv::vBuffer buffers[4];
@@ -281,8 +281,8 @@ static void syscall_writev(Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-static void syscall_openat(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_openat(Machine<address_t> &machine) {
 	const int dir_fd = machine.template sysarg<int>(0);
 	const auto g_path = machine.sysarg(1);
 	const int flags = machine.template sysarg<int>(2);
@@ -318,8 +318,8 @@ static void syscall_openat(Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-static void syscall_close(riscv::Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_close(riscv::Machine<address_t> &machine) {
 	const int vfd = machine.template sysarg<int>(0);
 	if constexpr (verbose_syscalls) {
 		printf("SYSCALL close, fd: %d\n", vfd);
@@ -344,8 +344,8 @@ static void syscall_close(riscv::Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-static void syscall_dup(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_dup(Machine<address_t> &machine) {
 	const int vfd = machine.template sysarg<int>(0);
 	SYSPRINT("SYSCALL dup, fd: %d\n", vfd);
 	(void)vfd;
@@ -353,8 +353,8 @@ static void syscall_dup(Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-static void syscall_fcntl(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_fcntl(Machine<address_t> &machine) {
 	const int vfd = machine.template sysarg<int>(0);
 	const auto cmd = machine.template sysarg<int>(1);
 	const auto arg1 = machine.sysarg(2);
@@ -384,8 +384,8 @@ static void syscall_fcntl(Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-static void syscall_ioctl(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_ioctl(Machine<address_t> &machine) {
 	const int vfd = machine.template sysarg<int>(0);
 	const auto req = machine.template sysarg<uint64_t>(1);
 	const auto arg1 = machine.sysarg(2);
@@ -417,8 +417,8 @@ static void syscall_ioctl(Machine<W> &machine) {
 	machine.set_result(-EBADF);
 }
 
-template<int W>
-void syscall_readlinkat(Machine<W> &machine) {
+template<AddressType address_t>
+void syscall_readlinkat(Machine<address_t> &machine) {
 	const int vfd = machine.template sysarg<int>(0);
 	const auto g_path = machine.sysarg(1);
 	const auto g_buf = machine.sysarg(2);
@@ -509,8 +509,8 @@ inline void copy_stat_buffer(struct stat &st, struct riscv_stat &rst) {
 	rst.rv_ctime_nsec = 0;
 }
 
-template<int W>
-static void syscall_fstatat(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_fstatat(Machine<address_t> &machine) {
 	const auto vfd = machine.template sysarg<int>(0);
 	const auto g_path = machine.sysarg(1);
 	const auto g_buf = machine.sysarg(2);
@@ -567,8 +567,8 @@ static void syscall_fstatat(Machine<W> &machine) {
 	machine.set_result(-ENOSYS);
 }
 
-template<int W>
-static void syscall_fstat(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_fstat(Machine<address_t> &machine) {
 	const auto vfd = machine.template sysarg<int>(0);
 	const auto g_buf = machine.sysarg(1);
 
@@ -593,8 +593,8 @@ static void syscall_fstat(Machine<W> &machine) {
 	machine.set_result(-ENOSYS);
 }
 
-template<int W>
-static void syscall_statx(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_statx(Machine<address_t> &machine) {
 	const int dir_fd = machine.template sysarg<int>(0);
 	const auto g_path = machine.sysarg(1);
 	const int flags = machine.template sysarg<int>(2);
@@ -632,8 +632,8 @@ static void syscall_statx(Machine<W> &machine) {
 	machine.set_result(-ENOSYS);
 }
 
-template<int W>
-static void syscall_gettimeofday(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_gettimeofday(Machine<address_t> &machine) {
 	const auto buffer = machine.sysarg(0);
 	SYSPRINT("SYSCALL gettimeofday, buffer: 0x%lX\n", (long) buffer);
 	auto tp = std::chrono::system_clock::now();
@@ -642,7 +642,7 @@ static void syscall_gettimeofday(Machine<W> &machine) {
 		time_point_cast<std::chrono::microseconds>(secs);
 	struct timeval tv =
 		timeval{ long(secs.time_since_epoch().count()), long(us.count()) };
-	if constexpr (W == 4) {
+	if constexpr (sizeof(address_t) == 4) {
 		int32_t timeval32[2] = {(int) tv.tv_sec, (int) tv.tv_usec};
 		machine.copy_to_guest(buffer, timeval32, sizeof(timeval32));
 	} else {
@@ -651,8 +651,8 @@ static void syscall_gettimeofday(Machine<W> &machine) {
 	machine.set_result_or_error(0);
 }
 
-template<int W>
-static void syscall_clock_gettime(Machine<W>& machine) {
+template<AddressType address_t>
+static void syscall_clock_gettime(Machine<address_t>& machine) {
 	const auto clkid = machine.template sysarg<int>(0);
 	const auto buffer = machine.sysarg(1);
 	SYSPRINT("SYSCALL clock_gettime, clkid: %x buffer: 0x%lX\n",
@@ -666,7 +666,7 @@ static void syscall_clock_gettime(Machine<W>& machine) {
 		timespec{ secs.time_since_epoch().count(), long(ns.count()) };
 	(void)clkid;
 
-	if constexpr (W == 4) {
+	if constexpr (sizeof(address_t) == 4) {
 		int32_t ts32[2] = {(int) ts.tv_sec, (int) ts.tv_nsec};
 		machine.copy_to_guest(buffer, &ts32, sizeof(ts32));
 	} else {
@@ -675,8 +675,8 @@ static void syscall_clock_gettime(Machine<W>& machine) {
 
 	machine.set_result_or_error(0);
 }
-template<int W>
-static void syscall_clock_gettime64(Machine<W>& machine) {
+template<AddressType address_t>
+static void syscall_clock_gettime64(Machine<address_t>& machine) {
 	const auto clkid = machine.template sysarg<int>(0);
 	const auto buffer = machine.sysarg(1);
 	SYSPRINT("SYSCALL clock_gettime64, clkid: %x buffer: 0x%lX\n",
@@ -694,8 +694,8 @@ static void syscall_clock_gettime64(Machine<W>& machine) {
 	machine.set_result_or_error(0);
 }
 
-template<int W>
-static void syscall_uname(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_uname(Machine<address_t> &machine) {
 	const auto buffer = machine.sysarg(0);
 	SYSPRINT("SYSCALL uname, buffer: 0x%lX\n", (long) buffer);
 	static constexpr int UTSLEN = 65;
@@ -711,9 +711,9 @@ static void syscall_uname(Machine<W> &machine) {
 	strcpy_s(uts.nodename, UTSLEN, "libriscv");
 	strcpy_s(uts.release, UTSLEN, "5.6.0");
 	strcpy_s(uts.version, UTSLEN, "");
-	if constexpr (W == 4)
+	if constexpr (sizeof(address_t) == 4)
 		strcpy_s(uts.machine, UTSLEN, "rv32imafdc");
-	else if constexpr (W == 8)
+	else if constexpr (sizeof(address_t) == 8)
 		strcpy_s(uts.machine, UTSLEN, "rv64imafdc");
 	else
 		strcpy_s(uts.machine, UTSLEN, "rv128imafd");
@@ -723,8 +723,8 @@ static void syscall_uname(Machine<W> &machine) {
 	machine.set_result(0);
 }
 
-template <int W>
-static void syscall_capget(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_capget(Machine<address_t>& machine)
 {
 	const auto header_ptr = machine.sysarg(0);
 	const auto data_ptr = machine.sysarg(1);
@@ -769,11 +769,11 @@ static void syscall_capget(Machine<W>& machine)
 			 (long)header_ptr, (long)data_ptr, (long)machine.return_value());
 }
 
-template<int W>
-static void syscall_brk(Machine<W> &machine) {
+template<AddressType address_t>
+static void syscall_brk(Machine<address_t> &machine) {
 	auto new_end = machine.sysarg(0);
-	if (new_end > machine.memory.heap_address() + Memory<W>::BRK_MAX) {
-		new_end = machine.memory.heap_address() + Memory<W>::BRK_MAX;
+	if (new_end > machine.memory.heap_address() + Memory<address_t>::BRK_MAX) {
+		new_end = machine.memory.heap_address() + Memory<address_t>::BRK_MAX;
 	} else if (new_end < machine.memory.heap_address()) {
 		new_end = machine.memory.heap_address();
 	}
@@ -784,8 +784,8 @@ static void syscall_brk(Machine<W> &machine) {
 	machine.set_result(new_end);
 }
 
-template <int W>
-static void syscall_pipe2(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_pipe2(Machine<address_t>& machine)
 {
 	const auto vfd_array = machine.sysarg(0);
 	const auto flags = machine.template sysarg<int>(1);
@@ -803,8 +803,8 @@ static void syscall_pipe2(Machine<W>& machine)
 		(long)vfd_array, flags, (long)machine.return_value());
 }
 
-template <int W>
-static void syscall_getrandom(Machine<W>& machine)
+template <AddressType address_t>
+static void syscall_getrandom(Machine<address_t>& machine)
 {
 	const auto g_addr = machine.sysarg(0);
 	const auto g_len  = machine.sysarg(1);
@@ -835,109 +835,109 @@ static void syscall_getrandom(Machine<W>& machine)
 #include "../linux/syscalls_mman.cpp"
 #include "epoll.cpp"
 
-template<int W>
-void Machine<W>::setup_minimal_syscalls() {
-	install_syscall_handler(SYSCALL_EBREAK, syscall_ebreak<W>);
-	install_syscall_handler(62, syscall_lseek<W>);
-	install_syscall_handler(63, syscall_read<W>);
-	install_syscall_handler(64, syscall_write<W>);
-	install_syscall_handler(93, syscall_exit<W>);
+template<AddressType address_t>
+void Machine<address_t>::setup_minimal_syscalls() {
+	install_syscall_handler(SYSCALL_EBREAK, syscall_ebreak<address_t>);
+	install_syscall_handler(62, syscall_lseek<address_t>);
+	install_syscall_handler(63, syscall_read<address_t>);
+	install_syscall_handler(64, syscall_write<address_t>);
+	install_syscall_handler(93, syscall_exit<address_t>);
 }
 
-template<int W>
-void Machine<W>::setup_newlib_syscalls() {
+template<AddressType address_t>
+void Machine<address_t>::setup_newlib_syscalls() {
 	setup_minimal_syscalls();
-	install_syscall_handler(169, syscall_gettimeofday<W>);
-	install_syscall_handler(214, syscall_brk<W>);
-	add_mman_syscalls<W>();
+	install_syscall_handler(169, syscall_gettimeofday<address_t>);
+	install_syscall_handler(214, syscall_brk<address_t>);
+	add_mman_syscalls<address_t>();
 }
-template<int W>
-void Machine<W>::setup_newlib_syscalls(bool) {
+template<AddressType address_t>
+void Machine<address_t>::setup_newlib_syscalls(bool) {
 	setup_newlib_syscalls();
 }
 
-template<int W>
-void Machine<W>::setup_linux_syscalls(bool filesystem, bool sockets) {
+template<AddressType address_t>
+void Machine<address_t>::setup_linux_syscalls(bool filesystem, bool sockets) {
 	this->setup_minimal_syscalls();
 
 	// eventfd2
-	install_syscall_handler(19, syscall_eventfd2<W>);
+	install_syscall_handler(19, syscall_eventfd2<address_t>);
 	// epoll_create
-	install_syscall_handler(20, syscall_epoll_create<W>);
+	install_syscall_handler(20, syscall_epoll_create<address_t>);
 	// epoll_ctl
-	install_syscall_handler(21, syscall_epoll_ctl<W>);
+	install_syscall_handler(21, syscall_epoll_ctl<address_t>);
 	// epoll_pwait
-	install_syscall_handler(22, syscall_epoll_pwait<W>);
+	install_syscall_handler(22, syscall_epoll_pwait<address_t>);
 	// dup
-	install_syscall_handler(23, syscall_dup<W>);
+	install_syscall_handler(23, syscall_dup<address_t>);
 	// fcntl
-	install_syscall_handler(25, syscall_fcntl<W>);
+	install_syscall_handler(25, syscall_fcntl<address_t>);
 	// ioctl
-	install_syscall_handler(29, syscall_ioctl<W>);
+	install_syscall_handler(29, syscall_ioctl<address_t>);
 	// faccessat
-	install_syscall_handler(48, syscall_stub_nosys<W>);
+	install_syscall_handler(48, syscall_stub_nosys<address_t>);
 
-	install_syscall_handler(56, syscall_openat<W>);
-	install_syscall_handler(57, syscall_close<W>);
-	install_syscall_handler(59, syscall_pipe2<W>);
-	install_syscall_handler(66, syscall_writev<W>);
+	install_syscall_handler(56, syscall_openat<address_t>);
+	install_syscall_handler(57, syscall_close<address_t>);
+	install_syscall_handler(59, syscall_pipe2<address_t>);
+	install_syscall_handler(66, syscall_writev<address_t>);
 	// 73: ppoll
-	install_syscall_handler(73, syscall_stub_zero<W>);
-	install_syscall_handler(78, syscall_readlinkat<W>);
+	install_syscall_handler(73, syscall_stub_zero<address_t>);
+	install_syscall_handler(78, syscall_readlinkat<address_t>);
 	// 79: fstatat
-	install_syscall_handler(79, syscall_fstatat<W>);
+	install_syscall_handler(79, syscall_fstatat<address_t>);
 	// 80: fstat
-	install_syscall_handler(80, syscall_fstat<W>);
+	install_syscall_handler(80, syscall_fstat<address_t>);
 	// 90: capget
-	install_syscall_handler(90, syscall_capget<W>);
+	install_syscall_handler(90, syscall_capget<address_t>);
 
 	// 94: exit_group (single-threaded)
-	install_syscall_handler(94, syscall_exit<W>);
+	install_syscall_handler(94, syscall_exit<address_t>);
 
 	// nanosleep
-	install_syscall_handler(101, syscall_stub_zero<W>);
+	install_syscall_handler(101, syscall_stub_zero<address_t>);
 	// clock_gettime
-	install_syscall_handler(113, syscall_clock_gettime<W>);
-	install_syscall_handler(403, syscall_clock_gettime64<W>);
+	install_syscall_handler(113, syscall_clock_gettime<address_t>);
+	install_syscall_handler(403, syscall_clock_gettime64<address_t>);
 	// clock_getres
-	install_syscall_handler(114, syscall_stub_nosys<W>);
+	install_syscall_handler(114, syscall_stub_nosys<address_t>);
 	// sched_getaffinity
-	install_syscall_handler(123, syscall_stub_nosys<W>);
+	install_syscall_handler(123, syscall_stub_nosys<address_t>);
 	// sigaltstack
-	install_syscall_handler(132, syscall_sigaltstack<W>);
+	install_syscall_handler(132, syscall_sigaltstack<address_t>);
 	// rt_sigaction
-	install_syscall_handler(134, syscall_sigaction<W>);
+	install_syscall_handler(134, syscall_sigaction<address_t>);
 	// rt_sigprocmask
-	install_syscall_handler(135, syscall_stub_zero<W>);
+	install_syscall_handler(135, syscall_stub_zero<address_t>);
 
 	// gettimeofday
-	install_syscall_handler(169, syscall_gettimeofday<W>);
+	install_syscall_handler(169, syscall_gettimeofday<address_t>);
 	// getpid
-	install_syscall_handler(172, syscall_stub_zero<W>);
+	install_syscall_handler(172, syscall_stub_zero<address_t>);
 	// getuid
-	install_syscall_handler(174, syscall_stub_zero<W>);
+	install_syscall_handler(174, syscall_stub_zero<address_t>);
 	// geteuid
-	install_syscall_handler(175, syscall_stub_zero<W>);
+	install_syscall_handler(175, syscall_stub_zero<address_t>);
 	// getgid
-	install_syscall_handler(176, syscall_stub_zero<W>);
-	// getegid
-	install_syscall_handler(177, syscall_stub_zero<W>);
+	install_syscall_handler(176, syscall_stub_zero<address_t>);
+	// getegid
+	install_syscall_handler(177, syscall_stub_zero<address_t>);
 
-	install_syscall_handler(160, syscall_uname<W>);
-	install_syscall_handler(214, syscall_brk<W>);
+	install_syscall_handler(160, syscall_uname<address_t>);
+	install_syscall_handler(214, syscall_brk<address_t>);
 	// riscv_hwprobe
-	install_syscall_handler(258, syscall_stub_zero<W>);
+	install_syscall_handler(258, syscall_stub_zero<address_t>);
 	// riscv_flush_icache
-	install_syscall_handler(259, syscall_stub_zero<W>);
+	install_syscall_handler(259, syscall_stub_zero<address_t>);
 
-	install_syscall_handler(278, syscall_getrandom<W>);
+	install_syscall_handler(278, syscall_getrandom<address_t>);
 
 	// statx
-	install_syscall_handler(291, syscall_statx<W>);
+	install_syscall_handler(291, syscall_statx<address_t>);
 	// rseq
-	install_syscall_handler(293, syscall_stub_nosys<W>);
+	install_syscall_handler(293, syscall_stub_nosys<address_t>);
 
-	add_mman_syscalls<W>();
+	add_mman_syscalls<address_t>();
 
 	if (filesystem || sockets) {
 		m_fds.reset(new FileDescriptors);

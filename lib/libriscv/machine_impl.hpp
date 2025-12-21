@@ -3,15 +3,15 @@
 
 namespace riscv {
 
-template <int W> inline void Machine<W>::stop() noexcept { m_max_counter = 0; }
-template <int W> inline bool Machine<W>::stopped() const noexcept { return m_counter >= m_max_counter; }
-template <int W> inline bool Machine<W>::instruction_limit_reached() const noexcept {
+template <AddressType address_t> inline void Machine<address_t>::stop() noexcept { m_max_counter = 0; }
+template <AddressType address_t> inline bool Machine<address_t>::stopped() const noexcept { return m_counter >= m_max_counter; }
+template <AddressType address_t> inline bool Machine<address_t>::instruction_limit_reached() const noexcept {
   return m_counter >= m_max_counter && m_max_counter != 0;
 }
 
-template <int W>
+template <AddressType address_t>
 template <bool Throw>
-inline bool Machine<W>::simulate_with(uint64_t max_instr, uint64_t counter, address_t pc) {
+inline bool Machine<address_t>::simulate_with(uint64_t max_instr, uint64_t counter, address_t pc) {
   const bool stopped_normally = cpu.simulate(pc, counter, max_instr);
   if constexpr (Throw) {
     // The simulation either ends normally, or it throws an exception
@@ -24,36 +24,36 @@ inline bool Machine<W>::simulate_with(uint64_t max_instr, uint64_t counter, addr
   }
 }
 
-template <int W> template <bool Throw> inline bool Machine<W>::simulate(uint64_t max_instr, uint64_t counter) {
+template <AddressType address_t> template <bool Throw> inline bool Machine<address_t>::simulate(uint64_t max_instr, uint64_t counter) {
   return this->simulate_with<Throw>(max_instr, counter, cpu.pc());
 }
 
-template <int W> template <bool Throw> inline bool Machine<W>::resume(uint64_t max_instr) {
+template <AddressType address_t> template <bool Throw> inline bool Machine<address_t>::resume(uint64_t max_instr) {
   return this->simulate<Throw>(this->instruction_counter() + max_instr, this->instruction_counter());
 }
 
-template <int W> inline void Machine<W>::reset() {
+template <AddressType address_t> inline void Machine<address_t>::reset() {
   cpu.reset();
   memory.reset();
 }
 
-template <int W> inline void Machine<W>::print(const char *buffer, size_t len) const {
+template <AddressType address_t> inline void Machine<address_t>::print(const char *buffer, size_t len) const {
   this->m_printer(*this, buffer, len);
 }
-template <int W> inline long Machine<W>::stdin_read(char *buffer, size_t len) const {
+template <AddressType address_t> inline long Machine<address_t>::stdin_read(char *buffer, size_t len) const {
   return this->m_stdin(*this, buffer, len);
 }
 
-template <int W> inline void Machine<W>::install_syscall_handler(size_t sysn, syscall_t handler) {
+template <AddressType address_t> inline void Machine<address_t>::install_syscall_handler(size_t sysn, syscall_t handler) {
   // A work-around for thread-sanitizer false positives (setting the same handler)
   if (syscall_handlers.at(sysn) != handler) syscall_handlers.at(sysn) = handler;
 }
-template <int W>
-inline void Machine<W>::install_syscall_handlers(std::initializer_list<std::pair<size_t, syscall_t>> syscalls) {
+template <AddressType address_t>
+inline void Machine<address_t>::install_syscall_handlers(std::initializer_list<std::pair<size_t, syscall_t>> syscalls) {
   for (auto &scall : syscalls) install_syscall_handler(scall.first, scall.second);
 }
 
-template <int W> inline void Machine<W>::system_call(size_t sysnum) {
+template <AddressType address_t> inline void Machine<address_t>::system_call(size_t sysnum) {
   if (LIKELY(sysnum < syscall_handlers.size())) {
     Machine::syscall_handlers[RISCV_SPECSAFE(sysnum)](*this);
   } else {
@@ -61,10 +61,10 @@ template <int W> inline void Machine<W>::system_call(size_t sysnum) {
   }
 }
 
-template <int W> template <typename T> inline T Machine<W>::sysarg(int idx) const {
+template <AddressType address_t> template <typename T> inline T Machine<address_t>::sysarg(int idx) const {
   if constexpr (std::is_integral_v<T>) {
     // 64-bit integers on 32-bit uses 2 registers
-    if constexpr (sizeof(T) > W) {
+    if constexpr (sizeof(T) > sizeof(address_t)) {
       return static_cast<T>(cpu.reg(REG_ARG0 + idx)) | static_cast<T>(cpu.reg(REG_ARG0 + idx + 1)) << 32;
     }
     return static_cast<T>(cpu.reg(REG_ARG0 + idx));
@@ -90,9 +90,9 @@ template <int W> template <typename T> inline T Machine<W>::sysarg(int idx) cons
   } else static_assert(always_false<T>, "Unknown type");
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename... Args, std::size_t... Indices>
-inline auto Machine<W>::resolve_args(std::index_sequence<Indices...>) const {
+inline auto Machine<address_t>::resolve_args(std::index_sequence<Indices...>) const {
   std::tuple<std::decay_t<Args>...> retval;
   size_t i = 0;
   size_t f = 0;
@@ -100,7 +100,7 @@ inline auto Machine<W>::resolve_args(std::index_sequence<Indices...>) const {
       [&] {
         if constexpr (std::is_integral_v<Args>) {
           std::get<Indices>(retval) = sysarg<Args>(i++);
-          if constexpr (sizeof(Args) > W) i++; // uses 2 registers
+          if constexpr (sizeof(Args) > sizeof(address_t)) i++; // uses 2 registers
         } else if constexpr (std::is_floating_point_v<Args>) std::get<Indices>(retval) = sysarg<Args>(f++);
         else if constexpr (std::is_enum_v<Args>) std::get<Indices>(retval) = sysarg<Args>(i++);
         else if constexpr (std::is_same_v<Args, riscv::Buffer>) {
@@ -126,17 +126,17 @@ inline auto Machine<W>::resolve_args(std::index_sequence<Indices...>) const {
   return retval;
 }
 
-template <int W> template <typename... Args> inline auto Machine<W>::sysargs() const {
+template <AddressType address_t> template <typename... Args> inline auto Machine<address_t>::sysargs() const {
   return resolve_args<Args...>(std::index_sequence_for<Args...>{});
 }
 
-template <int W> template <typename... Args> inline void Machine<W>::set_result(Args... args) noexcept {
+template <AddressType address_t> template <typename... Args> inline void Machine<address_t>::set_result(Args... args) noexcept {
   size_t i = 0;
   size_t f = 0;
   (
       [&] {
         if constexpr (std::is_integral_v<Args>) {
-          if constexpr (sizeof(Args) < W && !std::is_same_v<Args, bool>)
+          if constexpr (sizeof(Args) < sizeof(address_t) && !std::is_same_v<Args, bool>)
             // Sign-extend all arguments smaller than the word size
             cpu.registers().get(REG_ARG0 + i++) = (typename std::make_signed_t<Args>)args;
           else cpu.registers().get(REG_ARG0 + i++) = args;
@@ -148,43 +148,43 @@ template <int W> template <typename... Args> inline void Machine<W>::set_result(
       ...);
 }
 
-template <int W> inline void Machine<W>::ebreak() {
+template <AddressType address_t> inline void Machine<address_t>::ebreak() {
   // its simpler and more flexible to just call a user-provided function
   this->system_call(riscv::SYSCALL_EBREAK);
 }
 
-template <int W> inline void Machine<W>::copy_to_guest(address_t dst, const void *buf, size_t len) {
+template <AddressType address_t> inline void Machine<address_t>::copy_to_guest(address_t dst, const void *buf, size_t len) {
   memory.memcpy(dst, buf, len);
 }
 
-template <int W> inline void Machine<W>::copy_from_guest(void *dst, address_t buf, size_t len) const {
+template <AddressType address_t> inline void Machine<address_t>::copy_from_guest(void *dst, address_t buf, size_t len) const {
   memory.memcpy_out(dst, buf, len);
 }
 
-template <int W> inline address_type<W> Machine<W>::address_of(std::string_view name) const {
+template <AddressType address_t> inline address_t Machine<address_t>::address_of(std::string_view name) const {
   return memory.resolve_address(name);
 }
 
-template <int W> address_type<W> Machine<W>::stack_push(const void *data, size_t length) {
+template <AddressType address_t> address_t Machine<address_t>::stack_push(const void *data, size_t length) {
   auto &sp = cpu.reg(REG_SP);
-  sp = (sp - length) & ~(address_t)(W - 1); // maintain word alignment
+  sp = (sp - length) & ~(address_t)(sizeof(address_t) - 1); // maintain word alignment
   this->copy_to_guest(sp, data, length);
   return sp;
 }
-template <int W> inline address_type<W> Machine<W>::stack_push(const std::string &string) {
+template <AddressType address_t> inline address_t Machine<address_t>::stack_push(const std::string &string) {
   return stack_push(string.data(), string.size() + 1); /* zero */
 }
-template <int W> template <typename T> inline address_type<W> Machine<W>::stack_push(const T &type) {
+template <AddressType address_t> template <typename T> inline address_t Machine<address_t>::stack_push(const T &type) {
   static_assert(std::is_standard_layout_v<T>, "Must be a POD type");
   return stack_push(&type, sizeof(T));
 }
 
-template <int W> inline void Machine<W>::realign_stack() noexcept {
+template <AddressType address_t> inline void Machine<address_t>::realign_stack() noexcept {
   // the RISC-V calling convention mandates a 16-byte alignment
   cpu.reg(REG_SP) &= ~address_t{0xF};
 }
 
-template <int W> inline const MultiThreading<W> &Machine<W>::threads() const {
+template <AddressType address_t> inline const MultiThreading<address_t> &Machine<address_t>::threads() const {
   if (LIKELY(m_mt != nullptr)) return *m_mt;
 #if __cpp_exceptions
   throw MachineException(FEATURE_DISABLED, "Threads are not initialized");
@@ -192,7 +192,7 @@ template <int W> inline const MultiThreading<W> &Machine<W>::threads() const {
   std::abort();
 #endif
 }
-template <int W> inline MultiThreading<W> &Machine<W>::threads() {
+template <AddressType address_t> inline MultiThreading<address_t> &Machine<address_t>::threads() {
   if (LIKELY(m_mt != nullptr)) return *m_mt;
 #if __cpp_exceptions
   throw MachineException(FEATURE_DISABLED, "Threads are not initialized");
@@ -201,7 +201,7 @@ template <int W> inline MultiThreading<W> &Machine<W>::threads() {
 #endif
 }
 
-template <int W> inline const FileDescriptors &Machine<W>::fds() const {
+template <AddressType address_t> inline const FileDescriptors &Machine<address_t>::fds() const {
   if (m_fds != nullptr) return *m_fds;
 #if __cpp_exceptions
   throw MachineException(ILLEGAL_OPERATION, "No access to files or sockets", 0);
@@ -209,7 +209,7 @@ template <int W> inline const FileDescriptors &Machine<W>::fds() const {
   std::abort();
 #endif
 }
-template <int W> inline FileDescriptors &Machine<W>::fds() {
+template <AddressType address_t> inline FileDescriptors &Machine<address_t>::fds() {
   if (m_fds != nullptr) return *m_fds;
 #if __cpp_exceptions
   throw MachineException(ILLEGAL_OPERATION, "No access to files or sockets", 0);
@@ -218,12 +218,12 @@ template <int W> inline FileDescriptors &Machine<W>::fds() {
 #endif
 }
 
-template <int W> inline Signals<W> &Machine<W>::signals() {
-  if (m_signals == nullptr) m_signals.reset(new Signals<W>);
+template <AddressType address_t> inline Signals<address_t> &Machine<address_t>::signals() {
+  if (m_signals == nullptr) m_signals.reset(new Signals<address_t>);
   return *m_signals;
 }
 
-template <int W> inline MachineOptions<W> &Machine<W>::options() const {
+template <AddressType address_t> inline MachineOptions<address_t> &Machine<address_t>::options() const {
   if (m_options == nullptr)
 #if __cpp_exceptions
     throw MachineException(ILLEGAL_OPERATION, "Machine options have not been set/initialized");
@@ -232,7 +232,7 @@ template <int W> inline MachineOptions<W> &Machine<W>::options() const {
 #endif
   return *m_options;
 }
-template <int W> inline MachineOptions<W> &Machine<W>::options() {
+template <AddressType address_t> inline MachineOptions<address_t> &Machine<address_t>::options() {
   if (m_options == nullptr)
 #if __cpp_exceptions
     throw MachineException(ILLEGAL_OPERATION, "Machine options have not been set/initialized");
@@ -243,55 +243,55 @@ template <int W> inline MachineOptions<W> &Machine<W>::options() {
 }
 
 // machine.cpp
-template <int W>
-inline Machine<W>::Machine(std::string_view binary, const MachineOptions<W> &options)
+template <AddressType address_t>
+inline Machine<address_t>::Machine(std::string_view binary, const MachineOptions<address_t> &options)
     : cpu(*this), memory(*this, binary, options), m_arena(nullptr) {
   cpu.reset();
 }
 
-template <int W>
-inline Machine<W>::Machine(const std::vector<uint8_t> &bin, const MachineOptions<W> &opts)
+template <AddressType address_t>
+inline Machine<address_t>::Machine(const std::vector<uint8_t> &bin, const MachineOptions<address_t> &opts)
     : Machine(std::string_view{(const char *)bin.data(), bin.size()}, opts) {}
 
 #if RISCV_SPAN_AVAILABLE
-template <int W>
-inline Machine<W>::Machine(std::span<const uint8_t> binary, const MachineOptions<W> &options)
+template <AddressType address_t>
+inline Machine<address_t>::Machine(std::span<const uint8_t> binary, const MachineOptions<address_t> &options)
     : Machine(std::string_view{(const char *)binary.data(), binary.size()}, options) {}
 #endif
 
-template <int W> inline Machine<W>::Machine(const MachineOptions<W> &opts) : Machine(std::string_view{}, opts) {}
+template <AddressType address_t> inline Machine<address_t>::Machine(const MachineOptions<address_t> &opts) : Machine(std::string_view{}, opts) {}
 
-template <int W> Machine<W>::~Machine() {}
+template <AddressType address_t> Machine<address_t>::~Machine() {}
 
-template <int W> void Machine<W>::unknown_syscall_handler(Machine<W> &machine) {
+template <AddressType address_t> void Machine<address_t>::unknown_syscall_handler(Machine<address_t> &machine) {
   const auto syscall_number = machine.cpu.reg(REG_ECALL);
   machine.on_unhandled_syscall(machine, syscall_number);
 }
 
-template <int W> void Machine<W>::default_unknown_syscall_no(Machine<W> &machine, size_t num) {
+template <AddressType address_t> void Machine<address_t>::default_unknown_syscall_no(Machine<address_t> &machine, size_t num) {
   auto txt = "Unhandled system call: " + std::to_string(num) + "\n";
   machine.print(txt.c_str(), txt.size());
 }
 
-template <int W> void Machine<W>::register_clobbering_syscall(size_t sysnum) {}
+template <AddressType address_t> void Machine<address_t>::register_clobbering_syscall(size_t sysnum) {}
 
-template <int W> bool Machine<W>::is_clobbering_syscall(size_t sysnum) noexcept {
+template <AddressType address_t> bool Machine<address_t>::is_clobbering_syscall(size_t sysnum) noexcept {
   return false; // No clobbering syscalls in non-binary translation mode
 }
 
-template <int W> void Machine<W>::set_result_or_error(int result) {
+template <AddressType address_t> void Machine<address_t>::set_result_or_error(int result) {
   if (result >= 0) set_result(result);
   else set_result(-errno);
 }
 
-template <int W> void Machine<W>::penalize(uint32_t val) { m_counter += val; }
+template <AddressType address_t> void Machine<address_t>::penalize(uint32_t val) { m_counter += val; }
 
-template <int W> RISCV_COLD_PATH() void Machine<W>::timeout_exception(uint64_t max_instr) {
+template <AddressType address_t> RISCV_COLD_PATH() void Machine<address_t>::timeout_exception(uint64_t max_instr) {
   throw MachineTimeoutException(MAX_INSTRUCTIONS_REACHED, "Instruction count limit reached", max_instr);
 }
 
-template <int W>
-void Machine<W>::setup_argv(const std::vector<std::string> &args, const std::vector<std::string> &env) {
+template <AddressType address_t>
+void Machine<address_t>::setup_argv(const std::vector<std::string> &args, const std::vector<std::string> &env) {
   // Arguments to main()
   std::vector<address_t> argv;
   argv.push_back(args.size()); // argc
@@ -315,34 +315,35 @@ void Machine<W>::setup_argv(const std::vector<std::string> &args, const std::vec
   this->copy_to_guest(sp, argv.data(), argsize);
 }
 
-template <int W, typename T> const T *elf_offset(riscv::Machine<W> &machine, intptr_t ofs) {
+template <AddressType address_t, typename T> const T *elf_offset(riscv::Machine<address_t> &machine, intptr_t ofs) {
   return (const T *)&machine.memory.binary().at(ofs);
 }
-template <int W> inline const auto *elf_header(riscv::Machine<W> &machine) {
-  return elf_offset<W, typename riscv::Elf<W>::Header>(machine, 0);
+template <AddressType address_t> inline const auto *elf_header(riscv::Machine<address_t> &machine) {
+  return elf_offset<address_t, typename riscv::Elf<address_t>::Header>(machine, 0);
 }
 
-template <int W>
-static inline void push_arg(Machine<W> &m, std::vector<address_type<W>> &vec, address_type<W> &dst,
+template <AddressType address_t>
+static inline void push_arg(Machine<address_t> &m, std::vector<address_t> &vec, address_t &dst,
                             const std::string &str) {
   const size_t size = str.size() + 1;
   dst -= size;
-  dst &= ~(address_type<W>)(W - 1); // maintain alignment
+  dst &= ~(address_t)(sizeof(address_t) - 1); // maintain alignment
   vec.push_back(dst);
   m.copy_to_guest(dst, str.data(), size);
 }
-template <int W> static inline void push_aux(std::vector<address_type<W>> &vec, AuxVec<address_type<W>> aux) {
+template <AddressType address_t> static inline void push_aux(std::vector<address_t> &vec, AuxVec<address_t> aux) {
   vec.push_back(aux.a_type);
   vec.push_back(aux.a_val);
 }
-template <int W> static inline void push_down(Machine<W> &m, address_type<W> &dst, const void *data, size_t size) {
+template <AddressType address_t>
+static inline void push_down(Machine<address_t> &m, address_t &dst, const void *data, size_t size) {
   dst -= size;
-  dst &= ~(address_type<W>)(W - 1); // maintain alignment
+  dst &= ~(address_t)(sizeof(address_t) - 1); // maintain alignment
   m.copy_to_guest(dst, data, size);
 }
 
-template <int W>
-void Machine<W>::setup_linux(const std::vector<std::string> &args, const std::vector<std::string> &env) {
+template <AddressType address_t>
+void Machine<address_t>::setup_linux(const std::vector<std::string> &args, const std::vector<std::string> &env) {
 #if defined(__linux__) && !defined(RISCV_DISABLE_URANDOM)
   static std::random_device rd("/dev/urandom");
 #else
@@ -360,18 +361,18 @@ void Machine<W>::setup_linux(const std::vector<std::string> &args, const std::ve
   push_down(*this, dst, canary.data(), canary.size());
   const auto canary_addr = dst;
 
-  const char *platform = (W == 4) ? "RISC-V 32-bit" : "RISC-V 64-bit";
+  const char *platform = (sizeof(address_t) == 4) ? "RISC-V 32-bit" : "RISC-V 64-bit";
   push_down(*this, dst, platform, strlen(platform) + 1);
   const auto platform_addr = dst;
 
   // Program headers
-  const auto *binary_ehdr = elf_header<W>(*this);
-  const auto *binary_phdr = elf_offset<W, typename Elf<W>::ProgramHeader>(*this, binary_ehdr->e_phoff);
+  const auto *binary_ehdr = elf_header<address_t>(*this);
+  const auto *binary_phdr = elf_offset<address_t, typename Elf<address_t>::ProgramHeader>(*this, binary_ehdr->e_phoff);
   const int phdr_count = int(binary_ehdr->e_phnum);
   // Check if we have a PT_PHDR program header already loaded into memory
   address_t phdr_location = 0;
   for (int i = 0; i < phdr_count; i++) {
-    if (binary_phdr[i].p_type == Elf<W>::PT_PHDR) {
+    if (binary_phdr[i].p_type == Elf<address_t>::PT_PHDR) {
       phdr_location = this->memory.elf_base_address(binary_phdr[i].p_vaddr);
       break;
     }
@@ -379,7 +380,7 @@ void Machine<W>::setup_linux(const std::vector<std::string> &args, const std::ve
   if (phdr_location == 0) {
     for (int i = phdr_count - 1; i >= 0; i--) {
       const auto *phd = &binary_phdr[i];
-      push_down(*this, dst, phd, sizeof(typename Elf<W>::ProgramHeader));
+      push_down(*this, dst, phd, sizeof(typename Elf<address_t>::ProgramHeader));
     }
     phdr_location = dst;
   } else {
@@ -390,7 +391,7 @@ void Machine<W>::setup_linux(const std::vector<std::string> &args, const std::ve
   }
 
   // Arguments to main()
-  std::vector<address_type<W>> argv;
+  std::vector<address_t> argv;
   argv.push_back(args.size()); // argc
   for (const auto &string : args) {
     push_arg(*this, argv, dst, string);
@@ -404,30 +405,30 @@ void Machine<W>::setup_linux(const std::vector<std::string> &args, const std::ve
   argv.push_back(0x0);
 
   // Auxiliary vector
-  push_aux<W>(argv, {AT_PAGESZ, Page::size()});
-  push_aux<W>(argv, {AT_CLKTCK, 100});
+  push_aux<address_t>(argv, {AT_PAGESZ, Page::size()});
+  push_aux<address_t>(argv, {AT_CLKTCK, 100});
 
   // ELF related
-  push_aux<W>(argv, {AT_PHDR, phdr_location});
-  push_aux<W>(argv, {AT_PHENT, sizeof(*binary_phdr)});
-  push_aux<W>(argv, {AT_PHNUM, unsigned(phdr_count)});
+  push_aux<address_t>(argv, {AT_PHDR, phdr_location});
+  push_aux<address_t>(argv, {AT_PHENT, sizeof(*binary_phdr)});
+  push_aux<address_t>(argv, {AT_PHNUM, unsigned(phdr_count)});
 
   // Misc
-  push_aux<W>(argv, {AT_BASE, address_type<W>(this->memory.start_address() & ~0xFFFFFFLL)});
-  push_aux<W>(argv, {AT_ENTRY, this->memory.start_address()});
-  push_aux<W>(argv, {AT_HWCAP, 0});
-  push_aux<W>(argv, {AT_HWCAP2, 0});
-  push_aux<W>(argv, {AT_UID, 1000});
-  push_aux<W>(argv, {AT_EUID, 0});
-  push_aux<W>(argv, {AT_GID, 0});
-  push_aux<W>(argv, {AT_EGID, 0});
-  push_aux<W>(argv, {AT_SECURE, 0});
+  push_aux<address_t>(argv, {AT_BASE, address_t(this->memory.start_address() & ~0xFFFFFFLL)});
+  push_aux<address_t>(argv, {AT_ENTRY, this->memory.start_address()});
+  push_aux<address_t>(argv, {AT_HWCAP, 0});
+  push_aux<address_t>(argv, {AT_HWCAP2, 0});
+  push_aux<address_t>(argv, {AT_UID, 1000});
+  push_aux<address_t>(argv, {AT_EUID, 0});
+  push_aux<address_t>(argv, {AT_GID, 0});
+  push_aux<address_t>(argv, {AT_EGID, 0});
+  push_aux<address_t>(argv, {AT_SECURE, 0});
 
-  push_aux<W>(argv, {AT_PLATFORM, platform_addr});
+  push_aux<address_t>(argv, {AT_PLATFORM, platform_addr});
 
   // supplemental randomness
-  push_aux<W>(argv, {AT_RANDOM, canary_addr});
-  push_aux<W>(argv, {AT_NULL, 0});
+  push_aux<address_t>(argv, {AT_RANDOM, canary_addr});
+  push_aux<address_t>(argv, {AT_NULL, 0});
 
   // from this point on the stack is starting, pointing @ argc
   // install the arg vector
@@ -439,7 +440,7 @@ void Machine<W>::setup_linux(const std::vector<std::string> &args, const std::ve
   this->cpu.reg(REG_SP) = dst;
 }
 
-template <int W> void Machine<W>::system(union rv32i_instruction instr) {
+template <AddressType address_t> void Machine<address_t>::system(union rv32i_instruction instr) {
   switch (instr.Itype.funct3) {
   case 0x0: // SYSTEM functions
     switch (instr.Itype.imm) {
@@ -591,14 +592,14 @@ template <int W> void Machine<W>::system(union rv32i_instruction instr) {
 
 // machine_defaults.cpp
 // Default: Stdout allowed
-template <int W> void Machine<W>::default_printer(const Machine<W> &, const char *buffer, size_t len) {
+template <AddressType address_t> void Machine<address_t>::default_printer(const Machine<address_t> &, const char *buffer, size_t len) {
   std::ignore = ::write(1, buffer, len);
 }
 // Default: Stdin *NOT* allowed
-template <int W> long Machine<W>::default_stdin(const Machine<W> &, char * /*buffer*/, size_t /*len*/) { return 0; }
+template <AddressType address_t> long Machine<address_t>::default_stdin(const Machine<address_t> &, char * /*buffer*/, size_t /*len*/) { return 0; }
 
 // Default: RDTIME produces monotonic time with *microsecond*-granularity
-template <int W> uint64_t Machine<W>::default_rdtime(const Machine<W> &machine) {
+template <AddressType address_t> uint64_t Machine<address_t>::default_rdtime(const Machine<address_t> &machine) {
 #ifdef __wasm__
   return 0;
 #else
@@ -610,7 +611,7 @@ template <int W> uint64_t Machine<W>::default_rdtime(const Machine<W> &machine) 
 }
 
 // posix/signals.cpp
-template <int W> void Signals<W>::enter(Machine<W> &machine, int sig) {
+template <AddressType address_t> void Signals<address_t>::enter(Machine<address_t> &machine, int sig) {
   if (sig == 0) return;
 
   auto &sigact = signals.at(sig);
@@ -632,9 +633,9 @@ static constexpr size_t MEMCPY_BUFFERS = 256u;                 /* 1MB of maximal
 static constexpr uint32_t STRLEN_MAX = 64'000u;
 static constexpr uint64_t COMPLEX_CALL_PENALTY = 2'000u;
 
-template <int W> void Machine<W>::setup_native_heap_internal(const size_t syscall_base) {
+template <AddressType address_t> void Machine<address_t>::setup_native_heap_internal(const size_t syscall_base) {
   // Malloc n+0
-  Machine<W>::install_syscall_handler(syscall_base + 0, [](Machine<W> &machine) {
+  Machine<address_t>::install_syscall_handler(syscall_base + 0, [](Machine<address_t> &machine) {
     const size_t len = machine.sysarg(0);
     auto data = machine.arena().malloc(len);
     HPRINT("SYSCALL malloc(%zu) = 0x%lX\n", len, (long)data);
@@ -642,8 +643,8 @@ template <int W> void Machine<W>::setup_native_heap_internal(const size_t syscal
     machine.penalize(COMPLEX_CALL_PENALTY);
   });
   // Calloc n+1
-  Machine<W>::install_syscall_handler(syscall_base + 1, [](Machine<W> &machine) {
-    const auto [count, size] = machine.template sysargs<address_type<W>, address_type<W>>();
+  Machine<address_t>::install_syscall_handler(syscall_base + 1, [](Machine<address_t> &machine) {
+    const auto [count, size] = machine.template sysargs<address_t, address_t>();
     const size_t len = count * size;
     auto data = machine.arena().malloc(len);
     HPRINT("SYSCALL calloc(%zu, %zu) = 0x%lX\n", (size_t)count, (size_t)size, (long)data);
@@ -656,7 +657,7 @@ template <int W> void Machine<W>::setup_native_heap_internal(const size_t syscal
     machine.penalize(COMPLEX_CALL_PENALTY);
   });
   // Realloc n+2
-  Machine<W>::install_syscall_handler(syscall_base + 2, [](Machine<W> &machine) {
+  Machine<address_t>::install_syscall_handler(syscall_base + 2, [](Machine<address_t> &machine) {
     const auto src = machine.sysarg(0);
     const auto newlen = machine.sysarg(1);
 
@@ -672,7 +673,7 @@ template <int W> void Machine<W>::setup_native_heap_internal(const size_t syscal
     machine.penalize(COMPLEX_CALL_PENALTY);
   });
   // Free n+3
-  Machine<W>::install_syscall_handler(syscall_base + 3, [](Machine<W> &machine) {
+  Machine<address_t>::install_syscall_handler(syscall_base + 3, [](Machine<address_t> &machine) {
     const auto ptr = machine.sysarg(0);
     if (ptr != 0x0) {
       [[maybe_unused]] int ret = machine.arena().free(ptr);
@@ -690,16 +691,15 @@ template <int W> void Machine<W>::setup_native_heap_internal(const size_t syscal
     return;
   });
   // Meminfo n+4
-  Machine<W>::install_syscall_handler(syscall_base + 4, [](Machine<W> &machine) {
+  Machine<address_t>::install_syscall_handler(syscall_base + 4, [](Machine<address_t> &machine) {
     const auto dst = machine.sysarg(0);
     const auto &arena = machine.arena();
     struct Result {
-      const address_type<W> bf;
-      const address_type<W> bu;
-      const address_type<W> cu;
-    } result = {.bf = (address_type<W>)arena.bytes_free(),
-                .bu = (address_type<W>)arena.bytes_used(),
-                .cu = (address_type<W>)arena.chunks_used()};
+      const address_t bf;
+      const address_t bu;
+      const address_t cu;
+    } result = {
+        .bf = (address_t)arena.bytes_free(), .bu = (address_t)arena.bytes_used(), .cu = (address_t)arena.chunks_used()};
     int ret = (dst != 0) ? 0 : -1;
     HPRINT("SYSCALL meminfo(0x%lX) = %d\n", (long)dst, ret);
     if (ret == 0) {
@@ -710,44 +710,44 @@ template <int W> void Machine<W>::setup_native_heap_internal(const size_t syscal
   });
 }
 
-template <int W> const Arena &Machine<W>::arena() const {
+template <AddressType address_t> const Arena &Machine<address_t>::arena() const {
   if (UNLIKELY(m_arena == nullptr)) throw MachineException(SYSTEM_CALL_FAILED, "Arena not created on this machine");
   return *m_arena;
 }
-template <int W> Arena &Machine<W>::arena() {
+template <AddressType address_t> Arena &Machine<address_t>::arena() {
   if (UNLIKELY(m_arena == nullptr)) throw MachineException(SYSTEM_CALL_FAILED, "Arena not created on this machine");
   return *m_arena;
 }
-template <int W> void Machine<W>::setup_native_heap(size_t sysnum, uint64_t base, size_t max_memory) {
+template <AddressType address_t> void Machine<address_t>::setup_native_heap(size_t sysnum, uint64_t base, size_t max_memory) {
   m_arena.reset(new Arena(base, base + max_memory));
 
   this->setup_native_heap_internal(sysnum);
 }
-template <int W> void Machine<W>::transfer_arena_from(const Machine &other) { m_arena.reset(new Arena(other.arena())); }
+template <AddressType address_t> void Machine<address_t>::transfer_arena_from(const Machine &other) { m_arena.reset(new Arena(other.arena())); }
 
-template <int W> void Machine<W>::setup_native_memory(const size_t syscall_base) {
-  Machine<W>::install_syscall_handlers(
+template <AddressType address_t> void Machine<address_t>::setup_native_memory(const size_t syscall_base) {
+  Machine<address_t>::install_syscall_handlers(
       {{syscall_base + 0,
-        [](Machine<W> &m) {
+        [](Machine<address_t> &m) {
           // Memcpy n+0
-          auto [dst, src, len] = m.sysargs<address_type<W>, address_type<W>, address_type<W>>();
+          auto [dst, src, len] = m.sysargs<address_t, address_t, address_t>();
           MPRINT("SYSCALL memcpy(%#lX, %#lX, %zu)\n", (long)dst, (long)src, (size_t)len);
           m.memory.memcpy(dst, m, src, len);
           m.penalize(2 * len);
         }},
        {syscall_base + 1,
-        [](Machine<W> &m) {
+        [](Machine<address_t> &m) {
           // Memset n+1
-          const auto [dst, value, len] = m.sysargs<address_type<W>, int, address_type<W>>();
+          const auto [dst, value, len] = m.sysargs<address_t, int, address_t>();
           MPRINT("SYSCALL memset(%#lX, %#X, %zu)\n", (long)dst, value, (size_t)len);
           if (UNLIKELY(len > MEMCPY_MAX)) throw MachineException(SYSTEM_CALL_FAILED, "memset length too large", len);
           m.memory.memset(dst, value, len);
           m.penalize(len);
         }},
        {syscall_base + 2,
-        [](Machine<W> &m) {
+        [](Machine<address_t> &m) {
           // Memmove n+2
-          auto [dst, src, len] = m.sysargs<address_type<W>, address_type<W>, address_type<W>>();
+          auto [dst, src, len] = m.sysargs<address_t, address_t, address_t>();
           MPRINT("SYSCALL memmove(%#lX, %#lX, %zu)\n", (long)dst, (long)src, (size_t)len);
           // If we have a flat readwrite arena, we can use memmove
           if constexpr (riscv::flat_readwrite_arena) {
@@ -766,14 +766,14 @@ template <int W> void Machine<W>::setup_native_memory(const size_t syscall_base)
             }
           } else if (len > 0) {
             if (UNLIKELY(len > MEMCPY_MAX)) throw MachineException(SYSTEM_CALL_FAILED, "memmove length too large", len);
-            constexpr size_t wordsize = sizeof(address_type<W>);
+            constexpr size_t wordsize = sizeof(address_t);
             if (dst % wordsize == 0 && src % wordsize == 0 && len % wordsize == 0) {
               // Copy whole registers backwards
               // We start at len because unsigned doesn't have negative numbers
               // so we will have to read and write from index i-1 instead.
               for (unsigned i = len; i != 0; i -= wordsize) {
-                m.memory.template write<address_type<W>>(dst + i - wordsize,
-                                                         m.memory.template read<address_type<W>>(src + i - wordsize));
+                m.memory.template write<address_t>(dst + i - wordsize,
+                                                   m.memory.template read<address_t>(src + i - wordsize));
               }
             } else {
               // Copy byte by byte backwards
@@ -785,27 +785,27 @@ template <int W> void Machine<W>::setup_native_memory(const size_t syscall_base)
           m.penalize(2 * len);
         }},
        {syscall_base + 3,
-        [](Machine<W> &m) {
+        [](Machine<address_t> &m) {
           // Memcmp n+3
-          auto [p1, p2, len] = m.sysargs<address_type<W>, address_type<W>, address_type<W>>();
+          auto [p1, p2, len] = m.sysargs<address_t, address_t, address_t>();
           MPRINT("SYSCALL memcmp(%#lX, %#lX, %zu)\n", (long)p1, (long)p2, (size_t)len);
           if (UNLIKELY(len > MEMCPY_MAX)) throw MachineException(SYSTEM_CALL_FAILED, "memcmp length too large", len);
           m.penalize(2 * len);
           m.set_result(m.memory.memcmp(p1, p2, len));
         }},
        {syscall_base + 5,
-        [](Machine<W> &m) {
+        [](Machine<address_t> &m) {
           // Strlen n+5
-          auto [addr] = m.sysargs<address_type<W>>();
+          auto [addr] = m.sysargs<address_t>();
           uint32_t len = m.memory.strlen(addr, STRLEN_MAX);
           m.penalize(2 * len);
           m.set_result(len);
           MPRINT("SYSCALL strlen(%#lX) = %u\n", (long)addr, len);
         }},
        {syscall_base + 6,
-        [](Machine<W> &m) {
+        [](Machine<address_t> &m) {
           // Strncmp n+6
-          auto [a1, a2, maxlen] = m.sysargs<address_type<W>, address_type<W>, uint32_t>();
+          auto [a1, a2, maxlen] = m.sysargs<address_t, address_t, uint32_t>();
           MPRINT("SYSCALL strncmp(%#lX, %#lX, %u)\n", (long)a1, (long)a2, maxlen);
           maxlen = std::min(maxlen, STRLEN_MAX);
           uint32_t len = 0;
@@ -823,12 +823,12 @@ template <int W> void Machine<W>::setup_native_memory(const size_t syscall_base)
           m.set_result(0);
         }},
        {syscall_base + 13,
-        [](Machine<W> &m) {
+        [](Machine<address_t> &m) {
           // Reserved system call n+13
           // Space for one more accelerated libc function
           m.set_result(-1);
         }},
-       {syscall_base + 14, [](Machine<W> &m) {
+       {syscall_base + 14, [](Machine<address_t> &m) {
           // Print backtrace n+14
           m.memory.print_backtrace([&](std::string_view line) {
             m.print(line.data(), line.size());

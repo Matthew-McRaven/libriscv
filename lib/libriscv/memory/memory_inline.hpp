@@ -8,8 +8,8 @@ namespace riscv {
 #include "memory_inline_pages.hpp"
 
 // memory.cpp
-template <int W>
-Memory<W>::Memory(Machine<W> &mach, std::string_view bin, MachineOptions<W> options)
+template <AddressType address_t>
+Memory<address_t>::Memory(Machine<address_t> &mach, std::string_view bin, MachineOptions<address_t> options)
     : m_machine{mach}, m_original_machine{true}, m_binary{bin} {
   if (options.page_fault_handler != nullptr) {
     this->m_page_fault_handler = std::move(options.page_fault_handler);
@@ -73,8 +73,8 @@ Memory<W>::Memory(Machine<W> &mach, std::string_view bin, MachineOptions<W> opti
     this->binary_loader(options);
   }
 }
-template <int W>
-Memory<W>::Memory(Machine<W> &mach, const Machine<W> &other, MachineOptions<W> options)
+template <AddressType address_t>
+Memory<address_t>::Memory(Machine<address_t> &mach, const Machine<address_t> &other, MachineOptions<address_t> options)
     : m_machine{mach}, m_original_machine{false}, m_binary{other.memory.binary()} {
 #ifdef RISCV_EXT_ATOMICS
   this->m_atomics = other.memory.m_atomics;
@@ -82,7 +82,7 @@ Memory<W>::Memory(Machine<W> &mach, const Machine<W> &other, MachineOptions<W> o
   this->machine_loader(other, options);
 }
 
-template <int W> Memory<W>::~Memory() {
+template <AddressType address_t> Memory<address_t>::~Memory() {
   try {
     this->clear_all_pages();
   } catch (...) {
@@ -99,25 +99,25 @@ template <int W> Memory<W>::~Memory() {
   }
 }
 
-template <int W> RISCV_INTERNAL void Memory<W>::reset() {
+template <AddressType address_t> RISCV_INTERNAL void Memory<address_t>::reset() {
   // Hard to support because of things like
   // serialization, machine options and machine forks
 }
 
-template <int W> void Memory<W>::clear_all_pages() {
+template <AddressType address_t> void Memory<address_t>::clear_all_pages() {
   this->m_pages.clear();
   this->invalidate_reset_cache();
 }
 
-template <int W> RISCV_INTERNAL void Memory<W>::initial_paging() {
+template <AddressType address_t> RISCV_INTERNAL void Memory<address_t>::initial_paging() {
   if (m_pages.find(0) == m_pages.end()) {
     // add a guard page to catch zero-page accesses
     install_shared_page(0, Page::guard_page());
   }
 }
 
-template <int W>
-RISCV_INTERNAL void Memory<W>::binary_load_ph(const MachineOptions<W> &options, const typename Elf::ProgramHeader *hdr,
+template <AddressType address_t>
+RISCV_INTERNAL void Memory<address_t>::binary_load_ph(const MachineOptions<address_t> &options, const typename Elf::ProgramHeader *hdr,
                                               const address_t vaddr) {
   const auto *src = m_binary.data() + hdr->p_offset;
   const size_t len = hdr->p_filesz;
@@ -177,15 +177,15 @@ RISCV_INTERNAL void Memory<W>::binary_load_ph(const MachineOptions<W> &options, 
   }
 }
 
-template <int W>
-RISCV_INTERNAL void Memory<W>::serialize_execute_segment(const MachineOptions<W> &options,
+template <AddressType address_t>
+RISCV_INTERNAL void Memory<address_t>::serialize_execute_segment(const MachineOptions<address_t> &options,
                                                          const typename Elf::ProgramHeader *hdr, address_t vaddr) {
   // The execute segment:
   size_t exlen = hdr->p_filesz;
   const char *data = m_binary.data() + hdr->p_offset;
 
   // Zig's ELF writer is insane, so we add an option to disable .text section segment reduction.
-  if (W <= 8 && !options.ignore_text_section) {
+  if (sizeof(address_t) <= 8 && !options.ignore_text_section) {
     // Look for a .text section inside this segment:
     const auto *texthdr = section_by_name(".text");
     if (texthdr != nullptr
@@ -224,7 +224,7 @@ RISCV_INTERNAL void Memory<W>::serialize_execute_segment(const MachineOptions<W>
 }
 
 // ELF32 and ELF64 loader
-template <int W> RISCV_INTERNAL void Memory<W>::binary_loader(const MachineOptions<W> &options) {
+template <AddressType address_t> RISCV_INTERNAL void Memory<address_t>::binary_loader(const MachineOptions<address_t> &options) {
   static constexpr uint32_t ELFHDR_FLAGS_RVC = 0x1;
   static constexpr uint32_t ELFHDR_FLAGS_RVE = 0x8;
 
@@ -232,12 +232,10 @@ template <int W> RISCV_INTERNAL void Memory<W>::binary_loader(const MachineOptio
     throw MachineException(INVALID_PROGRAM, "ELF program too short");
   }
   if (UNLIKELY(!Elf::validate(m_binary))) {
-    if constexpr (W == 4)
+    if constexpr (sizeof(address_t) == 4)
       throw MachineException(INVALID_PROGRAM, "Invalid ELF header! Expected a 32-bit RISC-V ELF binary");
-    else if constexpr (W == 8)
+    else if constexpr (sizeof(address_t) == 8)
       throw MachineException(INVALID_PROGRAM, "Invalid ELF header! Expected a 64-bit RISC-V ELF binary");
-    else if constexpr (W == 16)
-      throw MachineException(INVALID_PROGRAM, "Invalid ELF header! Expected a 128-bit RISC-V ELF binary");
     else throw MachineException(INVALID_PROGRAM, "Invalid ELF header! Expected a RISC-V ELF binary");
   }
 
@@ -366,7 +364,7 @@ template <int W> RISCV_INTERNAL void Memory<W>::binary_loader(const MachineOptio
 
       serialize_execute_segment(options, hdr, vaddr);
     }
-    if constexpr (W <= 8) {
+    if constexpr (sizeof(address_t) <= 8) {
       if (this->m_is_dynamic) {
         this->dynamic_linking(*elf);
       }
@@ -378,8 +376,8 @@ template <int W> RISCV_INTERNAL void Memory<W>::binary_loader(const MachineOptio
   }
 }
 
-template <int W>
-RISCV_INTERNAL void Memory<W>::machine_loader(const Machine<W> &master, const MachineOptions<W> &options) {
+template <AddressType address_t>
+RISCV_INTERNAL void Memory<address_t>::machine_loader(const Machine<address_t> &master, const MachineOptions<address_t> &options) {
   // Some machines don't need custom PF handlers
   this->m_page_fault_handler = master.memory.m_page_fault_handler;
 
@@ -425,20 +423,18 @@ RISCV_INTERNAL void Memory<W>::machine_loader(const Machine<W> &master, const Ma
   this->invalidate_reset_cache();
 }
 
-template <int W> std::string Memory<W>::get_page_info(address_t addr) const {
+template <AddressType address_t> std::string Memory<address_t>::get_page_info(address_t addr) const {
   char buffer[1024];
   int len;
-  if constexpr (W == 4) {
+  if constexpr (sizeof(address_t) == 4) {
     len = snprintf(buffer, sizeof(buffer), "[0x%08" PRIX32 "] %s", addr, get_page(addr).to_string().c_str());
-  } else if constexpr (W == 8) {
+  } else if constexpr (sizeof(address_t) == 8) {
     len = snprintf(buffer, sizeof(buffer), "[0x%016" PRIX64 "] %s", addr, get_page(addr).to_string().c_str());
-  } else if constexpr (W == 16) {
-    len = snprintf(buffer, sizeof(buffer), "[0x%016" PRIX64 "] %s", (uint64_t)addr, get_page(addr).to_string().c_str());
   }
   return std::string(buffer, len);
 }
 
-template <int W> typename Memory<W>::Callsite Memory<W>::lookup(address_t address) const {
+template <AddressType address_t> typename Memory<address_t>::Callsite Memory<address_t>::lookup(address_t address) const {
   if (!Elf::validate(this->m_binary)) return {};
 
   const auto *sym_hdr = section_by_name(".symtab");
@@ -494,8 +490,8 @@ template <int W> typename Memory<W>::Callsite Memory<W>::lookup(address_t addres
   if (best) return result(strtab, address, best);
   return {};
 }
-template <int W> void Memory<W>::print_backtrace(std::function<void(std::string_view)> print_function, bool ra) const {
-  auto print_trace = [this, print_function](const int N, const address_type<W> addr) {
+template <AddressType address_t> void Memory<address_t>::print_backtrace(std::function<void(std::string_view)> print_function, bool ra) const {
+  auto print_trace = [this, print_function](const int N, const address_t addr) {
     // get information about the callsite
     const auto site = this->lookup(addr);
     if (site.address == 0 && site.offset == 0 && site.size == 0) {
@@ -511,15 +507,12 @@ template <int W> void Memory<W>::print_backtrace(std::function<void(std::string_
     if (N >= 0) {
       len = snprintf(&buffer[len], sizeof(buffer) - len, "[%d] ", N);
     }
-    if constexpr (W == 4) {
+    if constexpr (sizeof(address_t) == 4) {
       len += snprintf(&buffer[len], sizeof(buffer) - len, "0x%08" PRIx32 " + 0x%.3" PRIx32 ": %s", site.address,
                       site.offset, site.name.c_str());
-    } else if constexpr (W == 8) {
+    } else if constexpr (sizeof(address_t) == 8) {
       len += snprintf(&buffer[len], sizeof(buffer) - len, "0x%016" PRIX64 " + 0x%.3" PRIx32 ": %s", site.address,
                       site.offset, site.name.c_str());
-    } else if constexpr (W == 16) {
-      len += snprintf(&buffer[len], sizeof(buffer) - len, "0x%016" PRIx64 " + 0x%.3" PRIx32 ": %s",
-                      (uint64_t)site.address, site.offset, site.name.c_str());
     }
     if (len > 0) print_function({buffer, (size_t)len});
     else print_function("Scuffed frame. Should not happen!");
@@ -532,16 +525,16 @@ template <int W> void Memory<W>::print_backtrace(std::function<void(std::string_
   }
 }
 
-template <int W> void Memory<W>::protection_fault(address_t addr) { CPU<W>::trigger_exception(PROTECTION_FAULT, addr); }
+template <AddressType address_t> void Memory<address_t>::protection_fault(address_t addr) { CPU<address_t>::trigger_exception(PROTECTION_FAULT, addr); }
 
 // memory_rw.cpp
-template <int W> const Page &Memory<W>::get_readable_pageno(const address_t pageno) const {
+template <AddressType address_t> const Page &Memory<address_t>::get_readable_pageno(const address_t pageno) const {
   const auto &page = get_pageno(pageno);
   if (LIKELY(page.attr.read)) return page;
   this->protection_fault(pageno * Page::size());
 }
 
-template <int W> Page &Memory<W>::create_writable_pageno(const address_t pageno, bool init) {
+template <AddressType address_t> Page &Memory<address_t>::create_writable_pageno(const address_t pageno, bool init) {
   auto it = m_pages.find(pageno);
   if (LIKELY(it != m_pages.end())) {
     Page &page = it->second;
@@ -565,7 +558,7 @@ template <int W> Page &Memory<W>::create_writable_pageno(const address_t pageno,
   this->protection_fault(pageno * Page::size());
 }
 
-template <int W> void Memory<W>::set_pageno_attr(const address_t pageno, PageAttributes attr) {
+template <AddressType address_t> void Memory<address_t>::set_pageno_attr(const address_t pageno, PageAttributes attr) {
   auto it = pages().find(pageno);
   if (it != pages().end()) {
     auto &page = it->second;
@@ -600,7 +593,7 @@ template <int W> void Memory<W>::set_pageno_attr(const address_t pageno, PageAtt
   m_pages.try_emplace(pageno, attr, Page::cow_page().m_page.get());
 }
 
-template <int W> void Memory<W>::memdiscard(address_t dst, size_t len, bool ignore_protections) {
+template <AddressType address_t> void Memory<address_t>::memdiscard(address_t dst, size_t len, bool ignore_protections) {
 #ifndef MADV_DONTNEED
   static constexpr int MADV_DONTNEED = 0x4;
 #endif
@@ -677,9 +670,9 @@ template <int W> void Memory<W>::memdiscard(address_t dst, size_t len, bool igno
   }
 }
 
-template <int W> bool Memory<W>::free_pageno(address_t pageno) { return m_pages.erase(pageno) != 0; }
+template <AddressType address_t> bool Memory<address_t>::free_pageno(address_t pageno) { return m_pages.erase(pageno) != 0; }
 
-template <int W> void Memory<W>::free_pages(address_t dst, size_t len) {
+template <AddressType address_t> void Memory<address_t>::free_pages(address_t dst, size_t len) {
   address_t pageno = page_number(dst);
   address_t end = pageno + page_number((len + (Page::size() - 1)) & ~(Page::size() - 1));
   while (pageno < end) {
@@ -690,17 +683,17 @@ template <int W> void Memory<W>::free_pages(address_t dst, size_t len) {
   this->invalidate_reset_cache();
 }
 
-template <int W> void Memory<W>::default_page_write(Memory<W> &, address_t, Page &page) { page.make_writable(); }
+template <AddressType address_t> void Memory<address_t>::default_page_write(Memory<address_t> &, address_t, Page &page) { page.make_writable(); }
 
-template <int W> const Page &Memory<W>::default_page_read(const Memory<W> &mem, address_t pageno) {
+template <AddressType address_t> const Page &Memory<address_t>::default_page_read(const Memory<address_t> &mem, address_t pageno) {
   // This is a copy-on-write zeroed area, but we must respect the underlying arena
   if (flat_readwrite_arena && pageno < mem.m_arena.pages) {
-    return const_cast<Memory<W> &>(mem).create_writable_pageno(pageno);
+    return const_cast<Memory<address_t> &>(mem).create_writable_pageno(pageno);
   }
   return Page::cow_page();
 }
 
-template <int W> Page &Memory<W>::install_shared_page(address_t pageno, const Page &shared_page) {
+template <AddressType address_t> Page &Memory<address_t>::install_shared_page(address_t pageno, const Page &shared_page) {
   auto &already_there = get_pageno(pageno);
   if (!already_there.is_cow_page() && !already_there.attr.non_owning)
     throw MachineException(ILLEGAL_OPERATION, "There was a page at the specified location already", pageno);
@@ -721,7 +714,7 @@ template <int W> Page &Memory<W>::install_shared_page(address_t pageno, const Pa
   return res.first->second;
 }
 
-template <int W> void Memory<W>::insert_non_owned_memory(address_t dst, void *src, size_t size, PageAttributes attr) {
+template <AddressType address_t> void Memory<address_t>::insert_non_owned_memory(address_t dst, void *src, size_t size, PageAttributes attr) {
   assert(dst % Page::size() == 0);
   assert((dst + size) % Page::size() == 0);
   attr.non_owning = true;
@@ -735,7 +728,7 @@ template <int W> void Memory<W>::insert_non_owned_memory(address_t dst, void *sr
   this->invalidate_reset_cache();
 }
 
-template <int W> void Memory<W>::set_page_attr(address_t dst, size_t len, PageAttributes attr) {
+template <AddressType address_t> void Memory<address_t>::set_page_attr(address_t dst, size_t len, PageAttributes attr) {
   // printf("set_page_attr(0x%lX, %zu, prot=%X)\n", long(dst), len, attr.to_prot());
   while (len > 0) {
     const size_t offset = dst & (Page::size() - 1); // offset within page
@@ -748,9 +741,9 @@ template <int W> void Memory<W>::set_page_attr(address_t dst, size_t len, PageAt
   }
 }
 
-template <int W> uint64_t Memory<W>::memory_usage_total() const noexcept {
+template <AddressType address_t> uint64_t Memory<address_t>::memory_usage_total() const noexcept {
   uint64_t total = 0;
-  total += sizeof(Machine<W>);
+  total += sizeof(Machine<address_t>);
   // Pages
   for (const auto &it : m_pages) {
     const auto page_number = it.first;
@@ -771,14 +764,14 @@ template <int W> uint64_t Memory<W>::memory_usage_total() const noexcept {
 }
 
 // memory_mmap.cpp
-template <int W> address_type<W> Memory<W>::mmap_allocate(address_t bytes) {
+template <AddressType address_t> address_t Memory<address_t>::mmap_allocate(address_t bytes) {
   // Bytes rounded up to nearest PageSize.
   const address_t result = this->m_mmap_address;
   this->m_mmap_address += (bytes + PageMask) & ~address_t{PageMask};
   return result;
 }
 
-template <int W> bool Memory<W>::mmap_relax(address_t addr, address_t size, address_t new_size) {
+template <AddressType address_t> bool Memory<address_t>::mmap_relax(address_t addr, address_t size, address_t new_size) {
   // Undo or relax the last mmap allocation. Returns true if successful.
   if (this->m_mmap_address == addr + size && new_size <= size) {
     this->m_mmap_address = (addr + new_size + PageMask) & ~address_t{PageMask};
@@ -787,7 +780,7 @@ template <int W> bool Memory<W>::mmap_relax(address_t addr, address_t size, addr
   return false;
 }
 
-template <int W> bool Memory<W>::mmap_unmap(address_t addr, address_t size) {
+template <AddressType address_t> bool Memory<address_t>::mmap_unmap(address_t addr, address_t size) {
   size = (size + PageMask) & ~address_t{PageMask};
   const bool relaxed = this->mmap_relax(addr, size, 0u);
   if (relaxed) {
@@ -801,7 +794,7 @@ template <int W> bool Memory<W>::mmap_unmap(address_t addr, address_t size) {
 }
 
 // memory_elf.cpp
-template <int W> address_type<W> Memory<W>::elf_base_address(address_t offset) const {
+template <AddressType address_t> address_t Memory<address_t>::elf_base_address(address_t offset) const {
   if (this->m_is_dynamic) {
     const address_t vaddr_base = DYLINK_BASE;
     if (UNLIKELY(vaddr_base + offset < vaddr_base))
@@ -812,8 +805,8 @@ template <int W> address_type<W> Memory<W>::elf_base_address(address_t offset) c
   }
 }
 
-template <int W>
-const typename Elf<W>::Sym *Memory<W>::elf_sym_index(const typename Elf::SectionHeader *shdr, uint32_t symidx) const {
+template <AddressType address_t>
+const typename Elf<address_t>::Sym *Memory<address_t>::elf_sym_index(const typename Elf::SectionHeader *shdr, uint32_t symidx) const {
   if (symidx >= shdr->sh_size / sizeof(typename Elf::Sym))
 #ifdef __EXCEPTIONS
     throw MachineException(INVALID_PROGRAM, "ELF Symtab section index overflow");
@@ -824,7 +817,7 @@ const typename Elf<W>::Sym *Memory<W>::elf_sym_index(const typename Elf::Section
   return &symtab[symidx];
 }
 
-template <int W> const typename Elf<W>::SectionHeader *Memory<W>::section_by_name(const std::string &name) const {
+template <AddressType address_t> const typename Elf<address_t>::SectionHeader *Memory<address_t>::section_by_name(const std::string &name) const {
   auto &elf = *elf_header();
   const auto sh_end_offset = elf.e_shoff + elf.e_shnum * sizeof(typename Elf::SectionHeader);
 
@@ -859,7 +852,7 @@ template <int W> const typename Elf<W>::SectionHeader *Memory<W>::section_by_nam
   return nullptr;
 }
 
-template <int W> const typename Elf<W>::Sym *Memory<W>::resolve_symbol(std::string_view name) const {
+template <AddressType address_t> const typename Elf<address_t>::Sym *Memory<address_t>::resolve_symbol(std::string_view name) const {
   if (UNLIKELY(m_binary.empty())) return nullptr;
   const auto *sym_hdr = section_by_name(".symtab");
   if (UNLIKELY(sym_hdr == nullptr)) return nullptr;
@@ -881,7 +874,7 @@ template <int W> const typename Elf<W>::Sym *Memory<W>::resolve_symbol(std::stri
   return nullptr;
 }
 
-template <int W> std::vector<const char *> Memory<W>::all_symbols() const {
+template <AddressType address_t> std::vector<const char *> Memory<address_t>::all_symbols() const {
   std::vector<const char *> symbols;
   if (UNLIKELY(m_binary.empty())) return symbols;
   const auto *sym_hdr = section_by_name(".symtab");
@@ -902,8 +895,8 @@ template <int W> std::vector<const char *> Memory<W>::all_symbols() const {
   return symbols;
 }
 
-template <int W>
-std::vector<std::string_view> Memory<W>::all_unmangled_function_symbols(const std::string &prefix) const {
+template <AddressType address_t>
+std::vector<std::string_view> Memory<address_t>::all_unmangled_function_symbols(const std::string &prefix) const {
   std::vector<std::string_view> symbols;
   if (UNLIKELY(m_binary.empty())) return symbols;
   const auto *sym_hdr = section_by_name(".symtab");
@@ -930,7 +923,7 @@ std::vector<std::string_view> Memory<W>::all_unmangled_function_symbols(const st
   return symbols;
 }
 
-template <int W> std::vector<std::string_view> Memory<W>::elf_comments() const {
+template <AddressType address_t> std::vector<std::string_view> Memory<address_t>::elf_comments() const {
   std::vector<std::string_view> comments;
   if (UNLIKELY(m_binary.empty())) return comments;
   const auto *hdr = elf_header();
@@ -961,17 +954,17 @@ template <int W> std::vector<std::string_view> Memory<W>::elf_comments() const {
   return comments;
 }
 
-template <int W> static void elf_print_sym(const typename Elf<W>::Sym *sym) {
-  if constexpr (W == 4) {
+template <AddressType address_t> static void elf_print_sym(const typename Elf<address_t>::Sym *sym) {
+  if constexpr (sizeof(address_t) == 4) {
     printf("-> Sym is at 0x%" PRIX32 " with size %" PRIu32 ", type %u name %u\n", sym->st_value, sym->st_size,
-           Elf<W>::SymbolType(sym->st_info), sym->st_name);
+           Elf<address_t>::SymbolType(sym->st_info), sym->st_name);
   } else {
     printf("-> Sym is at 0x%" PRIX64 " with size %" PRIu64 ", type %u name %u\n", (uint64_t)sym->st_value, sym->st_size,
-           Elf<W>::SymbolType(sym->st_info), sym->st_name);
+           Elf<address_t>::SymbolType(sym->st_info), sym->st_name);
   }
 }
 
-template <int W> RISCV_INTERNAL void Memory<W>::relocate_section(const char *section_name, const char *sym_section) {
+template <AddressType address_t> RISCV_INTERNAL void Memory<address_t>::relocate_section(const char *section_name, const char *sym_section) {
   using ElfRela = typename Elf::Rela;
 
   const auto *rela = section_by_name(section_name);
@@ -987,7 +980,7 @@ template <int W> RISCV_INTERNAL void Memory<W>::relocate_section(const char *sec
   auto *rela_addr = elf_offset<ElfRela>(rela->sh_offset);
   for (size_t i = 0; i < rela_ents; i++) {
     size_t symidx;
-    if constexpr (W == 4) symidx = Elf::RelaSym(rela_addr[i].r_info);
+    if constexpr (sizeof(address_t) == 4) symidx = Elf::RelaSym(rela_addr[i].r_info);
     else symidx = Elf::RelaSym(rela_addr[i].r_info);
     auto *sym = elf_sym_index(dyn_hdr, symidx);
 
@@ -996,7 +989,7 @@ template <int W> RISCV_INTERNAL void Memory<W>::relocate_section(const char *sec
       if constexpr (false) {
         printf("Relocating rela %zu with sym idx %ld where 0x%lX -> 0x%lX\n", i, (long)symidx,
                (long)rela_addr[i].r_offset, (long)sym->st_value);
-        elf_print_sym<W>(sym);
+        elf_print_sym<address_t>(sym);
       }
       const auto rtype = Elf::RelaType(rela_addr[i].r_info);
       static constexpr int R_RISCV_64 = 0x2;
@@ -1030,7 +1023,7 @@ template <int W> RISCV_INTERNAL void Memory<W>::relocate_section(const char *sec
   }
 }
 
-template <int W> RISCV_INTERNAL void Memory<W>::dynamic_linking(const typename Elf::Header &hdr) {
+template <AddressType address_t> RISCV_INTERNAL void Memory<address_t>::dynamic_linking(const typename Elf::Header &hdr) {
   (void)hdr;
   this->relocate_section(".rela.dyn", ".dynsym");
   this->relocate_section(".rela.plt", ".symtab");
@@ -1044,9 +1037,9 @@ template <typename T> constexpr inline size_t memory_align_mask() {
 		return size_t(Page::size() - 1);
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename T> inline
-T Memory<W>::read(address_t address)
+T Memory<address_t>::read(address_t address)
 {
 	const auto offset = address & memory_align_mask<T>();
 	if constexpr (unaligned_memory_slowpaths) {
@@ -1074,9 +1067,9 @@ T Memory<W>::read(address_t address)
 	return pagedata.template aligned_read<T>(offset);
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename T> inline
-T& Memory<W>::writable_read(address_t address)
+T& Memory<address_t>::writable_read(address_t address)
 {
 	if constexpr (flat_readwrite_arena) {
 		if (LIKELY(address - initial_rodata_end() < memory_arena_write_boundary())) {
@@ -1089,9 +1082,9 @@ T& Memory<W>::writable_read(address_t address)
 	return pagedata.template aligned_read<T>(address & memory_align_mask<T>());
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename T> inline
-void Memory<W>::write(address_t address, T value)
+void Memory<address_t>::write(address_t address, T value)
 {
 	const auto offset = address & memory_align_mask<T>();
 	if constexpr (unaligned_memory_slowpaths) {
@@ -1133,9 +1126,9 @@ void Memory<W>::write(address_t address, T value)
 	page.page().template aligned_write<T>(offset, value);
 }
 
-template <int W>
+template <AddressType address_t>
 template <typename T> inline
-void Memory<W>::write_paging(address_t address, T value)
+void Memory<address_t>::write_paging(address_t address, T value)
 {
 	const auto offset = address & memory_align_mask<T>();
 	const auto pageno = page_number(address);
@@ -1158,41 +1151,41 @@ void Memory<W>::write_paging(address_t address, T value)
 }
 
 
-template <int W>
-inline address_type<W> Memory<W>::resolve_address(std::string_view name) const
+template <AddressType address_t>
+inline address_t Memory<address_t>::resolve_address(std::string_view name) const
 {
 	auto* sym = resolve_symbol(name);
 	return (sym) ? sym->st_value : 0x0;
 }
 
-template <int W>
-inline address_type<W> Memory<W>::resolve_section(const char* name) const
+template <AddressType address_t>
+inline address_t Memory<address_t>::resolve_section(const char* name) const
 {
 	auto* shdr = this->section_by_name(name);
 	if (shdr) return shdr->sh_addr;
 	return 0x0;
 }
 
-template <int W>
-inline address_type<W> Memory<W>::exit_address() const noexcept
+template <AddressType address_t>
+inline address_t Memory<address_t>::exit_address() const noexcept
 {
 	return this->m_exit_address;
 }
 
-template <int W>
-inline void Memory<W>::set_exit_address(address_t addr)
+template <AddressType address_t>
+inline void Memory<address_t>::set_exit_address(address_t addr)
 {
 	this->m_exit_address = addr;
 }
 
-template <int W>
-inline std::shared_ptr<DecodedExecuteSegment<W>>& Memory<W>::exec_segment_for(address_t vaddr)
+template <AddressType address_t>
+inline std::shared_ptr<DecodedExecuteSegment<address_t>>& Memory<address_t>::exec_segment_for(address_t vaddr)
 {
 	// Check main execute segment first, it's always present
 	if (m_main_exec_segment && m_main_exec_segment->is_within(vaddr)) return m_main_exec_segment;
 	for (auto& segment : m_exec) {
 		if (segment && segment->is_within(vaddr)) return segment;
 	}
-	return CPU<W>::empty_execute_segment();
+	return CPU<address_t>::empty_execute_segment();
 }
 } // namespace riscv

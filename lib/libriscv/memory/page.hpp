@@ -227,11 +227,13 @@ inline std::string Page::to_string() const
 }
 
 // Helper class for caching pages
-template <int W, typename T> struct CachedPage {
-	address_type<W> pageno = (address_type<W>)-1;
-	T* page = nullptr;
+template <AddressType address_t, typename T> struct CachedPage {
+  address_t pageno = (address_t)-1;
+  T *page = nullptr;
 
-	void reset() { pageno = (address_type<W>)-1; page = nullptr; }
+  void reset() {
+    pageno = (address_t)-1;
+    page = nullptr;
+  }
 };
-
 }

@@ -35,13 +35,12 @@ extern "C" char *__cxa_demangle(const char *name, char *buf, size_t *n, int *sta
 
 namespace riscv
 {
-	template<int W> struct Machine;
+	template<AddressType address_t> struct Machine;
 	struct vBuffer { char* ptr; size_t len; };
 
-	template<int W>
+	template<AddressType address_t>
 	struct alignas(RISCV_MACHINE_ALIGNMENT) Memory
 	{
-		using address_t = address_type<W>;
 		using mmio_cb_t = Page::mmio_cb_t;
 		using page_fault_cb_t = riscv::Function<Page&(Memory&, address_t, bool)>;
 		using page_readf_cb_t = riscv::Function<const Page&(const Memory&, address_t)>;
@@ -64,7 +63,7 @@ namespace riscv
 
 		void memset(address_t dst, uint8_t value, size_t len);
 		void memcpy(address_t dst, const void* src, size_t);
-		void memcpy(address_t dst, Machine<W>& srcm, address_t src, address_t len);
+		void memcpy(address_t dst, Machine<address_t>& srcm, address_t src, address_t len);
 		void memcpy_out(void* dst, address_t src, size_t) const;
 		// Copy between overlapping memory regions. Only available when flat_readwrite_arena is enabled!
 		bool try_memmove(address_t dst, address_t src, size_t len);
@@ -155,8 +154,8 @@ namespace riscv
 		bool mmap_unmap(address_t addr, address_t size);
 
 
-		Machine<W>& machine() noexcept { return this->m_machine; }
-		const Machine<W>& machine() const noexcept { return this->m_machine; }
+		Machine<address_t>& machine() noexcept { return this->m_machine; }
+		const Machine<address_t>& machine() const noexcept { return this->m_machine; }
 		bool is_forked() const noexcept { return !this->m_original_machine; }
 
 #ifdef RISCV_EXT_ATOMICS
@@ -204,14 +203,10 @@ namespace riscv
 		static inline address_t page_number(const address_t address) noexcept {
 			return address / Page::size();
 		}
-		CachedPage<W, const PageData>& rdcache() const noexcept {
-			return m_rd_cache;
-		}
-		CachedPage<W, PageData>& wrcache() noexcept {
-			return m_wr_cache;
-		}
-		const PageData& cached_readable_page(address_t, size_t) const;
-		PageData& cached_writable_page(address_t);
+    CachedPage<address_t, const PageData> &rdcache() const noexcept { return m_rd_cache; }
+    CachedPage<address_t, PageData> &wrcache() noexcept { return m_wr_cache; }
+    const PageData &cached_readable_page(address_t, size_t) const;
+    PageData& cached_writable_page(address_t);
 		// Page creation & destruction
 		template <typename... Args>
 		Page& allocate_page(address_t page, Args&& ...);
@@ -250,13 +245,13 @@ namespace riscv
 			address_t dst, void* src, size_t size, PageAttributes = {});
 
 		// Custom execute segment, returns page base, final size and execute segment pointer
-		std::shared_ptr<DecodedExecuteSegment<W>>& exec_segment_for(address_t vaddr);
-		const std::shared_ptr<DecodedExecuteSegment<W>>& exec_segment_for(address_t vaddr) const;
-		DecodedExecuteSegment<W>& create_execute_segment(const MachineOptions<W>&, const void* data, address_t addr, size_t len, bool is_initial, bool is_likely_jit = false);
+		std::shared_ptr<DecodedExecuteSegment<address_t>>& exec_segment_for(address_t vaddr);
+		const std::shared_ptr<DecodedExecuteSegment<address_t>>& exec_segment_for(address_t vaddr) const;
+		DecodedExecuteSegment<address_t>& create_execute_segment(const MachineOptions<address_t>&, const void* data, address_t addr, size_t len, bool is_initial, bool is_likely_jit = false);
 		size_t execute_segments_count() const noexcept { return m_exec.size(); }
 		// Evict all execute segments, also disabling the main execute segment
 		void evict_execute_segments();
-		void evict_execute_segment(DecodedExecuteSegment<W>&);
+		void evict_execute_segment(DecodedExecuteSegment<address_t>&);
 
 		const auto& binary() const noexcept { return m_binary; }
 		void reset();
@@ -276,10 +271,10 @@ namespace riscv
     // Returns the final size of the serialized state
     size_t serialize_to(std::vector<uint8_t> &vec) const;
     // Returns memory to a previously stored state
-		void deserialize_from(const std::vector<uint8_t>&, const SerializedMachine<W>&);
+		void deserialize_from(const std::vector<uint8_t>&, const SerializedMachine<address_t>&);
 
-		Memory(Machine<W>&, std::string_view, MachineOptions<W>);
-		Memory(Machine<W>&, const Machine<W>&, MachineOptions<W>);
+		Memory(Machine<address_t>&, std::string_view, MachineOptions<address_t>);
+		Memory(Machine<address_t>&, const Machine<address_t>&, MachineOptions<address_t>);
 		~Memory();
 	private:
 		void clear_all_pages();
@@ -293,7 +288,7 @@ namespace riscv
 		static void memview_helper(T& mem, address_t addr, size_t len,
 			std::function<void(T&, const uint8_t*, size_t)> callback);
 		// ELF stuff
-		using Elf = typename riscv::Elf<W>;
+		using Elf = typename riscv::Elf<address_t>;
 		template <typename T> T* elf_offset(size_t ofs) const {
 			if (ofs + sizeof(T) >= ofs && ofs + sizeof(T) < m_binary.size())
 				return (T*) &m_binary[ofs];
@@ -313,12 +308,12 @@ namespace riscv
 		const typename Elf::Sym* resolve_symbol(std::string_view name) const;
 		const typename Elf::Sym* elf_sym_index(const typename Elf::SectionHeader* shdr, uint32_t symidx) const;
 		// ELF loader
-		void binary_loader(const MachineOptions<W>&);
-		void binary_load_ph(const MachineOptions<W>&, const typename Elf::ProgramHeader*, address_t vaddr);
-		void serialize_execute_segment(const MachineOptions<W>&, const typename Elf::ProgramHeader*, address_t vaddr);
-		void generate_decoder_cache(const MachineOptions<W>&, std::shared_ptr<DecodedExecuteSegment<W>>&, bool is_initial);
+		void binary_loader(const MachineOptions<address_t>&);
+		void binary_load_ph(const MachineOptions<address_t>&, const typename Elf::ProgramHeader*, address_t vaddr);
+		void serialize_execute_segment(const MachineOptions<address_t>&, const typename Elf::ProgramHeader*, address_t vaddr);
+		void generate_decoder_cache(const MachineOptions<address_t>&, std::shared_ptr<DecodedExecuteSegment<address_t>>&, bool is_initial);
 		// Machine copy-on-write fork
-		void machine_loader(const Machine<W>&, const MachineOptions<W>&);
+		void machine_loader(const Machine<address_t>&, const MachineOptions<address_t>&);
 
 		address_t m_start_address = 0;
 		address_t m_stack_address = 0;
@@ -326,12 +321,12 @@ namespace riscv
 		address_t m_mmap_address  = 0;
 		address_t m_heap_address  = 0;
 
-		Machine<W>& m_machine;
+		Machine<address_t>& m_machine;
 
-		mutable CachedPage<W, const PageData> m_rd_cache;
-		mutable CachedPage<W, PageData> m_wr_cache;
+    mutable CachedPage<address_t, const PageData> m_rd_cache;
+    mutable CachedPage<address_t, PageData> m_wr_cache;
 
-		std::unordered_map<address_t, Page> m_pages;
+    std::unordered_map<address_t, Page> m_pages;
 
 		const bool m_original_machine;
 		bool m_is_dynamic = false;
@@ -339,20 +334,20 @@ namespace riscv
 		const std::string_view m_binary;
 
 		// Memory map cache
-		MMapCache<W> m_mmap_cache;
+		MMapCache<address_t> m_mmap_cache;
 
 		page_fault_cb_t m_page_fault_handler = nullptr;
 		page_write_cb_t m_page_write_handler = default_page_write;
 		page_readf_cb_t m_page_readf_handler = default_page_read;
 
 #ifdef RISCV_EXT_ATOMICS
-		AtomicMemory<W> m_atomics;
+		AtomicMemory<address_t> m_atomics;
 #endif
 
 		// Execute segments
-		std::shared_ptr<DecodedExecuteSegment<W>> m_main_exec_segment;
-		std::vector<std::shared_ptr<DecodedExecuteSegment<W>>> m_exec; // not including main_exec_segment
-		std::shared_ptr<DecodedExecuteSegment<W>>& next_execute_segment();
+		std::shared_ptr<DecodedExecuteSegment<address_t>> m_main_exec_segment;
+		std::vector<std::shared_ptr<DecodedExecuteSegment<address_t>>> m_exec; // not including main_exec_segment
+		std::shared_ptr<DecodedExecuteSegment<address_t>>& next_execute_segment();
 
 		// Linear arena at start of memory (mmap-backed)
 		struct {
@@ -363,6 +358,6 @@ namespace riscv
 			size_t    pages = 0;
 		} m_arena;
 
-		friend struct CPU<W>;
+		friend struct CPU<address_t>;
   };
 }

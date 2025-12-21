@@ -5,7 +5,7 @@
 /** Implementation **/
 
 namespace riscv {
-template <int W> inline MultiThreading<W>::MultiThreading(Machine<W> &mach) : machine(mach) {
+template <AddressType address_t> inline MultiThreading<address_t>::MultiThreading(Machine<address_t> &mach) : machine(mach) {
   // Best guess for default stack boundries
   const address_t base = 0x1000;
   const address_t size = mach.memory.stack_initial() - base;
@@ -14,8 +14,8 @@ template <int W> inline MultiThreading<W>::MultiThreading(Machine<W> &mach) : ma
   m_current = &it.first->second;
 }
 
-template <int W>
-inline MultiThreading<W>::MultiThreading(Machine<W> &mach, const MultiThreading<W> &other)
+template <AddressType address_t>
+inline MultiThreading<address_t>::MultiThreading(Machine<address_t> &mach, const MultiThreading<address_t> &other)
     : machine(mach), m_thread_counter(other.m_thread_counter), m_max_threads(other.m_max_threads) {
   for (const auto &it : other.m_threads) {
     const int tid = it.first;
@@ -37,54 +37,54 @@ inline MultiThreading<W>::MultiThreading(Machine<W> &mach, const MultiThreading<
     throw MachineException(INVALID_PROGRAM, "Other machine had invalid multi-threading state");
 }
 
-template <int W> inline void Thread<W>::resume() {
+template <AddressType address_t> inline void Thread<address_t>::resume() {
   threading.m_current = this;
   auto &m = threading.machine;
   // restore registers
-  m.cpu.registers().copy_from(Registers<W>::Options::NoVectors, this->stored_regs);
+  m.cpu.registers().copy_from(Registers<address_t>::Options::NoVectors, this->stored_regs);
   THPRINT(threading.machine, "Returning to tid=%d tls=0x%lX stack=0x%lX\n", this->tid,
           (long)this->stored_regs.get(REG_TP), (long)this->stored_regs.get(REG_SP));
   // this will ensure PC is executable in all cases
   m.cpu.aligned_jump(m.cpu.pc());
 }
 
-template <int W> inline void Thread<W>::suspend() {
+template <AddressType address_t> inline void Thread<address_t>::suspend() {
   // copy all regs except vector lanes
-  this->stored_regs.copy_from(Registers<W>::Options::NoVectors, threading.machine.cpu.registers());
+  this->stored_regs.copy_from(Registers<address_t>::Options::NoVectors, threading.machine.cpu.registers());
   // add to suspended (NB: can throw)
   threading.m_suspended.push_back(this);
 }
 
-template <int W> inline void Thread<W>::suspend(address_t return_value) {
+template <AddressType address_t> inline void Thread<address_t>::suspend(address_t return_value) {
   this->suspend();
   // set the *future* return value for this thread
   this->stored_regs.get(REG_ARG0) = return_value;
 }
 
-template <int W> inline void Thread<W>::block(uint32_t reason, uint32_t extra) {
+template <AddressType address_t> inline void Thread<address_t>::block(uint32_t reason, uint32_t extra) {
   // copy all regs except vector lanes
-  this->stored_regs.copy_from(Registers<W>::Options::NoVectors, threading.machine.cpu.registers());
+  this->stored_regs.copy_from(Registers<address_t>::Options::NoVectors, threading.machine.cpu.registers());
   this->block_word = reason;
   this->block_extra = extra;
   // add to blocked (NB: can throw)
   threading.m_blocked.push_back(this);
 }
 
-template <int W> inline void Thread<W>::block_return(address_t return_value, uint32_t reason, uint32_t extra) {
+template <AddressType address_t> inline void Thread<address_t>::block_return(address_t return_value, uint32_t reason, uint32_t extra) {
   this->block(reason, extra);
   // set the block reason as the next return value
   this->stored_regs.get(REG_ARG0) = return_value;
 }
 
-template <int W> inline Thread<W> *MultiThreading<W>::get_thread() { return this->m_current; }
+template <AddressType address_t> inline Thread<address_t> *MultiThreading<address_t>::get_thread() { return this->m_current; }
 
-template <int W> inline Thread<W> *MultiThreading<W>::get_thread(int tid) {
+template <AddressType address_t> inline Thread<address_t> *MultiThreading<address_t>::get_thread(int tid) {
   auto it = m_threads.find(tid);
   if (it == m_threads.end()) return nullptr;
   return &it->second;
 }
 
-template <int W> inline void MultiThreading<W>::wakeup_next() {
+template <AddressType address_t> inline void MultiThreading<address_t>::wakeup_next() {
   // resume a waiting thread
   if (!m_suspended.empty()) {
     auto *next = m_suspended.front();
@@ -98,29 +98,29 @@ template <int W> inline void MultiThreading<W>::wakeup_next() {
   }
 }
 
-template <int W>
-inline Thread<W>::Thread(MultiThreading<W> &mt, int ttid, address_t tls, address_t stack, address_t stkbase,
+template <AddressType address_t>
+inline Thread<address_t>::Thread(MultiThreading<address_t> &mt, int ttid, address_t tls, address_t stack, address_t stkbase,
                          address_t stksize)
     : threading(mt), tid(ttid), stack_base(stkbase), stack_size(stksize) {
   this->stored_regs.get(REG_TP) = tls;
   this->stored_regs.get(REG_SP) = stack;
 }
 
-template <int W>
-inline Thread<W>::Thread(MultiThreading<W> &mt, const Thread &other)
+template <AddressType address_t>
+inline Thread<address_t>::Thread(MultiThreading<address_t> &mt, const Thread &other)
     : threading(mt), tid(other.tid), stack_base(other.stack_base), stack_size(other.stack_size),
       clear_tid(other.clear_tid), block_word(other.block_word), block_extra(other.block_extra) {
-  stored_regs.copy_from(Registers<W>::Options::NoVectors, other.stored_regs);
+  stored_regs.copy_from(Registers<address_t>::Options::NoVectors, other.stored_regs);
 }
 
-template <int W> inline void Thread<W>::activate() {
+template <AddressType address_t> inline void Thread<address_t>::activate() {
   threading.m_current = this;
   auto &cpu = threading.machine.cpu;
   cpu.reg(REG_TP) = this->stored_regs.get(REG_TP);
   cpu.reg(REG_SP) = this->stored_regs.get(REG_SP);
 }
 
-template <int W> inline bool Thread<W>::exit() {
+template <AddressType address_t> inline bool Thread<address_t>::exit() {
   const bool exiting_myself = (threading.get_thread() == this);
   // Copy of reference to thread manager and thread ID
   auto &thr = this->threading;
@@ -128,7 +128,7 @@ template <int W> inline bool Thread<W>::exit() {
   // CLONE_CHILD_CLEARTID: set userspace TID value to zero
   if (this->clear_tid) {
     THPRINT(threading.machine, "Clearing thread value for tid=%d at 0x%lX\n", this->tid, (long)this->clear_tid);
-    threading.machine.memory.template write<address_type<W>>(this->clear_tid, 0);
+    threading.machine.memory.template write<address_t>(this->clear_tid, 0);
   }
   // Delete this thread (except main thread)
   if (tid != 0) {
@@ -145,8 +145,8 @@ template <int W> inline bool Thread<W>::exit() {
   return (tid == 0);
 }
 
-template <int W>
-inline Thread<W> *MultiThreading<W>::create(int flags, address_t ctid, address_t ptid, address_t stack, address_t tls,
+template <AddressType address_t>
+inline Thread<address_t> *MultiThreading<address_t>::create(int flags, address_t ctid, address_t ptid, address_t stack, address_t tls,
                                             address_t stkbase, address_t stksize) {
   if (this->m_threads.size() >= this->m_max_threads)
     throw MachineException(INVALID_PROGRAM, "Too many threads", this->m_max_threads);
@@ -169,7 +169,7 @@ inline Thread<W> *MultiThreading<W>::create(int flags, address_t ctid, address_t
   return thread;
 }
 
-template <int W> inline bool MultiThreading<W>::preempt() {
+template <AddressType address_t> inline bool MultiThreading<address_t>::preempt() {
   auto *thread = get_thread();
   if (m_suspended.empty()) {
     return false;
@@ -179,7 +179,7 @@ template <int W> inline bool MultiThreading<W>::preempt() {
   return true;
 }
 
-template <int W> inline bool MultiThreading<W>::suspend_and_yield(long result) {
+template <AddressType address_t> inline bool MultiThreading<address_t>::suspend_and_yield(long result) {
   auto *thread = get_thread();
   // don't go through the ardous yielding process when alone
   if (m_suspended.empty()) {
@@ -194,7 +194,7 @@ template <int W> inline bool MultiThreading<W>::suspend_and_yield(long result) {
   return true;
 }
 
-template <int W> inline bool MultiThreading<W>::block(address_t retval, uint32_t reason, uint32_t extra) {
+template <AddressType address_t> inline bool MultiThreading<address_t>::block(address_t retval, uint32_t reason, uint32_t extra) {
   auto *thread = get_thread();
   if (UNLIKELY(m_suspended.empty())) {
     // TODO: Stop the machine here?
@@ -207,7 +207,7 @@ template <int W> inline bool MultiThreading<W>::block(address_t retval, uint32_t
   return true;
 }
 
-template <int W> inline bool MultiThreading<W>::yield_to(int tid, bool store_retval) {
+template <AddressType address_t> inline bool MultiThreading<address_t>::yield_to(int tid, bool store_retval) {
   auto *thread = get_thread();
   auto *next = get_thread(tid);
   if (next == nullptr) {
@@ -234,7 +234,7 @@ template <int W> inline bool MultiThreading<W>::yield_to(int tid, bool store_ret
   return true;
 }
 
-template <int W> inline void MultiThreading<W>::unblock(int tid) {
+template <AddressType address_t> inline void MultiThreading<address_t>::unblock(int tid) {
   for (auto it = m_blocked.begin(); it != m_blocked.end();) {
     if ((*it)->tid == tid) {
       // suspend current thread
@@ -248,7 +248,7 @@ template <int W> inline void MultiThreading<W>::unblock(int tid) {
   // given thread id was not blocked
   machine.cpu.reg(REG_ARG0) = -1;
 }
-template <int W> inline size_t MultiThreading<W>::wakeup_blocked(size_t max, uint32_t reason, uint32_t mask) {
+template <AddressType address_t> inline size_t MultiThreading<address_t>::wakeup_blocked(size_t max, uint32_t reason, uint32_t mask) {
   size_t awakened = 0;
   for (auto it = m_blocked.begin(); it != m_blocked.end() && awakened < max;) {
     // compare against block reason
@@ -263,15 +263,15 @@ template <int W> inline size_t MultiThreading<W>::wakeup_blocked(size_t max, uin
   return awakened;
 }
 
-template <int W> inline void MultiThreading<W>::erase_thread(int tid) {
+template <AddressType address_t> inline void MultiThreading<address_t>::erase_thread(int tid) {
   auto it = m_threads.find(tid);
   assert(it != m_threads.end());
   m_threads.erase(it);
 }
 
 // machine.cpp
-template <int W>
-inline Machine<W>::Machine(const Machine &other, const MachineOptions<W> &options)
+template <AddressType address_t>
+inline Machine<address_t>::Machine(const Machine &other, const MachineOptions<address_t> &options)
     : cpu(*this, other), memory(*this, other, options), m_arena(nullptr) {
   this->m_counter = other.m_counter;
   this->m_max_counter = other.m_max_counter;
@@ -284,27 +284,27 @@ inline Machine<W>::Machine(const Machine &other, const MachineOptions<W> &option
 // native_threads.hpp
 static const uint32_t STACK_SIZE = 256 * 1024;
 
-template <int W> void Machine<W>::setup_native_threads(const size_t syscall_base) {
-  if (this->m_mt == nullptr) this->m_mt.reset(new MultiThreading<W>(*this));
+template <AddressType address_t> void Machine<address_t>::setup_native_threads(const size_t syscall_base) {
+  if (this->m_mt == nullptr) this->m_mt.reset(new MultiThreading<address_t>(*this));
 
   // Globally register a system call that clobbers all registers
-  Machine<W>::register_clobbering_syscall(syscall_base + 0); // microclone
-  Machine<W>::register_clobbering_syscall(syscall_base + 1); // exit
-  Machine<W>::register_clobbering_syscall(syscall_base + 2); // yield
-  Machine<W>::register_clobbering_syscall(syscall_base + 3); // yield_to
-  Machine<W>::register_clobbering_syscall(syscall_base + 4); // block
-  Machine<W>::register_clobbering_syscall(syscall_base + 5); // unblock
-  Machine<W>::register_clobbering_syscall(syscall_base + 6); // unblock_thread
-  Machine<W>::register_clobbering_syscall(syscall_base + 8); // clone threadcall
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 0); // microclone
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 1); // exit
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 2); // yield
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 3); // yield_to
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 4); // block
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 5); // unblock
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 6); // unblock_thread
+  Machine<address_t>::register_clobbering_syscall(syscall_base + 8); // clone threadcall
 
   // 500: microclone
-  this->install_syscall_handler(syscall_base + 0, [](Machine<W> &machine) {
-    const auto stack = (machine.template sysarg<address_type<W>>(0) & ~0xF);
-    const auto func = machine.template sysarg<address_type<W>>(1);
-    const auto tls = machine.template sysarg<address_type<W>>(2);
+  this->install_syscall_handler(syscall_base + 0, [](Machine<address_t> &machine) {
+    const auto stack = (machine.template sysarg<address_t>(0) & ~0xF);
+    const auto func = machine.template sysarg<address_t>(1);
+    const auto tls = machine.template sysarg<address_t>(2);
     const auto flags = machine.template sysarg<uint32_t>(3);
-    const auto sbase = machine.template sysarg<address_type<W>>(4);
-    const auto ssize = machine.template sysarg<address_type<W>>(5);
+    const auto sbase = machine.template sysarg<address_t>(4);
+    const auto ssize = machine.template sysarg<address_t>(5);
     // printf(">>> clone(func=0x%lX, stack=0x%lX, tls=0x%lX, stack base=0x%lX size=0x%lX)\n",
     //		(long)func, (long)stack, (long)tls, (long)sbase, (long)ssize);
     auto *thread = machine.threads().create(CHILD_SETTID | flags, tls, 0x0, stack, tls, sbase, ssize);
@@ -318,7 +318,7 @@ template <int W> void Machine<W>::setup_native_threads(const size_t syscall_base
     machine.cpu.jump(func - 4);
   });
   // exit
-  this->install_syscall_handler(syscall_base + 1, [](Machine<W> &machine) {
+  this->install_syscall_handler(syscall_base + 1, [](Machine<address_t> &machine) {
     const int status = machine.template sysarg<int>(0);
     THPRINT(machine, ">>> Exit on tid=%d, exit status = %d\n", machine.threads().get_tid(), (int)status);
     // Exit returns true if the program ended
@@ -330,31 +330,31 @@ template <int W> void Machine<W>::setup_native_threads(const size_t syscall_base
     machine.set_result(status);
   });
   // sched_yield
-  this->install_syscall_handler(syscall_base + 2, [](Machine<W> &machine) {
+  this->install_syscall_handler(syscall_base + 2, [](Machine<address_t> &machine) {
     // begone!
     machine.threads().suspend_and_yield();
   });
   // yield_to
   this->install_syscall_handler(
-      syscall_base + 3, [](Machine<W> &machine) { machine.threads().yield_to(machine.template sysarg<uint32_t>(0)); });
+      syscall_base + 3, [](Machine<address_t> &machine) { machine.threads().yield_to(machine.template sysarg<uint32_t>(0)); });
   // block (w/reason)
-  this->install_syscall_handler(syscall_base + 4, [](Machine<W> &machine) {
+  this->install_syscall_handler(syscall_base + 4, [](Machine<address_t> &machine) {
     // begone!
     if (machine.threads().block(machine.template sysarg<int>(0), 0)) return;
     // error, we didn't block
     machine.set_result(-1);
   });
   // unblock (w/reason)
-  this->install_syscall_handler(syscall_base + 5, [](Machine<W> &machine) {
+  this->install_syscall_handler(syscall_base + 5, [](Machine<address_t> &machine) {
     if (!machine.threads().wakeup_blocked(64, machine.template sysarg<int>(0))) machine.set_result(-1);
   });
   // unblock thread
   this->install_syscall_handler(
-      syscall_base + 6, [](Machine<W> &machine) { machine.threads().unblock(machine.template sysarg<int>(0)); });
+      syscall_base + 6, [](Machine<address_t> &machine) { machine.threads().unblock(machine.template sysarg<int>(0)); });
 
   // super fast "direct" threads
   // N+8: clone threadcall
-  this->install_syscall_handler(syscall_base + 8, [](Machine<W> &machine) {
+  this->install_syscall_handler(syscall_base + 8, [](Machine<address_t> &machine) {
     const auto func = machine.sysarg(0);
     const auto fini = machine.sysarg(1);
 
@@ -378,7 +378,7 @@ template <int W> void Machine<W>::setup_native_threads(const size_t syscall_base
     machine.cpu.jump(func - 4);
   });
   // N+9: exit threadcall
-  this->install_syscall_handler(syscall_base + 9, [](Machine<W> &machine) {
+  this->install_syscall_handler(syscall_base + 9, [](Machine<address_t> &machine) {
     auto retval = machine.cpu.reg(riscv::REG_RETVAL);
     auto self = machine.cpu.reg(riscv::REG_TP);
     // TODO: check this return value

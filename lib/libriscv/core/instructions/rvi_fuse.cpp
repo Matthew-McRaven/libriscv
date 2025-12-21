@@ -4,9 +4,9 @@ T& view_as(rv32i_instruction& i) {
 	return *(T*) &i;
 }
 
-template <int W>
+template <AddressType address_t>
 static void fused_li_ecall(
-	typename CPU<W>::instr_pair& i1, typename CPU<W>::instr_pair& i2, int sysno)
+	typename CPU<address_t>::instr_pair& i1, typename CPU<address_t>::instr_pair& i2, int sysno)
 {
 	union FusedSyscall {
 		struct {
@@ -35,7 +35,7 @@ static void fused_li_ecall(
 
 template <int W, typename T>
 static void fused_store(
-	typename CPU<W>::instr_pair& i1, typename CPU<W>::instr_pair& i2)
+	typename CPU<address_t>::instr_pair& i1, typename CPU<address_t>::instr_pair& i2)
 {
 	union FusedStores {
 		struct {
@@ -76,8 +76,8 @@ static void fused_store(
 	};
 }
 
-template <int W>
-bool CPU<W>::try_fuse(instr_pair i1, instr_pair i2) const
+template <AddressType address_t>
+bool CPU<address_t>::try_fuse(instr_pair i1, instr_pair i2) const
 {
 	// LI + ECALL fused
 	if (i1.first == DECODED_INSTR(OP_IMM_LI).handler &&
@@ -87,7 +87,7 @@ bool CPU<W>::try_fuse(instr_pair i1, instr_pair i2) const
 		const uint16_t sysno = i1.second.Itype.signed_imm();
 		if (i1.second.Itype.rd == REG_ECALL && sysno < RISCV_SYSCALLS_MAX)
 		{
-			fused_li_ecall<W>(i1, i2, sysno);
+			fused_li_ecall<address_t>(i1, i2, sysno);
 			return true;
 		}
 	}
@@ -196,7 +196,7 @@ bool CPU<W>::try_fuse(instr_pair i1, instr_pair i2) const
 		const uint16_t sysno = ci.CI.signed_imm();
 		if (ci.CI.rd == REG_ECALL && sysno < RISCV_SYSCALLS_MAX)
 		{
-			fused_li_ecall<W>(i1, i2, sysno);
+			fused_li_ecall<address_t>(i1, i2, sysno);
 			return true;
 		}
 	}

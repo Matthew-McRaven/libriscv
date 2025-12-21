@@ -30,7 +30,7 @@ static void fuzz_instruction_set(const uint8_t* data, size_t len)
 
 	try
 	{
-		riscv::Machine<W> machine { empty, {} };
+		riscv::Machine<address_t> machine { empty, {} };
 		machine.memory.set_page_attr(S, 0x1000, {.read = true, .write = true});
 		machine.memory.set_page_attr(V, 0x1000, {.read = true, .exec = true});
 		machine.on_unhandled_syscall = [] (auto&, size_t) {};
@@ -62,13 +62,13 @@ static void fuzz_elf_loader(const uint8_t* data, size_t len)
 	using namespace riscv;
 	const std::string_view bin {(const char*) data, len};
 	try {
-		const MachineOptions<W> options {
+		const MachineOptions<address_t> options {
 			.allow_write_exec_segment = true,
 			.use_memory_arena = false
 		};
 		// Instantiating the machine will fuzz the ELF loader,
 		// and the decoder cache creation.
-		Machine<W> machine { bin, options };
+		Machine<address_t> machine { bin, options };
 		machine.on_unhandled_syscall = [] (auto&, size_t) {};
 		// Fuzzing the linux system calls with no filesystem access
 		// and no socket access.
@@ -101,11 +101,11 @@ static void fuzz_native_syscalls(const uint8_t* data, size_t len)
 		return;
 
 	// Create empty machine
-	const riscv::MachineOptions<W> options {
+	const riscv::MachineOptions<address_t> options {
 		.allow_write_exec_segment = true,
 		.use_memory_arena = false
 	};
-	riscv::Machine<W> machine { empty, options };
+	riscv::Machine<address_t> machine { empty, options };
 	machine.on_unhandled_syscall = [] (auto&, size_t) {};
 	// The fuzzer occasionally tries to invoke write/writev
 	machine.set_printer([] (auto&, const char *, size_t) {});
@@ -145,11 +145,11 @@ static void fuzz_syscall_helpers(const uint8_t* data, size_t len)
 	static constexpr uint64_t MAX_CYCLES = 10'000ull;
 
 	// Create empty machine
-	const riscv::MachineOptions<W> options {
+	const riscv::MachineOptions<address_t> options {
 		.allow_write_exec_segment = true,
 		.use_memory_arena = false
 	};
-	riscv::Machine<W> machine { empty, options };
+	riscv::Machine<address_t> machine { empty, options };
 	machine.on_unhandled_syscall = [] (auto&, size_t) {};
 	// The fuzzer occasionally tries to invoke write/writev
 	machine.set_printer([] (auto&, const char *, size_t) {});
@@ -160,7 +160,7 @@ static void fuzz_syscall_helpers(const uint8_t* data, size_t len)
 		const auto heap = machine.memory.mmap_allocate(2ull << 20);
 
 		machine.install_syscall_handler(1,
-			[] (riscv::Machine<W>& m) {
+			[] (riscv::Machine<address_t>& m) {
 				try {
 					const auto [str] = m.sysargs <std::string> ();
 				} catch (...) {}

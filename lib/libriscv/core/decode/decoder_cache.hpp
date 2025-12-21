@@ -26,9 +26,9 @@ static inline long nanodiff(timespec, timespec);
 #define TIME_POINT(x) /* x */
 #endif
 
-template <int W>
+template <AddressType address_t>
 struct DecoderData {
-	using Handler = instruction_handler<W>;
+	using Handler = instruction_handler<address_t>;
 
 	uint8_t  m_bytecode;
 	uint8_t  m_handler;
@@ -50,10 +50,10 @@ struct DecoderData {
 		this->m_bytecode = num;
 	}
 
-	void set_handler(Instruction<W> insn) noexcept {
+	void set_handler(Instruction<address_t> insn) noexcept {
 		this->set_insn_handler(insn.handler);
 	}
-	void set_insn_handler(instruction_handler<W> ih) noexcept {
+	void set_insn_handler(instruction_handler<address_t> ih) noexcept {
 		this->m_handler = handler_index_for(ih);
 	}
 	void set_invalid_handler() noexcept {
@@ -80,7 +80,7 @@ struct DecoderData {
 #endif
   }
 
-  bool operator==(const DecoderData<W> &other) const noexcept {
+  bool operator==(const DecoderData<address_t> &other) const noexcept {
     return m_bytecode == other.m_bytecode && m_handler == other.m_handler && idxend == other.idxend &&
            instr == other.instr;
   }
@@ -88,8 +88,8 @@ struct DecoderData {
   static size_t handler_index_for(Handler new_handler);
   static Handler *get_handlers() noexcept { return &instr_handlers[0]; }
 
-  void atomic_overwrite(const DecoderData<W> &other) noexcept {
-    static_assert(sizeof(DecoderData<W>) == 8, "DecoderData size mismatch");
+  void atomic_overwrite(const DecoderData<address_t> &other) noexcept {
+    static_assert(sizeof(DecoderData<address_t>) == 8, "DecoderData size mismatch");
     *(uint64_t *)this = *(uint64_t *)&other;
   }
 
@@ -99,7 +99,7 @@ private:
   static inline std::unordered_map<Handler, size_t> handler_cache;
 };
 
-template <int W> struct DecoderCache {
+template <AddressType address_t> struct DecoderCache {
   static constexpr size_t DIVISOR = (compressed_enabled) ? 2 : 4;
   static constexpr unsigned SHIFT = (compressed_enabled) ? 1 : 2;
 
@@ -107,11 +107,11 @@ template <int W> struct DecoderCache {
 
   inline auto *get_base() noexcept { return &cache[0]; }
 
-  std::array<DecoderData<W>, PageSize / DIVISOR> cache;
+  std::array<DecoderData<address_t>, PageSize / DIVISOR> cache;
 };
 
-template <int W> struct DecoderEntryAndCount {
-  DecoderData<W> *entry;
+template <AddressType address_t> struct DecoderEntryAndCount {
+  DecoderData<address_t> *entry;
   int count;
 };
 
@@ -120,7 +120,7 @@ struct SegmentKey {
   uint32_t crc;
   uint64_t arena_size = 0;
 
-  template <int W> static SegmentKey from(const riscv::DecodedExecuteSegment<W> &segment, uint64_t arena_size) {
+  template <AddressType address_t> static SegmentKey from(const riscv::DecodedExecuteSegment<address_t> &segment, uint64_t arena_size) {
     SegmentKey key;
     key.pc = uint64_t(segment.exec_begin());
     key.crc = segment.crc32c_hash();
@@ -132,22 +132,22 @@ struct SegmentKey {
   bool operator<(const SegmentKey &other) const;
 };
 
-template <int W> struct SharedExecuteSegments {
+template <AddressType address_t> struct SharedExecuteSegments {
   SharedExecuteSegments() = default;
   SharedExecuteSegments(const SharedExecuteSegments &) = delete;
   SharedExecuteSegments &operator=(const SharedExecuteSegments &) = delete;
   using key_t = SegmentKey;
 
   struct Segment {
-    std::shared_ptr<DecodedExecuteSegment<W>> segment;
+    std::shared_ptr<DecodedExecuteSegment<address_t>> segment;
     std::mutex mutex;
 
-    std::shared_ptr<DecodedExecuteSegment<W>> get() {
+    std::shared_ptr<DecodedExecuteSegment<address_t>> get() {
       std::lock_guard<std::mutex> lock(mutex);
       return segment;
     }
 
-    void unlocked_set(std::shared_ptr<DecodedExecuteSegment<W>> segment) { this->segment = std::move(segment); }
+    void unlocked_set(std::shared_ptr<DecodedExecuteSegment<address_t>> segment) { this->segment = std::move(segment); }
   };
 
   // Remove a segment if it is the last reference
