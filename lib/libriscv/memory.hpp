@@ -4,7 +4,7 @@
 #include <inttypes.h>
 #include <string_view>
 #include <unordered_map>
-#include "decoded_exec_segment.hpp"
+#include "decode/decoded_exec_segment.hpp"
 #include "elf.hpp"
 #include "mmap_cache.hpp"
 #include "page.hpp"

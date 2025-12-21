@@ -42,7 +42,7 @@ set(RISCV_VERSION_MINOR 11)
 
 set(SOURCES
     libriscv/debug.cpp
-    libriscv/decoder_cache.cpp
+    libriscv/decode/decoder_cache.cpp
     libriscv/memory.cpp
     libriscv/explicit_templates.cpp
     libriscv/posix/minimal.cpp
@@ -67,11 +67,11 @@ endif()
 
 if(RISCV_THREADED)
   message(STATUS "libriscv: Threaded dispatch enabled")
-  list(APPEND SOURCES libriscv/threaded_dispatch.cpp
-       libriscv/threaded_inaccurate_dispatch.cpp)
+  list(APPEND SOURCES libriscv/decode/threaded_dispatch.cpp
+       libriscv/decode/threaded_inaccurate_dispatch.cpp)
 else()
   message(STATUS "libriscv: Switch-based dispatch enabled")
-  list(APPEND SOURCES libriscv/bytecode_dispatch.cpp)
+  list(APPEND SOURCES libriscv/decode/bytecode_dispatch.cpp)
 endif()
 
 # Generate the settings header RISCV_VERSION_MAJOR and RISCV_VERSION_MINOR are

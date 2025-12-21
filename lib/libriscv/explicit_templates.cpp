@@ -1,8 +1,8 @@
-#include "decoder_cache.hpp"
 #include "common.hpp"
+#include "decode/decoder_cache.hpp"
 #include "memory.hpp"
 
-#include "decoder_cache_impl.hpp"
+#include "decode/decoder_cache_impl.hpp"
 #include "machine_impl.hpp"
 #include "memory_inline.hpp"
 

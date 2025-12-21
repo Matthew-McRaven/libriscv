@@ -1,8 +1,8 @@
 #pragma once
+#include "../machine.hpp"
+#include "../memory.hpp"
 #include "decoded_exec_segment.hpp"
 #include "decoder_cache.hpp"
-#include "machine.hpp"
-#include "memory.hpp"
 
 #include <cstdint>
 #include <mutex>

@@ -3,10 +3,10 @@
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
-#include "cpu_impl.hpp"
-#include "decoder_cache_impl.hpp"
-#include "instructions/rv32i_instr.hpp"
 #include "common.hpp"
+#include "cpu_impl.hpp"
+#include "decode/decoder_cache_impl.hpp"
+#include "instructions/rv32i_instr.hpp"
 #include "machine_impl.hpp"
 #include "memory_inline.hpp"
 
