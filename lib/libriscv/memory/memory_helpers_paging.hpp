@@ -1,5 +1,8 @@
 #pragma once
+#include "../common.hpp"
+#include "./memory.hpp"
 
+namespace riscv {
 template <AddressType address_t> inline
 void Memory<address_t>::memset(address_t dst, uint8_t value, size_t len)
 {
@@ -511,3 +514,4 @@ size_t Memory<address_t>::gather_writable_buffers_from_range(
 	}
 	return index;
 }
+} // namespace riscv

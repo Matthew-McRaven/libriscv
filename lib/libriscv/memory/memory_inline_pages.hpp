@@ -1,4 +1,9 @@
 #pragma once
+#include "../common.hpp"
+#include "./memory.hpp"
+#include "./memory_helpers_paging.hpp"
+
+namespace riscv {
 template <AddressType address_t> inline const PageData &Memory<address_t>::cached_readable_page(address_t address, size_t len) const {
   const auto pageno = page_number(address);
   auto &entry = m_rd_cache;
@@ -111,3 +116,4 @@ inline void Memory<address_t>::trap(address_t page_addr, mmio_cb_t callback)
 	page.attr.cacheable = false;
 	page.set_trap(callback);
 }
+} // namespace riscv

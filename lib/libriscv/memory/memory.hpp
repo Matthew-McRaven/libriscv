@@ -38,13 +38,11 @@ namespace riscv
 	template<AddressType address_t> struct Machine;
 	struct vBuffer { char* ptr; size_t len; };
 
-	template<AddressType address_t>
-	struct alignas(RISCV_MACHINE_ALIGNMENT) Memory
-	{
-		using mmio_cb_t = Page::mmio_cb_t;
-		using page_fault_cb_t = riscv::Function<Page&(Memory&, address_t, bool)>;
-		using page_readf_cb_t = riscv::Function<const Page&(const Memory&, address_t)>;
-		using page_write_cb_t = riscv::Function<void(Memory&, address_t, Page&)>;
+  template <AddressType address_t> struct alignas(RISCV_MACHINE_ALIGNMENT) Memory {
+    using mmio_cb_t = Page::mmio_cb_t;
+    using page_fault_cb_t = riscv::Function<Page &(Memory &, address_t, bool)>;
+    using page_readf_cb_t = riscv::Function<const Page &(const Memory &, address_t)>;
+    using page_write_cb_t = riscv::Function<void(Memory&, address_t, Page&)>;
 		static constexpr address_t BRK_MAX      = RISCV_BRK_MEMORY_SIZE; // Default BRK size
 		static constexpr address_t DYLINK_BASE  = 0x40000; // Dynamic link base address
 		static constexpr address_t RWREAD_BEGIN = 0x1000; // Default rw-arena rodata start
@@ -360,4 +358,8 @@ namespace riscv
 
 		friend struct CPU<address_t>;
   };
-}
+
+  } // namespace riscv
+
+#include "memory_inline.hpp"
+#include "memory_inline_pages.hpp"
