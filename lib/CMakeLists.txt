@@ -43,6 +43,7 @@ set(RISCV_VERSION_MINOR 11)
 set(SOURCES
     libriscv/debug.cpp
     libriscv/core/decode/decoder_cache.cpp
+    libriscv/core/cpu.cpp
     libriscv/memory/memory.cpp
     libriscv/explicit_templates.cpp
     libriscv/posix/minimal.cpp
@@ -80,8 +81,7 @@ configure_file(libriscv_settings.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/libriscv_settings.h)
 configure_file(libriscv.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libriscv.pc)
 
-add_library(riscv ${SOURCES}
-  libriscv/machine.cpp)
+add_library(riscv ${SOURCES} libriscv/machine.cpp)
 if(COSMOPOLITAN)
   target_compile_options(riscv PUBLIC -fexceptions)
 endif()

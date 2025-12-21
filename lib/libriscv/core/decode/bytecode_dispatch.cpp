@@ -1,7 +1,7 @@
 #include "../../common.hpp"
 #include "../../machine_impl.hpp"
 #include "../../memory/memory_inline.hpp"
-#include "../cpu_impl.hpp"
+#include "../cpu.hpp"
 
 #define DISPATCH_MODE_SWITCH_BASED
 #define DISPATCH_ATTR RISCV_HOT_PATH()
@@ -25,5 +25,3 @@ namespace riscv
 }
 
 #include "./cpu_dispatch.cpp"
-
-#include "./cpu_inaccurate_dispatch.cpp"

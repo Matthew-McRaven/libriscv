@@ -1,5 +1,5 @@
 #include "../../machine.hpp"
-#include "../cpu_impl.hpp"
+#include "../cpu.hpp"
 #include "./instr_helpers.hpp"
 
 #include "../../memory/memory_inline.hpp"

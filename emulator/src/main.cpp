@@ -578,11 +578,11 @@ static void run_program(
 			// Normal RISC-V simulation
 			if (cli_args.accurate)
 				machine.simulate(cli_args.fuel);
-			else {
-				// Simulate until it eventually stops (or user interrupts)
-				machine.cpu.simulate_inaccurate(machine.cpu.pc());
-			}
-		}
+      else {
+        // Simulate until it eventually stops (or user interrupts)
+        machine.simulate(std::numeric_limits<uint64_t>::max())
+      }
+    }
 	} catch (const riscv::MachineException& me) {
 		printf("%s\n", machine.cpu.current_instruction_to_string().c_str());
 		printf(">>> Machine exception %d: %s (data: 0x%" PRIX64 ")\n",

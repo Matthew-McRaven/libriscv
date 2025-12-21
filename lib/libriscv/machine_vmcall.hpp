@@ -49,13 +49,13 @@ inline address_t Machine<address_t>::vmcall(address_t pc, Args&&... args)
 	// setup calling convention
 	this->setup_call(std::forward<Args>(args)...);
 	// execute guest function
-	if constexpr (MAXI == UINT64_MAX || MAXI == 0u) {
-		this->cpu.simulate_inaccurate(pc);
-	} else {
-		this->simulate_with<Throw>(MAXI, 0u, pc);
-	}
+  if constexpr (MAXI == UINT64_MAX || MAXI == 0u) {
+    this->simulate_with<Throw>(MAXI, 0u, pc);
+  } else {
+    this->simulate_with<Throw>(MAXI, 0u, pc);
+  }
 
-	// address-sized integer return value
+  // address-sized integer return value
 	return cpu.reg(REG_ARG0);
 }
 

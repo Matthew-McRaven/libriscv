@@ -35,12 +35,6 @@ template <AddressType address_type> struct alignas(32) CPU {
   /// @return Returns true if the machine stopped normally, otherwise an execution timeout happened.
   bool simulate(address_t pc, uint64_t icounter, uint64_t maxcounter);
 
-  /// @brief Simulate faster by not counting instructions, and consequently
-  /// not checking for timeouts. This is useful when there is another
-  /// layer of timeout checking, like signal handling.
-  /// @param pc The starting address
-  void simulate_inaccurate(address_t pc);
-
   // Step precisely one instruction forward from current PC.
   void step_one(bool use_instruction_counter = true);
 
@@ -209,3 +203,5 @@ template <AddressType address_type> struct alignas(32) CPU {
     static_assert((sizeof(address_t) == 4 || sizeof(address_t) == 8), "Must be either 32-bit or64-bit ISA");
 };
 } // namespace riscv
+
+#include "cpu_inline.hpp"

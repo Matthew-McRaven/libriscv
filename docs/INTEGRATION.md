@@ -119,7 +119,7 @@ The fastest configuration is:
 3. Always enable flat read-write arena
 4. Enable experimental + 32-bit encompassing arena
 5. Enable binary translation (or use embedded source files)
-6. Disable execution timeout (use CPU::simulate_inaccurate)
+6. Disable execution timeout (use CPU::simulate_inaccurate (removed by matthew-mcraven))
 7. Enable link-time optimization
 
 Although this is the fastest known configuration, one should use the one that is most convenient.

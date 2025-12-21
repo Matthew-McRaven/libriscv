@@ -4,5 +4,5 @@
 #include "./machine_vmcall.hpp"
 #include "./native_heap.hpp"
 
-riscv::Machine<uint32_t>;
-riscv::Machine<uint32_t>;
+template struct riscv::Machine<uint32_t>;
+template struct riscv::Machine<uint64_t>;

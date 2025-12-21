@@ -5,7 +5,7 @@
 #include <inttypes.h>
 #include "../../machine.hpp"
 #include "../../riscvbase.hpp"
-#include "../cpu_impl.hpp"
+#include "../cpu.hpp"
 #include "./rvc.hpp"
 #include "instr_helpers.hpp"
 

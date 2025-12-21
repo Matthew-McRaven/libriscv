@@ -161,14 +161,13 @@ int libriscv_run(RISCVMachine *m, uint64_t instruction_limit)
 {
 	try {
 		auto& machine = *MACHINE(m);
-		if (instruction_limit == 0) {
-			machine.cpu.simulate_inaccurate(machine.cpu.pc());
-			return machine.instruction_limit_reached() ? -RISCV_ERROR_TYPE_MACHINE_TIMEOUT : 0;
-		}
-		else {
-			return machine.simulate<false>(instruction_limit) ? 0 : -RISCV_ERROR_TYPE_MACHINE_TIMEOUT;
-		}
-	} catch (const MachineTimeoutException& tmo) {
+    if (instruction_limit == 0) {
+      machine.simulate();
+      return machine.instruction_limit_reached() ? -RISCV_ERROR_TYPE_MACHINE_TIMEOUT : 0;
+    } else {
+      return machine.simulate<false>(instruction_limit) ? 0 : -RISCV_ERROR_TYPE_MACHINE_TIMEOUT;
+    }
+  } catch (const MachineTimeoutException& tmo) {
 		ERROR_CALLBACK(MACHINE(m), RISCV_ERROR_TYPE_MACHINE_TIMEOUT, tmo.what(), tmo.data());
 		return RISCV_ERROR_TYPE_MACHINE_TIMEOUT;
 	} catch (const MachineException& me) {
