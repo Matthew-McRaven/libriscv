@@ -1,5 +1,5 @@
 #pragma once
-#include "machine.hpp"
+#include "../machine.hpp"
 
 namespace riscv {
 template <AddressType address_t> template <typename... Args> constexpr inline void Machine<address_t>::setup_call(Args &&...args) {

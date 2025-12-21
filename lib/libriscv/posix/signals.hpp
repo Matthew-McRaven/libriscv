@@ -45,13 +45,4 @@ private:
   std::array<SignalAction<address_t>, 64> signals{};
   std::map<int, SignalPerThread<address_t>> m_per_thread;
 };
-
-template <AddressType address_t> Signals<address_t>::Signals() {}
-template <AddressType address_t> Signals<address_t>::~Signals() {}
-
-template <AddressType address_t> SignalAction<address_t> &Signals<address_t>::get(int sig) {
-  if (sig > 0) return signals.at(sig - 1);
-  throw MachineException(ILLEGAL_OPERATION, "Signal 0 invoked");
-}
-
 } // riscv

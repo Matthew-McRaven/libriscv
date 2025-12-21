@@ -1,7 +1,6 @@
 #include "../threads.hpp"
 
 #include <libriscv/machine.hpp>
-#include <libriscv/machine_impl.hpp>
 
 namespace riscv {
 

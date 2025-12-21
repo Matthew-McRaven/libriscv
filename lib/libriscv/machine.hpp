@@ -487,5 +487,6 @@ template <AddressType address_t> struct alignas(RISCV_MACHINE_ALIGNMENT) Machine
     static long default_stdin(const Machine &, char *, size_t);
     static uint64_t default_rdtime(const Machine&);
 };
+} // namespace riscv
 
-  } // namespace riscv
+#include "machine/machine_inline.hpp"

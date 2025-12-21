@@ -44,18 +44,19 @@ set(SOURCES
     libriscv/debug.cpp
     libriscv/core/decode/decoder_cache.cpp
     libriscv/core/cpu.cpp
+    libriscv/core/registers.cpp
     libriscv/memory/memory.cpp
-    libriscv/explicit_templates.cpp
     libriscv/posix/minimal.cpp
     libriscv/posix/signals.cpp
     libriscv/posix/threads.cpp
     libriscv/posix/socket_calls.cpp
-    libriscv/serialize.cpp
+
     libriscv/core/instructions/rvc_instr.cpp
     libriscv/core/instructions/rvi_instr.cpp
     libriscv/core/instructions/rvf_instr.cpp
     libriscv/core/instructions/rva_instr.cpp
     libriscv/core/instructions/rvv_instr.cpp
+    libriscv/machine/machine.cpp
     libriscv/util/crc32c.cpp)
 
 if(MINGW_TOOLCHAIN
@@ -66,22 +67,13 @@ elseif(UNIX)
   list(APPEND SOURCES libriscv/linux/system_calls.cpp)
 endif()
 
-if(RISCV_THREADED)
-  message(STATUS "libriscv: Threaded dispatch enabled")
-  list(APPEND SOURCES libriscv/core/decode/threaded_dispatch.cpp
-       libriscv/core/decode/threaded_inaccurate_dispatch.cpp)
-else()
-  message(STATUS "libriscv: Switch-based dispatch enabled")
-  list(APPEND SOURCES libriscv/core/decode/bytecode_dispatch.cpp)
-endif()
-
 # Generate the settings header RISCV_VERSION_MAJOR and RISCV_VERSION_MINOR are
 # required by libriscv_settings.h.in
 configure_file(libriscv_settings.h.in
                ${CMAKE_CURRENT_BINARY_DIR}/libriscv_settings.h)
 configure_file(libriscv.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libriscv.pc)
 
-add_library(riscv ${SOURCES} libriscv/machine.cpp)
+add_library(riscv ${SOURCES})
 if(COSMOPOLITAN)
   target_compile_options(riscv PUBLIC -fexceptions)
 endif()

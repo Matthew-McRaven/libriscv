@@ -1,5 +1,5 @@
 #pragma once
-#include "machine.hpp"
+#include "../machine.hpp"
 
 namespace riscv {
 
@@ -273,9 +273,9 @@ template <AddressType address_t> void Machine<address_t>::default_unknown_syscal
   machine.print(txt.c_str(), txt.size());
 }
 
-template <AddressType address_t> void Machine<address_t>::register_clobbering_syscall(size_t sysnum) {}
+template <AddressType address_t> void Machine<address_t>::register_clobbering_syscall(size_t) {}
 
-template <AddressType address_t> bool Machine<address_t>::is_clobbering_syscall(size_t sysnum) noexcept {
+template <AddressType address_t> bool Machine<address_t>::is_clobbering_syscall(size_t) noexcept {
   return false; // No clobbering syscalls in non-binary translation mode
 }
 
@@ -590,41 +590,7 @@ template <AddressType address_t> void Machine<address_t>::system(union rv32i_ins
   cpu.trigger_exception(ILLEGAL_OPERATION, instr.Itype.funct3);
 }
 
-// machine_defaults.cpp
-// Default: Stdout allowed
-template <AddressType address_t> void Machine<address_t>::default_printer(const Machine<address_t> &, const char *buffer, size_t len) {
-  std::ignore = ::write(1, buffer, len);
-}
-// Default: Stdin *NOT* allowed
-template <AddressType address_t> long Machine<address_t>::default_stdin(const Machine<address_t> &, char * /*buffer*/, size_t /*len*/) { return 0; }
-
-// Default: RDTIME produces monotonic time with *microsecond*-granularity
-template <AddressType address_t> uint64_t Machine<address_t>::default_rdtime(const Machine<address_t> &machine) {
-#ifdef __wasm__
-  return 0;
-#else
-  auto now = std::chrono::steady_clock::now();
-  auto micros = std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
-  if (!(machine.has_file_descriptors() && machine.fds().proxy_mode)) micros &= ANTI_FINGERPRINTING_MASK_MICROS();
-  return micros;
-#endif
-}
-
 // posix/signals.cpp
-template <AddressType address_t> void Signals<address_t>::enter(Machine<address_t> &machine, int sig) {
-  if (sig == 0) return;
-
-  auto &sigact = signals.at(sig);
-  if (sigact.altstack) {
-    auto *thread = machine.threads().get_thread();
-    // Change to alternate per-thread stack
-    auto &stack = per_thread(thread->tid).stack;
-    machine.cpu.reg(REG_SP) = stack.ss_sp + stack.ss_size;
-  }
-  // We have to jump to handler-4 because we are mid-instruction
-  // WARNING: Assumption.
-  machine.cpu.jump(sigact.handler - 4);
-}
 
 // native_libc.cpp
 // An arbitrary maximum length just to stop *somewhere*
@@ -840,6 +806,5 @@ template <AddressType address_t> void Machine<address_t>::setup_native_memory(co
 }
 } // namespace riscv
 
-#include "machine_impl.hpp"
 #include "machine_threads.hpp"
 #include "machine_vmcall.hpp"

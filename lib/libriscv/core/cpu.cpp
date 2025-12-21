@@ -1,66 +1,16 @@
-#include "../common.hpp"
+#include "./cpu.hpp"
 #include "../riscvbase.hpp"
 #include "./cpu.hpp"
+#include "./decode/cpu_dispatch.hpp"
 #include "./decode/threaded_bytecodes.hpp"
 
+#include <libriscv/core/decode/decoder_cache.hpp>
+
 namespace riscv {
-// Use a trick to access the Machine directly on g++/clang, Linux-only for now
-#if (defined(__GNUG__) || defined(__clang__)) && defined(__linux__)
-template <AddressType address_t> RISCV_ALWAYS_INLINE inline
-Machine<address_t>& CPU<address_t>::machine() noexcept { return *reinterpret_cast<Machine<address_t>*> (this); }
-template <AddressType address_t> RISCV_ALWAYS_INLINE inline
-const Machine<address_t>& CPU<address_t>::machine() const noexcept { return *reinterpret_cast<const Machine<address_t>*> (this); }
-#else
-template <AddressType address_t> RISCV_ALWAYS_INLINE inline
-Machine<address_t>& CPU<address_t>::machine() noexcept { return this->m_machine; }
-template <AddressType address_t> RISCV_ALWAYS_INLINE inline
-const Machine<address_t>& CPU<address_t>::machine() const noexcept { return this->m_machine; }
-#endif
-
-template <AddressType address_t> RISCV_ALWAYS_INLINE inline
-Memory<address_t>& CPU<address_t>::memory() noexcept { return machine().memory; }
-template <AddressType address_t> RISCV_ALWAYS_INLINE inline
-const Memory<address_t>& CPU<address_t>::memory() const noexcept { return machine().memory; }
-
-template <AddressType address_t>
-inline CPU<address_t>::CPU(Machine<address_t>& machine)
-	: m_machine { machine }, m_exec(empty_execute_segment().get())
-{
-}
-template <AddressType address_t>
-inline void CPU<address_t>::reset_stack_pointer() noexcept
-{
-	// initial stack location
-	this->reg(2) = machine().memory.stack_initial();
-}
-
-template<AddressType address_t>
-inline void CPU<address_t>::jump(const address_t dst)
-{
-	// it's possible to jump to a misaligned address
-	if constexpr (!compressed_enabled) {
-		if (UNLIKELY(dst & 0x3)) {
-			trigger_exception(MISALIGNED_INSTRUCTION, dst);
-		}
-	} else {
-		if (UNLIKELY(dst & 0x1)) {
-			trigger_exception(MISALIGNED_INSTRUCTION, dst);
-		}
-	}
-	this->registers().pc = dst;
-}
-
-template<AddressType address_t>
-inline void CPU<address_t>::aligned_jump(const address_t dst) noexcept
-{
-	this->registers().pc = dst;
-}
-
-template <AddressType address_t> inline void CPU<address_t>::increment_pc(int delta) noexcept { registers().pc += delta; }
-
 // cpu.cpp
 template <AddressType address_t>
-CPU<address_t>::CPU(Machine<address_t> &machine, const Machine<address_t> &other) : m_machine{machine}, m_exec(other.cpu.m_exec) {
+CPU<address_t>::CPU(Machine<address_t> &machine, const Machine<address_t> &other)
+    : m_machine{machine}, m_exec(other.cpu.m_exec) {
   // Copy all registers except vectors
   // Users can still copy vector registers by assigning to registers().rvv().
   this->registers().copy_from(Registers<address_t>::Options::NoVectors, other.cpu.registers());
@@ -82,7 +32,8 @@ template <AddressType address_t> void CPU<address_t>::reset() {
   }
 }
 
-template <AddressType address_t> RISCV_NOINLINE typename CPU<address_t>::NextExecuteReturn CPU<address_t>::next_execute_segment(address_t pc) {
+template <AddressType address_t>
+RISCV_NOINLINE typename CPU<address_t>::NextExecuteReturn CPU<address_t>::next_execute_segment(address_t pc) {
   static constexpr int MAX_RESTARTS = 4;
   int restarts = 0;
 restart_next_execute_segment:
@@ -219,7 +170,9 @@ RISCV_NOINLINE RISCV_INTERNAL typename CPU<address_t>::format_t CPU<address_t>::
   return instruction;
 }
 
-template <AddressType address_t> bool CPU<address_t>::is_executable(address_t addr) const noexcept { return m_exec->is_within(addr); }
+template <AddressType address_t> bool CPU<address_t>::is_executable(address_t addr) const noexcept {
+  return m_exec->is_within(addr);
+}
 
 template <AddressType address_t> typename CPU<address_t>::format_t CPU<address_t>::read_next_instruction() const {
   if (LIKELY(this->is_executable(this->pc()))) {
@@ -230,7 +183,8 @@ template <AddressType address_t> typename CPU<address_t>::format_t CPU<address_t
   return read_next_instruction_slowpath();
 }
 
-template <AddressType address_t> static inline rv32i_instruction decode_safely(const uint8_t *exec_seg_data, address_t pc) {
+template <AddressType address_t>
+static inline rv32i_instruction decode_safely(const uint8_t *exec_seg_data, address_t pc) {
   // Instructions may be unaligned with C-extension
   // On amd64 we take the cost, because it's faster
 #if defined(RISCV_EXT_COMPRESSED) && !defined(__x86_64__)
@@ -288,7 +242,7 @@ template <AddressType address_t> void CPU<address_t>::step_one(bool use_instruct
 
 template <AddressType address_t>
 address_t CPU<address_t>::preempt_internal(Registers<address_t> &old_regs, bool Throw, bool store_regs, address_t pc,
-                                         uint64_t max_instr) {
+                                           uint64_t max_instr) {
   auto &m = machine();
   const auto prev_max = m.max_instructions();
   try {
@@ -347,29 +301,229 @@ template <AddressType address_t> RISCV_COLD_PATH() std::string CPU<address_t>::c
   return to_string(instruction, decode(instruction));
 }
 
-template <AddressType address_t> RISCV_COLD_PATH() std::string Registers<address_t>::flp_to_string() const {
-  char buffer[800];
-  int len = 0;
-  for (int i = 0; i < 32; i++) {
-    auto &src = this->getfl(i);
-    const char T = (src.i32[1] == 0) ? 'S' : 'D';
-    if constexpr (true) {
-      double val = (src.i32[1] == 0) ? src.f32[0] : src.f64;
-      len += snprintf(buffer + len, sizeof(buffer) - len, "[%s\t%c%+.2f] ", RISCV::flpname(i), T, val);
-    } else {
-      if (src.i32[1] == 0) {
-        double val = src.f64;
-        len += snprintf(buffer + len, sizeof(buffer) - len, "[%s\t%c0x%lX] ", RISCV::flpname(i), T, *(int64_t *)&val);
-      } else {
-        float val = src.f32[0];
-        len += snprintf(buffer + len, sizeof(buffer) - len, "[%s\t%c0x%X] ", RISCV::flpname(i), T, *(int32_t *)&val);
-      }
-    }
-    if (i % 5 == 4) {
-      len += snprintf(buffer + len, sizeof(buffer) - len, "\n");
-    }
+// cpu.cpp
+// A default empty execute segment used to enforce that the
+// current CPU execute segment is never null.
+template <AddressType address_t>
+std::shared_ptr<DecodedExecuteSegment<address_t>> &CPU<address_t>::empty_execute_segment() noexcept {
+  static std::shared_ptr<DecodedExecuteSegment<address_t>> empty_shared =
+      std::make_shared<DecodedExecuteSegment<address_t>>(0, 0, 0, 0);
+  return empty_shared;
+}
+
+template <AddressType address_t>
+DecodedExecuteSegment<address_t> &CPU<address_t>::init_execute_area(const void *vdata, address_t begin,
+                                                                    address_t vlength, bool is_likely_jit) {
+  if (vlength < 4) trigger_exception(EXECUTION_SPACE_PROTECTION_FAULT, begin);
+  // Create a new *non-initial* execute segment
+  if (machine().has_options())
+    this->m_exec =
+        &machine().memory.create_execute_segment(machine().options(), vdata, begin, vlength, false, is_likely_jit);
+  else
+    this->m_exec = &machine().memory.create_execute_segment(MachineOptions<address_t>(), vdata, begin, vlength, false,
+                                                            is_likely_jit);
+  return *this->m_exec;
+} // CPU::init_execute_area
+
+template <AddressType address_t>
+DecoderData<address_t> &CPU<address_t>::create_block_ending_entry_at(DecodedExecuteSegment<address_t> &exec,
+                                                                     address_t addr) {
+  if (!exec.is_within(addr)) {
+    throw MachineException(EXECUTION_SPACE_PROTECTION_FAULT, "Breakpoint address is not within the execute segment",
+                           addr);
   }
-  len += snprintf(buffer + len, sizeof(buffer) - len, "[FFLAGS\t0x%X] ", m_fcsr.fflags);
+
+  auto *exec_decoder = exec.decoder_cache();
+  auto *decoder_begin = &exec_decoder[exec.exec_begin() / DecoderCache<address_t>::DIVISOR];
+
+  auto &cache_entry = exec_decoder[addr / DecoderCache<address_t>::DIVISOR];
+
+  // The last instruction will be the current entry
+  // Later instructions will work as normal
+  // 1. Look back to find the beginning of the block
+  auto *last = &cache_entry;
+  auto *current = &cache_entry;
+  auto last_block_bytes = cache_entry.block_bytes();
+  while (current > decoder_begin && (current - 1)->block_bytes() > last_block_bytes) {
+    current--;
+    last_block_bytes = current->block_bytes();
+  }
+
+  // 2. Find the start address of the block
+  const auto block_begin_addr = addr - (compressed_enabled ? 2 : 4) * (last - current);
+  if (!exec.is_within(block_begin_addr)) {
+    throw MachineException(INVALID_PROGRAM, "Breakpoint block was outside execute area", block_begin_addr);
+  }
+
+  // 3. Correct block_bytes() for all entries in the block
+  auto patched_addr = block_begin_addr;
+  for (auto *dd = current; dd < last; dd++) {
+    // Get the patched decoder entry
+    auto &p = exec_decoder[patched_addr / DecoderCache<address_t>::DIVISOR];
+    p.idxend = last - dd;
+#ifdef RISCV_EXT_C
+    p.icount = 0; // TODO: Implement C-ext icount for breakpoints
+#endif
+    patched_addr += (compressed_enabled) ? 2 : 4;
+  }
+  // Check if the last address matches the breakpoint address
+  if (patched_addr != addr) {
+    throw MachineException(INVALID_PROGRAM, "Last instruction in breakpoint block was not aligned", patched_addr);
+  }
+
+  return cache_entry;
+}
+
+// Install an ebreak instruction at the given address
+template <AddressType address_t>
+uint32_t CPU<address_t>::install_ebreak_for(DecodedExecuteSegment<address_t> &exec, address_t breakpoint_addr) {
+  // Get a reference to the decoder cache
+  auto &cache_entry = CPU<address_t>::create_block_ending_entry_at(exec, breakpoint_addr);
+  const auto old_instruction = cache_entry.instr;
+
+  // Install the new ebreak instruction at the breakpoint address
+  rv32i_instruction new_instruction;
+  new_instruction.Itype.opcode = 0b1110011; // SYSTEM
+  new_instruction.Itype.rd = 0;
+  new_instruction.Itype.funct3 = 0b000;
+  new_instruction.Itype.rs1 = 0;
+  new_instruction.Itype.imm = 1; // EBREAK
+  cache_entry.instr = new_instruction.whole;
+  cache_entry.set_bytecode(RV32I_BC_SYSTEM);
+  cache_entry.idxend = 0;
+#ifdef RISCV_EXT_C
+  cache_entry.icount = 0; // TODO: Implement C-ext icount for breakpoints
+#endif
+
+  // Return the old instruction
+  return old_instruction;
+}
+
+template <AddressType address_t> uint32_t CPU<address_t>::install_ebreak_at(address_t addr) {
+  return install_ebreak_for(*m_exec, addr);
+}
+
+template <AddressType address_t>
+bool CPU<address_t>::create_fast_path_function(DecodedExecuteSegment<address_t> &exec, address_t block_pc) {
+  // First, find the end of the block that either returns or stops (ignore traps)
+  // 1. Return: JALR reg
+  // 2. Stop: STOP
+  if (!exec.is_within(block_pc)) {
+    throw MachineException(EXECUTION_SPACE_PROTECTION_FAULT, "Function start address is not within the execute segment",
+                           block_pc);
+  }
+
+  auto *exec_decoder = exec.decoder_cache();
+  // The beginning of the function:
+  auto *cache_entry = &exec_decoder[block_pc / DecoderCache<address_t>::DIVISOR];
+
+  const address_t current_end = exec.exec_end();
+  while (block_pc < current_end) {
+    // Move to the end of the block
+    block_pc += cache_entry->block_bytes();
+    cache_entry += cache_entry->block_bytes() / DecoderCache<address_t>::DIVISOR;
+    // Check if we're still within the execute segment
+    if (UNLIKELY(block_pc >= current_end)) {
+      // TODO: Return false instead?
+      throw MachineException(INVALID_PROGRAM, "Function block ended outside execute area", block_pc);
+    }
+    // Check if we're at the end of the function
+    auto bytecode = cache_entry->get_bytecode();
+    if (bytecode == RV32I_BC_JALR) {
+      const FasterItype instr{cache_entry->instr};
+
+      // Check if it's a direct jump to REG_RA
+      if (instr.rs2 == REG_RA && instr.rs1 == 0 && instr.imm == 0) {
+        if (cache_entry->block_bytes() != 0)
+          throw MachineException(INVALID_PROGRAM, "Function block ended but was not last instruction in block",
+                                 block_pc);
+        // We found the (potential) end of the function
+        // Now rewrite it to a speculative live-patch STOP instruction
+        cache_entry->set_atomic_bytecode_and_handler(RV32I_BC_LIVEPATCH, 1);
+        return true;
+      } else {
+        // Unconditional jump could be a tail call, in which
+        // case we can't confidently optimize this function
+        return false;
+      }
+    } else if (bytecode == RV32I_BC_STOP) {
+      // It's already a fast-path function
+      return true;
+    } else if (bytecode == RV32I_BC_LIVEPATCH) {
+      // It's already (potentially) a fast-path function
+      if (cache_entry->m_handler == 1 || cache_entry->m_handler == 2) {
+        return true;
+      }
+#ifdef RISCV_EXT_COMPRESSED
+    } else if (bytecode == RV32C_BC_JR) {
+      const auto reg = cache_entry->instr;
+      if (reg == REG_RA) {
+        if (cache_entry->block_bytes() != 0)
+          throw MachineException(INVALID_PROGRAM, "Function block ended but was not last instruction in block",
+                                 block_pc);
+        // We found the (potential) end of the function
+        // Now rewrite it to a speculative live-patch STOP instruction
+        cache_entry->set_atomic_bytecode_and_handler(RV32I_BC_LIVEPATCH, 2);
+        return true;
+      } else {
+        return false;
+      }
+#endif
+    }
+
+    cache_entry++;
+    block_pc += (compressed_enabled) ? 2 : 4;
+  }
+  // Not able to find the end of the function
+  return false;
+}
+
+template <AddressType address_t> bool CPU<address_t>::create_fast_path_function(address_t addr) {
+  DecodedExecuteSegment<address_t> *exec = machine().memory.exec_segment_for(addr).get();
+  return create_fast_path_function(*exec, addr);
+}
+
+// rv32i/rv64i.cpp
+template <AddressType address_t>
+RISCV_INTERNAL const CPU<address_t>::instruction_t &CPU<address_t>::decode(const format_t instruction) {
+  return decode_one<address_t>(instruction);
+}
+
+template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(const format_t instruction) {
+  auto dec = decode(instruction);
+  dec.handler(*this, instruction);
+}
+
+template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(uint8_t &handler_idx, uint32_t instr) {
+  if (handler_idx == 0 && instr != 0) {
+    [[unlikely]];
+    handler_idx = DecoderData<address_t>::handler_index_for(decode(instr).handler);
+  }
+  DecoderData<address_t>::get_handlers()[handler_idx](*this, instr);
+}
+
+template <AddressType address_t>
+const Instruction<address_t> &CPU<address_t>::get_unimplemented_instruction() noexcept {
+  if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
+  else return instr64i_UNIMPLEMENTED;
+}
+
+template <AddressType address_t>
+RISCV_COLD_PATH()
+std::string CPU<address_t>::to_string(instruction_format format, const instruction_t &instr) const {
+  char buffer[256];
+  char ibuffer[128];
+  int ibuflen = instr.printer(ibuffer, sizeof(ibuffer), *this, format);
+  int len = 0;
+  if (format.length() == 4) {
+    len = snprintf(buffer, sizeof(buffer), "[%08X] %08X %.*s", this->pc(), format.whole, ibuflen, ibuffer);
+  } else if (format.length() == 2) {
+    len =
+        snprintf(buffer, sizeof(buffer), "[%08X]     %04hX %.*s", this->pc(), (uint16_t)format.whole, ibuflen, ibuffer);
+  } else {
+    throw MachineException(UNIMPLEMENTED_INSTRUCTION_LENGTH, "Unimplemented instruction format length",
+                           format.length());
+  }
   return std::string(buffer, len);
 }
 
@@ -786,55 +940,7 @@ template <AddressType address_t> size_t CPU<address_t>::computed_index_for(rv32i
   return RV32I_BC_FUNCTION;
 } // computed_index_for()
 
-// rv32i/rv64i.cpp
-template <AddressType address_t> RISCV_INTERNAL const CPU<address_t>::instruction_t &CPU<address_t>::decode(const format_t instruction) {
-  return decode_one<address_t>(instruction);
-}
-
-template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(const format_t instruction) {
-  auto dec = decode(instruction);
-  dec.handler(*this, instruction);
-}
-
-template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(uint8_t &handler_idx, uint32_t instr) {
-  if (handler_idx == 0 && instr != 0) {
-    [[unlikely]];
-    handler_idx = DecoderData<address_t>::handler_index_for(decode(instr).handler);
-  }
-  DecoderData<address_t>::get_handlers()[handler_idx](*this, instr);
-}
-
-template <AddressType address_t> const Instruction<address_t> &CPU<address_t>::get_unimplemented_instruction() noexcept {
-  if constexpr (sizeof(address_t) == 4) return instr32i_UNIMPLEMENTED;
-  else return instr64i_UNIMPLEMENTED;
-}
-
-template <AddressType address_t> RISCV_COLD_PATH() std::string Registers<address_t>::to_string() const {
-  char buffer[600];
-  int len = 0;
-  for (int i = 1; i < 32; i++) {
-    len += snprintf(buffer + len, sizeof(buffer) - len, "[%s\t%08X] ", RISCV::regname(i), this->get(i));
-    if (i % 5 == 4) len += snprintf(buffer + len, sizeof(buffer) - len, "\n");
-  }
-  return std::string(buffer, len);
-}
-
-template <AddressType address_t>
-RISCV_COLD_PATH()
-std::string CPU<address_t>::to_string(instruction_format format, const instruction_t &instr) const {
-  char buffer[256];
-  char ibuffer[128];
-  int ibuflen = instr.printer(ibuffer, sizeof(ibuffer), *this, format);
-  int len = 0;
-  if (format.length() == 4) {
-    len = snprintf(buffer, sizeof(buffer), "[%08X] %08X %.*s", this->pc(), format.whole, ibuflen, ibuffer);
-  } else if (format.length() == 2) {
-    len =
-        snprintf(buffer, sizeof(buffer), "[%08X]     %04hX %.*s", this->pc(), (uint16_t)format.whole, ibuflen, ibuffer);
-  } else {
-    throw MachineException(UNIMPLEMENTED_INSTRUCTION_LENGTH, "Unimplemented instruction format length",
-                           format.length());
-  }
-  return std::string(buffer, len);
-}
 } // namespace riscv
+
+template struct riscv::CPU<uint32_t>;
+template struct riscv::CPU<uint64_t>;

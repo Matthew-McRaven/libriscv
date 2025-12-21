@@ -45,7 +45,7 @@ TEST_CASE("Main example", "[Examples]")
 	REQUIRE(machine.return_value() == 666);
 }
 
-#include <libriscv/instructions/rv32i_instr.hpp>
+#include <libriscv/core/instructions/rv32i_instr.hpp>
 
 TEST_CASE("One instruction at a time", "[Examples]")
 {

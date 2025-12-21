@@ -1,6 +1,6 @@
 #pragma once
-#include "machine.hpp"
-#include "threads.hpp"
+#include "../machine.hpp"
+#include "../threads.hpp"
 
 /** Implementation **/
 

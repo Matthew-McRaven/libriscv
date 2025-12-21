@@ -14,7 +14,7 @@ static constexpr bool verbose_syscalls = false;
 #endif
 
 #include <fcntl.h>
-#include <libriscv/machine_impl.hpp>
+#include <libriscv/machine.hpp>
 #include <libriscv/memory/memory_inline.hpp>
 #include <signal.h>
 #undef sa_handler
