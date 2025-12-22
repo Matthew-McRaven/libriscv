@@ -1,6 +1,6 @@
 //#define SYSPRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
 
-#include "libriscv/linux/syscalls.hpp"
+#include "../machine.hpp"
 #include "libriscv/types.hpp"
 namespace riscv {
 template <AddressType address_t>

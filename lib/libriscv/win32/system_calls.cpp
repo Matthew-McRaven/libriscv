@@ -832,7 +832,6 @@ static void syscall_getrandom(Machine<address_t>& machine)
 	}
 }
 
-#include "../linux/syscalls_mman.hpp"
 #include "epoll.hpp"
 
 template<AddressType address_t>
@@ -861,14 +860,14 @@ void Machine<address_t>::setup_linux_syscalls(bool filesystem, bool sockets) {
 	this->setup_minimal_syscalls();
 
 	// eventfd2
-	install_syscall_handler(19, syscall_eventfd2<address_t>);
-	// epoll_create
-	install_syscall_handler(20, syscall_epoll_create<address_t>);
-	// epoll_ctl
-	install_syscall_handler(21, syscall_epoll_ctl<address_t>);
-	// epoll_pwait
-	install_syscall_handler(22, syscall_epoll_pwait<address_t>);
-	// dup
+  install_syscall_handler(19, riscv::syscall_eventfd2<address_t>);
+  // epoll_create
+  install_syscall_handler(20, riscv::syscall_epoll_create<address_t>);
+  // epoll_ctl
+  install_syscall_handler(21, riscv::syscall_epoll_ctl<address_t>);
+  // epoll_pwait
+  install_syscall_handler(22, riscv::syscall_epoll_pwait<address_t>);
+  // dup
 	install_syscall_handler(23, syscall_dup<address_t>);
 	// fcntl
 	install_syscall_handler(25, syscall_fcntl<address_t>);
@@ -945,19 +944,6 @@ void Machine<address_t>::setup_linux_syscalls(bool filesystem, bool sockets) {
 			add_socket_syscalls(*this);
 	}
 }
-
-#ifdef RISCV_32I
-template void Machine<4>::setup_minimal_syscalls();
-template void Machine<4>::setup_newlib_syscalls();
-template void Machine<4>::setup_newlib_syscalls(bool);
-template void Machine<4>::setup_linux_syscalls(bool, bool);
-#endif
-#ifdef RISCV_64I
-template void Machine<8>::setup_minimal_syscalls();
-template void Machine<8>::setup_newlib_syscalls();
-template void Machine<8>::setup_newlib_syscalls(bool);
-template void Machine<8>::setup_linux_syscalls(bool, bool);
-#endif
 
 FileDescriptors::~FileDescriptors() {
 	// Close all the real FDs

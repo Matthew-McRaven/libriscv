@@ -77,7 +77,7 @@ target_compile_features(riscv PUBLIC cxx_std_20)
 target_include_directories(riscv PUBLIC .)
 target_include_directories(riscv PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
-if(NOT WIN32 OR MINGW_TOOLCHAIN)
+if(NOT (WIN32 OR MINGW_TOOLCHAIN))
   target_compile_options(riscv PRIVATE -Wall -Wextra)
 endif()
 
