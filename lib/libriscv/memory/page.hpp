@@ -18,11 +18,9 @@ struct PageAttributes
 	mutable bool cacheable = true;
 	uint8_t user_defined = 0; /* Use this for yourself */
 
-	int to_prot() const noexcept {
-		return this->read | (bool)(this->write << 1) | (bool)(this->exec << 2);
-	}
+  int to_prot() const noexcept { return this->read | (this->write ? 2 : 0) | (this->exec ? 4 : 0); }
 
-	constexpr bool is_cacheable() const noexcept {
+  constexpr bool is_cacheable() const noexcept {
 		// Cacheable only makes sense when memory traps are enabled
 		if constexpr (memory_traps_enabled)
 			return cacheable;
