@@ -1,9 +1,18 @@
 cmake_minimum_required(VERSION 3.10)
 project(libriscv_unittests CXX)
 
-set(CMAKE_CXX_FLAGS
-    "-Wall -Wextra -O1 -ggdb3 -fno-omit-frame-pointer -fsanitize=address,undefined"
-)
+set(SAN_FLAGS "-fsanitize=address,undefined -fno-omit-frame-pointer")
+
+# Verify we can compile+link a tiny program with both compile and link options.
+set(CMAKE_REQUIRED_OPTIONS "${SAN_FLAGS}")
+set(CMAKE_REQUIRED_LINK_OPTIONS "${SAN_FLAGS}")
+check_cxx_source_compiles("int main(){return 0;}" HAS_ASAN_UBSAN)
+
+if(HAS_ASAN_UBSAN)
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -O1 -ggdb3 ${SAN_FLAGS}")
+else()
+  set(CMAKE_CXX_FLAGS "-Wall -Wextra -O1 -ggdb3")
+endif()
 
 option(RISCV_MULTIPROCESS "" ON)
 
