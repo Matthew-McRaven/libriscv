@@ -63,14 +63,14 @@ static inline uint64_t MUL128(
 #endif // _MSC_VER
 
 template <AddressType address_t>
-void NOP_handler(CPU<address_t> & /* cpu */, rv32i_instruction /* instr */) RVINSTR_COLDATTR {};
+RVINSTR_COLDATTR void NOP_handler(CPU<address_t> & /* cpu */, rv32i_instruction /* instr */) {};
 template <AddressType address_t>
-int NOP_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction) RVPRINTR_ATTR {
+RVPRINTR_ATTR int NOP_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction) {
   return snprintf(buffer, len, "NOP");
 };
 
 template <AddressType address_t>
-int UNIMPLEMENTED_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int UNIMPLEMENTED_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   if (instr.length() == 4) {
     return snprintf(buffer, len, "UNIMPLEMENTED: 4-byte 0x%X (0x%X)", instr.opcode(), instr.whole);
   } else {
@@ -79,64 +79,64 @@ int UNIMPLEMENTED_printer(char *buffer, size_t len, const CPU<address_t> &, rv32
   }
 };
 template <AddressType address_t>
-void UNIMPLEMENTED_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_COLDATTR {
+RVINSTR_COLDATTR void UNIMPLEMENTED_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   if (instr.length() == 4) cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
   else cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.half[0]);
 };
 template <AddressType address_t>
-void ILLEGAL_handler(CPU<address_t> &cpu, rv32i_instruction /* instr */) RVINSTR_COLDATTR {
+RVINSTR_COLDATTR void ILLEGAL_handler(CPU<address_t> &cpu, rv32i_instruction /* instr */) {
   cpu.trigger_exception(ILLEGAL_OPCODE);
 };
 
 template <AddressType address_t>
-int LOAD_I8_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int LOAD_I8_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   static std::array<const char *, 8> f3 = {"LD.B", "LD.H", "LD.W", "LD.D", "LD.BU", "LD.HU", "LD.WU", "LD.Q"};
   return snprintf(buffer, len, "%s %s, [%s%+" PRId32 " = 0x%" PRIX64 "]", f3[instr.Itype.funct3],
                   RISCV::regname(instr.Itype.rd), RISCV::regname(instr.Itype.rs1), instr.Itype.signed_imm(),
                   uint64_t(cpu.reg(instr.Itype.rs1) + instr.Itype.signed_imm()));
 };
-template <AddressType address_t> void LOAD_I8_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_I8_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (int8_t)cpu.machine().memory.template read<uint8_t>(addr);
 };
-template <AddressType address_t> void LOAD_I16_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_I16_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (int16_t)cpu.machine().memory.template read<uint16_t>(addr);
 };
-template <AddressType address_t> void LOAD_I32_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_I32_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (int32_t)cpu.machine().memory.template read<uint32_t>(addr);
 };
-template <AddressType address_t> void LOAD_I64_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_I64_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (int64_t)cpu.machine().memory.template read<uint64_t>(addr);
 };
-template <AddressType address_t> void LOAD_U8_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_U8_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (RVSIGNTYPE(cpu))cpu.machine().memory.template read<uint8_t>(addr);
 };
-template <AddressType address_t> void LOAD_U16_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_U16_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (RVSIGNTYPE(cpu))cpu.machine().memory.template read<uint16_t>(addr);
 };
-template <AddressType address_t> void LOAD_U32_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_U32_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (RVSIGNTYPE(cpu))cpu.machine().memory.template read<uint32_t>(addr);
 };
-template <AddressType address_t> void LOAD_U64_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LOAD_U64_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &reg = cpu.reg(instr.Itype.rd);
   const auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   reg = (RVSIGNTYPE(cpu))cpu.machine().memory.template read<uint64_t>(addr);
 };
 template <AddressType address_t>
-void LOAD_X_DUMMY_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_COLDATTR {
+RVINSTR_COLDATTR void LOAD_X_DUMMY_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto addr = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
   switch (instr.Itype.funct3) {
   case 0x0: cpu.machine().memory.template read<uint8_t>(addr); return;
@@ -154,43 +154,36 @@ void LOAD_X_DUMMY_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_
 };
 
 template <AddressType address_t>
-int STORE_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int STORE_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   static std::array<const char *, 8> f3 = {"ST.B", "ST.H", "ST.W", "ST.D", "ST.Q", "???", "???", "???"};
   return snprintf(buffer, len, "%s %s, [%s%+d] (0x%" PRIX64 ")", f3[instr.Stype.funct3],
                   RISCV::regname(instr.Stype.rs2), RISCV::regname(instr.Stype.rs1), instr.Stype.signed_imm(),
                   uint64_t(cpu.reg(instr.Stype.rs1) + instr.Stype.signed_imm()));
 };
-template <AddressType address_t> void STORE_I8_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void STORE_I8_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto &value = cpu.reg(instr.Stype.rs2);
   const auto addr = cpu.reg(instr.Stype.rs1) + RVIMM(cpu, instr.Stype);
   cpu.machine().memory.template write<uint8_t>(addr, value);
 };
-template <AddressType address_t> void STORE_I8_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void STORE_I8_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto &addr = cpu.reg(instr.Stype.rs1);
   const auto &value = cpu.reg(instr.Stype.rs2);
   cpu.machine().memory.template write<uint8_t>(addr, value);
 };
-template <AddressType address_t> void STORE_I16_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void STORE_I16_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto &value = cpu.reg(instr.Stype.rs2);
   const auto addr = cpu.reg(instr.Stype.rs1) + RVIMM(cpu, instr.Stype);
   cpu.machine().memory.template write<uint16_t>(addr, value);
 };
-template <AddressType address_t> void STORE_I32_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void STORE_I32_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto &value = cpu.reg(instr.Stype.rs2);
   const auto addr = cpu.reg(instr.Stype.rs1) + RVIMM(cpu, instr.Stype);
   cpu.machine().memory.template write<uint32_t>(addr, value);
 };
-template <AddressType address_t> void STORE_I64_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void STORE_I64_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto &value = cpu.reg(instr.Stype.rs2);
   const auto addr = cpu.reg(instr.Stype.rs1) + RVIMM(cpu, instr.Stype);
   cpu.machine().memory.template write<uint64_t>(addr, value);
-};
-template <AddressType address_t>
-void STORE_I128_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
-  const auto &value = cpu.reg(instr.Stype.rs2);
-  auto addr = cpu.reg(instr.Stype.rs1) + RVIMM(cpu, instr.Stype);
-  addr &= ~RVREGTYPE(cpu)(0xF);
-  cpu.machine().memory.template write<RVREGTYPE(cpu)>(addr, value);
 };
 
 #define VERBOSE_BRANCH()                                                                                               \
@@ -199,7 +192,7 @@ void STORE_I128_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINST
   }
 
 template <AddressType address_t>
-int BRANCH_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int BRANCH_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   // BRANCH compares two registers, BQE = equal taken, BNE = notequal taken
   static std::array<const char *, 8> f3 = {"BEQ", "BNE", "???", "???", "BLT", "BGE", "BLTU", "BGEU"};
   static std::array<const char *, 8> f1z = {"BEQ", "BNE", "???", "???", "BGTZ", "BLEZ", "BLTU", "BGEU"};
@@ -217,7 +210,7 @@ int BRANCH_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_in
                     uint64_t(cpu.pc() + instr.Btype.signed_imm()));
   }
 };
-template <AddressType address_t> void BRANCH_EQ_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void BRANCH_EQ_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto reg1 = cpu.reg(instr.Btype.rs1);
   const auto reg2 = cpu.reg(instr.Btype.rs2);
   if (reg1 == reg2) {
@@ -225,7 +218,7 @@ template <AddressType address_t> void BRANCH_EQ_handler(CPU<address_t> &cpu, rv3
     VERBOSE_BRANCH()
   }
 };
-template <AddressType address_t> void BRANCH_NE_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void BRANCH_NE_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto reg1 = cpu.reg(instr.Btype.rs1);
   const auto reg2 = cpu.reg(instr.Btype.rs2);
   if (reg1 != reg2) {
@@ -233,7 +226,7 @@ template <AddressType address_t> void BRANCH_NE_handler(CPU<address_t> &cpu, rv3
     VERBOSE_BRANCH()
   }
 };
-template <AddressType address_t> void BRANCH_LT_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void BRANCH_LT_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto reg1 = cpu.reg(instr.Btype.rs1);
   const auto reg2 = cpu.reg(instr.Btype.rs2);
   if (RVTOSIGNED(reg1) < RVTOSIGNED(reg2)) {
@@ -241,7 +234,7 @@ template <AddressType address_t> void BRANCH_LT_handler(CPU<address_t> &cpu, rv3
     VERBOSE_BRANCH()
   }
 };
-template <AddressType address_t> void BRANCH_GE_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void BRANCH_GE_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto reg1 = cpu.reg(instr.Btype.rs1);
   const auto reg2 = cpu.reg(instr.Btype.rs2);
   if (RVTOSIGNED(reg1) >= RVTOSIGNED(reg2)) {
@@ -249,7 +242,7 @@ template <AddressType address_t> void BRANCH_GE_handler(CPU<address_t> &cpu, rv3
     VERBOSE_BRANCH()
   }
 };
-template <AddressType address_t> void BRANCH_LTU_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void BRANCH_LTU_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto &reg1 = cpu.reg(instr.Btype.rs1);
   const auto &reg2 = cpu.reg(instr.Btype.rs2);
   if (reg1 < reg2) {
@@ -257,7 +250,7 @@ template <AddressType address_t> void BRANCH_LTU_handler(CPU<address_t> &cpu, rv
     VERBOSE_BRANCH()
   }
 };
-template <AddressType address_t> void BRANCH_GEU_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void BRANCH_GEU_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const auto &reg1 = cpu.reg(instr.Btype.rs1);
   const auto &reg2 = cpu.reg(instr.Btype.rs2);
   if (reg1 >= reg2) {
@@ -266,7 +259,7 @@ template <AddressType address_t> void BRANCH_GEU_handler(CPU<address_t> &cpu, rv
   }
 };
 
-template <AddressType address_t> void JALR_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void JALR_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   // jump to register + immediate
   // NOTE: if rs1 == rd, avoid clobber by storing address first
   const auto address = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
@@ -281,7 +274,7 @@ template <AddressType address_t> void JALR_handler(CPU<address_t> &cpu, rv32i_in
   }
 };
 template <AddressType address_t>
-int JALR_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int JALR_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   // RISC-V's RET instruction: return to register + immediate
   const char *variant = (instr.Itype.rs1 == REG_RA) ? "RET" : "JMP";
   const auto address = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
@@ -289,7 +282,7 @@ int JALR_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_inst
                   instr.Itype.signed_imm(), uint64_t(address));
 };
 
-template <AddressType address_t> void JAL_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void JAL_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   // Link *next* instruction (rd = PC + 4)
   cpu.reg(instr.Jtype.rd) = cpu.pc() + 4;
   // And jump relative
@@ -301,7 +294,7 @@ template <AddressType address_t> void JAL_handler(CPU<address_t> &cpu, rv32i_ins
 };
 
 template <AddressType address_t>
-int JAL_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int JAL_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   if (instr.Jtype.rd != 0) {
     return snprintf(buffer, len, "JAL %s, PC%+d (0x%" PRIX64 ")", RISCV::regname(instr.Jtype.rd),
                     instr.Jtype.jump_offset(), uint64_t(cpu.pc() + instr.Jtype.jump_offset()));
@@ -309,7 +302,7 @@ int JAL_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instr
   return snprintf(buffer, len, "JMP PC%+d (0x%" PRIX64 ")", instr.Jtype.jump_offset(),
                   uint64_t(cpu.pc() + instr.Jtype.jump_offset()));
 };
-template <AddressType address_t> void JMPI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void JMPI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   // Jump relative
   cpu.jump(cpu.pc() + instr.Jtype.jump_offset() - 4);
   if constexpr (verbose_branches_enabled) {
@@ -319,7 +312,7 @@ template <AddressType address_t> void JMPI_handler(CPU<address_t> &cpu, rv32i_in
 };
 
 template <AddressType address_t>
-int OP_IMM_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int OP_IMM_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   if (instr.Itype.imm == 0) {
     // this is the official NOP instruction (ADDI x0, x0, 0)
     if (instr.Itype.rd == 0 && instr.Itype.rs1 == 0) {
@@ -354,7 +347,7 @@ int OP_IMM_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_in
   return snprintf(buffer, len, "%s %s, %d (0x%X)", func3[instr.Itype.funct3], RISCV::regname(instr.Itype.rd),
                   instr.Itype.signed_imm(), instr.Itype.signed_imm());
 };
-template <AddressType address_t> void OP_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_IMM_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const auto src = cpu.reg(instr.Itype.rs1);
   switch (instr.Itype.funct3) {
@@ -448,36 +441,36 @@ template <AddressType address_t> void OP_IMM_handler(CPU<address_t> &cpu, rv32i_
   }
   cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
 };
-template <AddressType address_t> void OP_IMM_ADDI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_IMM_ADDI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   // ADDI: Add sign-extended 12-bit immediate
   cpu.reg(instr.Itype.rd) = cpu.reg(instr.Itype.rs1) + RVIMM(cpu, instr.Itype);
 };
-template <AddressType address_t> void OP_IMM_LI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_IMM_LI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   // LI: Load sign-extended 12-bit immediate
   cpu.reg(instr.Itype.rd) = (RVSIGNTYPE(cpu))RVIMM(cpu, instr.Itype);
 };
-template <AddressType address_t> void OP_MV_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_MV_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   cpu.reg(instr.Itype.rd) = cpu.reg(instr.Itype.rs1);
 };
-template <AddressType address_t> void OP_IMM_SLLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_IMM_SLLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const auto src = cpu.reg(instr.Itype.rs1);
   // SLLI: Logical left-shift 5/6/7-bit immediate
   dst = src << (instr.Itype.imm & (RVXLEN(cpu) - 1));
 };
-template <AddressType address_t> void OP_IMM_SRLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_IMM_SRLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const auto src = cpu.reg(instr.Itype.rs1);
   // SRLI: Shift-right logical 5/6/7-bit immediate
   dst = src >> (instr.Itype.imm & (RVXLEN(cpu) - 1));
 };
-template <AddressType address_t> void OP_IMM_ANDI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_IMM_ANDI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   // ANDI: And sign-extended 12-bit immediate
   dst = cpu.reg(instr.Itype.rs1) & RVIMM(cpu, instr.Itype);
 };
 
-template <AddressType address_t> void OP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Rtype.rd);
   const auto src1 = cpu.reg(instr.Rtype.rs1);
   const auto src2 = cpu.reg(instr.Rtype.rs2);
@@ -668,7 +661,7 @@ template <AddressType address_t> void OP_handler(CPU<address_t> &cpu, rv32i_inst
   cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
 };
 template <AddressType address_t>
-int OP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int OP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const char *strop = "";
   switch (instr.Rtype.jumptable_friendly_op()) {
   case 0x0: strop = "ADD"; break;
@@ -713,20 +706,20 @@ int OP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instru
   return snprintf(buffer, len, "%s %s <- %s, %s (= 0x%" PRIX64 ")", strop, RISCV::regname(instr.Rtype.rd),
                   RISCV::regname(instr.Rtype.rs1), RISCV::regname(instr.Rtype.rs2), uint64_t(cpu.reg(instr.Rtype.rd)));
 };
-template <AddressType address_t> void OP_ADD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_ADD_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Rtype.rd);
   dst = cpu.reg(instr.Rtype.rs1) + cpu.reg(instr.Rtype.rs2);
 };
-template <AddressType address_t> void OP_SUB_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_SUB_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Rtype.rd);
   dst = cpu.reg(instr.Rtype.rs1) - cpu.reg(instr.Rtype.rs2);
 };
 
-template <AddressType address_t> void SYSTEM_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_COLDATTR {
+template <AddressType address_t> RVINSTR_COLDATTR void SYSTEM_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   cpu.machine().system(instr);
 };
 template <AddressType address_t>
-int SYSTEM_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int SYSTEM_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   // system functions
   static std::array<const char *, 2> etype = {"ECALL", "EBREAK"};
   if (instr.Itype.imm < 2 && instr.Itype.funct3 == 0) {
@@ -755,39 +748,39 @@ int SYSTEM_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instr
     return snprintf(buffer, len, "SYS ???");
   }
 };
-template <AddressType address_t> void SYSCALL_handler(CPU<address_t> &cpu, rv32i_instruction) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void SYSCALL_handler(CPU<address_t> &cpu, rv32i_instruction) {
   cpu.machine().system_call(cpu.reg(REG_ECALL));
 };
-template <AddressType address_t> void WFI_handler(CPU<address_t> &cpu, rv32i_instruction) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void WFI_handler(CPU<address_t> &cpu, rv32i_instruction) {
   cpu.machine().stop();
 };
 
-template <AddressType address_t> void LUI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void LUI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   cpu.reg(instr.Utype.rd) = instr.Utype.upper_imm();
 };
 template <AddressType address_t>
-int LUI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int LUI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   return snprintf(buffer, len, "LUI %s, 0x%X", RISCV::regname(instr.Utype.rd), instr.Utype.upper_imm());
 };
 
-template <AddressType address_t> void AUIPC_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void AUIPC_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   cpu.reg(instr.Utype.rd) = cpu.pc() + instr.Utype.upper_imm();
 };
 template <AddressType address_t>
-int AUIPC_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int AUIPC_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   return snprintf(buffer, len, "AUIPC %s, PC+0x%X (0x%" PRIX64 ")", RISCV::regname(instr.Utype.rd),
                   instr.Utype.upper_imm(), uint64_t(cpu.pc() + instr.Utype.upper_imm()));
 };
 
 template <AddressType address_t>
-void OP_IMM32_ADDIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+void RVINSTR_ATTR OP_IMM32_ADDIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const uint32_t src = cpu.reg(instr.Itype.rs1);
   // ADDIW: Add 32-bit sign-extended 12-bit immediate
   dst = (int32_t)(src + RVIMM(cpu, instr.Itype));
 };
 template <AddressType address_t>
-int OP_IMM32_ADDIW_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int OP_IMM32_ADDIW_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   if (instr.Itype.imm == 0) {
     // this is the official NOP instruction (ADDI x0, x0, 0)
     if (instr.Itype.rd == 0 && instr.Itype.rs1 == 0) {
@@ -819,34 +812,34 @@ int OP_IMM32_ADDIW_printer(char *buffer, size_t len, const CPU<address_t> &cpu, 
                   instr.Itype.signed_imm(), instr.Itype.signed_imm());
 };
 template <AddressType address_t>
-void OP_IMM32_SLLIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+RVINSTR_ATTR void OP_IMM32_SLLIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const uint32_t src = cpu.reg(instr.Itype.rs1);
   // SLLIW: Shift-Left Logical 0-31 immediate
   dst = (int32_t)(src << instr.Itype.shift_imm());
 };
 template <AddressType address_t>
-void OP_IMM32_SRLIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+RVINSTR_ATTR void OP_IMM32_SRLIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const uint32_t src = cpu.reg(instr.Itype.rs1);
   // SRLIW: Shift-Right Logical 0-31 immediate
   dst = (int32_t)(src >> instr.Itype.shift_imm());
 };
 template <AddressType address_t>
-void OP_IMM32_SRAIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+RVINSTR_ATTR void OP_IMM32_SRAIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const uint32_t src = cpu.reg(instr.Itype.rs1);
   // SRAIW: Arithmetic right shift, preserve the sign bit
   dst = (int32_t)src >> instr.Itype.shift_imm();
 };
 template <AddressType address_t>
-void OP_IMM32_SLLI_UW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+RVINSTR_ATTR void OP_IMM32_SLLI_UW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const uint32_t src = cpu.reg(instr.Itype.rs1);
   // SLLI.UW: Shift-left Unsigned Word (Immediate)
   dst = RVREGTYPE(cpu)(src) << instr.Itype.shift_imm();
 };
-template <AddressType address_t> void OP_IMM32_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP_IMM32_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Itype.rd);
   const uint32_t src = cpu.reg(instr.Itype.rs1);
 
@@ -888,7 +881,7 @@ template <AddressType address_t> void OP_IMM32_handler(CPU<address_t> &cpu, rv32
   cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
 };
 
-template <AddressType address_t> void OP32_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP32_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Rtype.rd);
   const uint32_t src1 = cpu.reg(instr.Rtype.rs1);
   const uint32_t src2 = cpu.reg(instr.Rtype.rs2);
@@ -975,7 +968,7 @@ template <AddressType address_t> void OP32_handler(CPU<address_t> &cpu, rv32i_in
   cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION, instr.whole);
 };
 template <AddressType address_t>
-int OP32_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int OP32_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const char *strop = "";
   switch (instr.Rtype.jumptable_friendly_op()) {
   case 0x0: strop = "ADD.W"; break;
@@ -1003,19 +996,19 @@ int OP32_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_inst
   return snprintf(buffer, len, "%s %s <- %s, %s (= 0x%" PRIX64 ")", strop, RISCV::regname(instr.Rtype.rd),
                   RISCV::regname(instr.Rtype.rs1), RISCV::regname(instr.Rtype.rs2), uint64_t(cpu.reg(instr.Rtype.rd)));
 };
-template <AddressType address_t> void OP32_ADDW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void OP32_ADDW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   auto &dst = cpu.reg(instr.Rtype.rd);
   const uint32_t src1 = cpu.reg(instr.Rtype.rs1);
   const uint32_t src2 = cpu.reg(instr.Rtype.rs2);
   dst = (int32_t)(src1 + src2);
 };
 
-template <AddressType address_t> void FENCE_handler(CPU<address_t> &, rv32i_instruction /* instr */) RVINSTR_COLDATTR {
+template <AddressType address_t> RVINSTR_COLDATTR void FENCE_handler(CPU<address_t> &, rv32i_instruction /* instr */) {
   // Do a full barrier, for now
   std::atomic_thread_fence(std::memory_order_seq_cst);
 };
 template <AddressType address_t>
-int FENCE_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction) RVPRINTR_ATTR {
+RVPRINTR_ATTR int FENCE_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction) {
   // printer
   return snprintf(buffer, len, "FENCE");
 };
@@ -1044,7 +1037,6 @@ const riscv::Instruction<uint32_t> instr32i_STORE_I8{riscv::STORE_I8_handler, ri
 const riscv::Instruction<uint32_t> instr32i_STORE_I16_IMM{riscv::STORE_I16_IMM_handler, riscv::STORE_printer};
 const riscv::Instruction<uint32_t> instr32i_STORE_I32_IMM{riscv::STORE_I32_IMM_handler, riscv::STORE_printer};
 const riscv::Instruction<uint32_t> instr32i_STORE_I64_IMM{riscv::STORE_I64_IMM_handler, riscv::STORE_printer};
-const riscv::Instruction<uint32_t> instr32i_STORE_I128_IMM{riscv::STORE_I128_IMM_handler, riscv::STORE_printer};
 const riscv::Instruction<uint32_t> instr32i_BRANCH_EQ{riscv::BRANCH_EQ_handler, riscv::BRANCH_printer};
 const riscv::Instruction<uint32_t> instr32i_BRANCH_NE{riscv::BRANCH_NE_handler, riscv::BRANCH_printer};
 const riscv::Instruction<uint32_t> instr32i_BRANCH_LT{riscv::BRANCH_LT_handler, riscv::BRANCH_printer};
@@ -1096,7 +1088,6 @@ const riscv::Instruction<uint64_t> instr64i_STORE_I8{riscv::STORE_I8_handler, ri
 const riscv::Instruction<uint64_t> instr64i_STORE_I16_IMM{riscv::STORE_I16_IMM_handler, riscv::STORE_printer};
 const riscv::Instruction<uint64_t> instr64i_STORE_I32_IMM{riscv::STORE_I32_IMM_handler, riscv::STORE_printer};
 const riscv::Instruction<uint64_t> instr64i_STORE_I64_IMM{riscv::STORE_I64_IMM_handler, riscv::STORE_printer};
-const riscv::Instruction<uint64_t> instr64i_STORE_I128_IMM{riscv::STORE_I128_IMM_handler, riscv::STORE_printer};
 const riscv::Instruction<uint64_t> instr64i_BRANCH_EQ{riscv::BRANCH_EQ_handler, riscv::BRANCH_printer};
 const riscv::Instruction<uint64_t> instr64i_BRANCH_NE{riscv::BRANCH_NE_handler, riscv::BRANCH_printer};
 const riscv::Instruction<uint64_t> instr64i_BRANCH_LT{riscv::BRANCH_LT_handler, riscv::BRANCH_printer};

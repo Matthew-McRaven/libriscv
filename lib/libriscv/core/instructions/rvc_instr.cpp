@@ -1,4 +1,3 @@
-#pragma once
 // Must be before instr_helpers.hpp
 #include "../../common.hpp"
 
@@ -10,12 +9,12 @@
 #include "instr_helpers.hpp"
 
 namespace riscv {
-template <AddressType address_t> void C0_ADDI4SPN_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_ADDI4SPN_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   cpu.cireg(ci.CIW.srd) = cpu.reg(REG_SP) + ci.CIW.offset();
 };
 template <AddressType address_t>
-int C0_ADDI4SPN_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C0_ADDI4SPN_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   if (UNLIKELY(ci.whole == 0)) {
     return snprintf(buffer, len, "INVALID: All zeroes");
@@ -25,42 +24,42 @@ int C0_ADDI4SPN_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv3
 };
 
 // LW, LD, LQ, FLW, FLD
-template <AddressType address_t> void C0_REG_FLD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_FLD_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.cireg(ci.CL.srs1) + ci.CSD.offset8();
   cpu.ciflp(ci.CL.srd).load_u64(cpu.machine().memory.template read<uint64_t>(address));
 };
 template <AddressType address_t>
-int C0_REG_FLD_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C0_REG_FLD_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   static const std::array<const char *, 4> f3 = {"???", "FLD", "LW", RVIS64BIT(cpu) ? "LD" : "FLW"};
   const rv32c_instruction ci{instr};
   return snprintf(buffer, len, "C.%s %s, [%s+%u = 0x%lX]", f3[ci.CL.funct3], RISCV::ciname(ci.CL.srd),
                   RISCV::ciname(ci.CL.srs1), ci.CL.offset(), (long)cpu.cireg(ci.CL.srs1) + ci.CL.offset());
 };
-template <AddressType address_t> void C0_REG_LW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_LW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.cireg(ci.CL.srs1) + ci.CL.offset();
   cpu.cireg(ci.CL.srd) = (int32_t)cpu.machine().memory.template read<uint32_t>(address);
 };
-template <AddressType address_t> void C0_REG_LD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_LD_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.cireg(ci.CSD.srs1) + ci.CSD.offset8();
   cpu.cireg(ci.CSD.srs2) = (int64_t)cpu.machine().memory.template read<uint64_t>(address);
 };
-template <AddressType address_t> void C0_REG_FLW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_FLW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.cireg(ci.CL.srs1) + ci.CL.offset();
   cpu.ciflp(ci.CL.srd).load_u32(cpu.machine().memory.template read<uint32_t>(address));
 };
 // SW, SD, SQ, FSW, FSD
-template <AddressType address_t> void C0_REG_FSD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_FSD_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   const auto address = cpu.cireg(ci.CSD.srs1) + ci.CSD.offset8();
   const auto value = cpu.ciflp(ci.CSD.srs2).i64;
   cpu.machine().memory.template write<uint64_t>(address, value);
 };
 template <AddressType address_t>
-int C0_REG_FSD_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C0_REG_FSD_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   static const std::array<const char *, 4> f3 = {"Reserved instruction", "FSD", "SW", "FSW"};
   const rv32c_instruction ci{instr};
   if (ci.CS.funct3 == 0x6) {
@@ -71,31 +70,32 @@ int C0_REG_FSD_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_i
   return snprintf(buffer, len, "C.%s %s, [%s%+d]", f3[ci.CS.funct3 - 4], RISCV::ciflp(ci.CS.srs2),
                   RISCV::ciname(ci.CS.srs1), offset);
 };
-template <AddressType address_t> void C0_REG_SW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_SW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   const auto address = cpu.cireg(ci.CS.srs1) + ci.CS.offset4();
   const auto value = cpu.cireg(ci.CS.srs2);
   cpu.machine().memory.template write<uint32_t>(address, value);
 };
-template <AddressType address_t> void C0_REG_SD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_SD_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   const auto address = cpu.cireg(ci.CSD.srs1) + ci.CSD.offset8();
   const auto value = cpu.cireg(ci.CSD.srs2);
   cpu.machine().memory.template write<uint64_t>(address, value);
 };
-template <AddressType address_t> void C0_REG_FSW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C0_REG_FSW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   const auto address = cpu.cireg(ci.CS.srs1) + ci.CS.offset4();
   const auto value = cpu.ciflp(ci.CS.srs2).i32[0];
   cpu.machine().memory.template write<uint32_t>(address, value);
 };
 
-template <AddressType address_t> void C1_ADDI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_ADDI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   // C.ADDI (non-hint, not NOP)
   cpu.reg(ci.CI.rd) += ci.CI.signed_imm();
 };
-template <AddressType address_t> int C1_ADDI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+template <AddressType address_t>
+RVPRINTR_ATTR int C1_ADDI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   if (ci.CI.rd != 0) {
     return snprintf(buffer, len, "C.ADDI %s, %" PRId32, RISCV::regname(ci.CI.rd), ci.CI.signed_imm());
@@ -104,7 +104,7 @@ template <AddressType address_t> int C1_ADDI_printer(char *buffer, size_t len, c
   return snprintf(buffer, len, "C.NOP");
 };
 
-template <AddressType address_t> void C1_JAL_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_JAL_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   cpu.reg(REG_RA) = cpu.pc() + 2; // return instruction
   const auto address = cpu.pc() + ci.CJ.signed_imm();
@@ -114,40 +114,42 @@ template <AddressType address_t> void C1_JAL_handler(CPU<address_t> &cpu, rv32i_
   }
 };
 template <AddressType address_t>
-int C1_JAL_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C1_JAL_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   return snprintf(buffer, len, "C.JAL %s, PC%+" PRId32 " (0x%" PRIX64 ")", RISCV::regname(REG_RA), ci.CJ.signed_imm(),
                   uint64_t(cpu.pc() + ci.CJ.signed_imm()));
 };
 
-template <AddressType address_t> void C1_ADDIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_ADDIW_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   // C.ADDIW rd, imm[5:0]
   const uint32_t src = cpu.reg(ci.CI.rd);
   cpu.reg(ci.CI.rd) = (int32_t)(src + ci.CI.signed_imm());
 };
-template <AddressType address_t> int C1_ADDIW_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+template <AddressType address_t>
+RVPRINTR_ATTR int C1_ADDIW_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   return snprintf(buffer, len, "C.ADDIW %s, %+" PRId32, RISCV::regname(ci.CI.rd), ci.CI.signed_imm());
 };
 
-template <AddressType address_t> void C1_LI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_LI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   // C.LI rd, imm[5:0]
   cpu.reg(ci.CI.rd) = ci.CI.signed_imm();
 };
-template <AddressType address_t> int C1_LI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+template <AddressType address_t>
+RVPRINTR_ATTR int C1_LI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   return snprintf(buffer, len, "C.LI %s, %+" PRId32, RISCV::regname(ci.CI.rd), ci.CI.signed_imm());
 };
 
-template <AddressType address_t> void C1_ADDI16SP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_ADDI16SP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   // C.ADDI16SP rd, imm[17:12]
   cpu.reg(REG_SP) += ci.CI16.signed_imm();
 };
 template <AddressType address_t>
-int C1_ADDI16SP_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C1_ADDI16SP_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   if (ci.CI.rd != 0 && ci.CI.rd != 2) {
     return snprintf(buffer, len, "C.LUI %s, 0x%" PRIX32, RISCV::regname(ci.CI.rd), ci.CI.upper_imm());
@@ -156,12 +158,12 @@ int C1_ADDI16SP_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_
   }
   return snprintf(buffer, len, "C.LUI (Invalid values)");
 };
-template <AddressType address_t> void C1_LUI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_LUI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   // LUI rd, imm[17:12] (sign-extended)
   cpu.reg(ci.CI.rd) = (int32_t)ci.CI.upper_imm();
 };
-template <AddressType address_t> void C1_ALU_OPS_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_ALU_OPS_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto &dst = cpu.cireg(ci.CA.srd);
   switch (ci.CA.funct6 & 0x3) {
@@ -211,7 +213,7 @@ template <AddressType address_t> void C1_ALU_OPS_handler(CPU<address_t> &cpu, rv
   cpu.trigger_exception(ILLEGAL_OPCODE);
 };
 template <AddressType address_t>
-int C1_ALU_OPS_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C1_ALU_OPS_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   if ((ci.CA.funct6 & 0x3) < 2) {
     static const std::array<const char *, 2> f3 = {"SRLI", "SRAI"};
@@ -226,7 +228,7 @@ int C1_ALU_OPS_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32
   return snprintf(buffer, len, "C.%s %s, %s", f3[op], RISCV::ciname(ci.CA.srd), RISCV::ciname(ci.CA.srs2));
 };
 
-template <AddressType address_t> void C1_JUMP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_JUMP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   cpu.jump(cpu.pc() + ci.CJ.signed_imm() - 2);
   if constexpr (verbose_branches_enabled) {
@@ -234,11 +236,11 @@ template <AddressType address_t> void C1_JUMP_handler(CPU<address_t> &cpu, rv32i
   }
 };
 template <AddressType address_t>
-int C1_JUMP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C1_JUMP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   return snprintf(buffer, len, "C.JMP 0x%" PRIX64, uint64_t(cpu.pc() + ci.CJ.signed_imm()));
 };
-template <AddressType address_t> void C1_BEQZ_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_BEQZ_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   // condition: register equals zero
   if (cpu.cireg(ci.CB.srs1) == 0) {
@@ -250,13 +252,13 @@ template <AddressType address_t> void C1_BEQZ_handler(CPU<address_t> &cpu, rv32i
   }
 };
 template <AddressType address_t>
-int C1_BEQZ_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C1_BEQZ_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   return snprintf(buffer, len, "C.BEQZ %s, PC%+" PRId32 " (0x%" PRIX64 ")", RISCV::ciname(ci.CB.srs1),
                   ci.CB.signed_imm(), uint64_t(cpu.pc() + ci.CB.signed_imm()));
 };
 
-template <AddressType address_t> void C1_BNEZ_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C1_BNEZ_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   // condition: register not-equal zero
   if (cpu.cireg(ci.CB.srs1) != 0) {
@@ -268,7 +270,7 @@ template <AddressType address_t> void C1_BNEZ_handler(CPU<address_t> &cpu, rv32i
   }
 };
 template <AddressType address_t>
-int C1_BNEZ_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C1_BNEZ_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   return snprintf(buffer, len, "C.BNEZ %s, PC%+" PRId32 " (0x%" PRIX64 ")", RISCV::ciname(ci.CB.srs1),
                   ci.CB.signed_imm(), uint64_t(cpu.pc() + ci.CB.signed_imm()));
@@ -276,7 +278,7 @@ int C1_BNEZ_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_i
 
 // C.SLLI, LWSP, LDSP, LQSP, FLWSP, FLDSP
 template <AddressType address_t>
-int C2_SLLI_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C2_SLLI_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   if (ci.CI2.funct3 == 0x0 && ci.CI2.rd != 0) {
     return snprintf(buffer, len, "C.SLLI %s, %u", RISCV::regname(ci.CI.rd),
@@ -290,7 +292,7 @@ int C2_SLLI_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_i
   }
   return snprintf(buffer, len, "C.HINT %s", RISCV::regname(ci.CI2.rd));
 };
-template <AddressType address_t> void C2_SLLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_SLLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   if constexpr (RVIS64BIT(cpu)) {
     cpu.reg(ci.CI.rd) <<= ci.CI.shift64_imm();
@@ -298,23 +300,23 @@ template <AddressType address_t> void C2_SLLI_handler(CPU<address_t> &cpu, rv32i
     cpu.reg(ci.CI.rd) <<= ci.CI.shift_imm();
   }
 };
-template <AddressType address_t> void C2_FLDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_FLDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.reg(REG_SP) + ci.CIFLD.offset();
   auto &dst = cpu.registers().getfl(ci.CIFLD.rd);
   dst.load_u64(cpu.machine().memory.template read<uint64_t>(address));
 };
-template <AddressType address_t> void C2_LWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_LWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.reg(REG_SP) + ci.CI2.offset();
   cpu.reg(ci.CI2.rd) = (int32_t)cpu.machine().memory.template read<uint32_t>(address);
 };
-template <AddressType address_t> void C2_LDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_LDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.reg(REG_SP) + ci.CIFLD.offset();
   cpu.reg(ci.CIFLD.rd) = (int64_t)cpu.machine().memory.template read<uint64_t>(address);
 };
-template <AddressType address_t> void C2_FLWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_FLWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.reg(REG_SP) + ci.CI2.offset();
   auto &dst = cpu.registers().getfl(ci.CI2.rd);
@@ -322,39 +324,39 @@ template <AddressType address_t> void C2_FLWSP_handler(CPU<address_t> &cpu, rv32
 };
 // SWSP, SDSP, SQSP, FSWSP, FSDSP
 template <AddressType address_t>
-int C2_FSDSP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C2_FSDSP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   static const std::array<const char *, 4> f3 = {"XXX", "FSDSP", "SWSP", RVIS64BIT(cpu) ? "SDSP" : "FSWSP"};
   const rv32c_instruction ci{instr};
   auto address = cpu.reg(REG_SP) + ci.CSS.offset(4);
   return snprintf(buffer, len, "C.%s [SP%+d], %s (0x%lX)", f3[ci.CSS.funct3 - 4], ci.CSS.offset(4),
                   RISCV::regname(ci.CSS.rs2), (long)address);
 };
-template <AddressType address_t> void C2_FSDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_FSDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto addr = cpu.reg(REG_SP) + ci.CSFSD.offset();
   uint64_t value = cpu.registers().getfl(ci.CSFSD.rs2).i64;
   cpu.machine().memory.template write<uint64_t>(addr, value);
 };
-template <AddressType address_t> void C2_SWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_SWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto addr = cpu.reg(REG_SP) + ci.CSS.offset(4);
   uint32_t value = cpu.reg(ci.CSS.rs2);
   cpu.machine().memory.template write<uint32_t>(addr, value);
 };
-template <AddressType address_t> void C2_FSWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_FSWSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto addr = cpu.reg(REG_SP) + ci.CSS.offset(4);
   uint32_t value = cpu.registers().getfl(ci.CSS.rs2).i32[0];
   cpu.machine().memory.template write<uint32_t>(addr, value);
 };
-template <AddressType address_t> void C2_SDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_SDSP_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto addr = cpu.reg(REG_SP) + ci.CSFSD.offset();
   auto value = cpu.reg(ci.CSFSD.rs2);
   cpu.machine().memory.template write<uint64_t>(addr, value);
 };
 template <AddressType address_t>
-int C2_SDSP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+RVPRINTR_ATTR int C2_SDSP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   auto address = cpu.reg(REG_SP) + ci.CSFSD.offset();
   return snprintf(buffer, len, "C.SDSP [SP%+d], %s (0x%lX)", ci.CSFSD.offset(), RISCV::regname(ci.CSS.rs2),
@@ -362,7 +364,8 @@ int C2_SDSP_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_i
 };
 
 // C.JR, C.MV, C.JALR, C.ADD
-template <AddressType address_t> int C2_JR_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) RVPRINTR_ATTR {
+template <AddressType address_t>
+RVPRINTR_ATTR int C2_JR_printer(char *buffer, size_t len, const CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   const bool topbit = ci.whole & (1 << 12);
   if (!topbit && ci.CR.rs2 == 0 && ci.CR.rd != 0) {
@@ -378,14 +381,14 @@ template <AddressType address_t> int C2_JR_printer(char *buffer, size_t len, con
   else if (topbit && ci.CR.rd == 0 && ci.CR.rs2 == 0) return snprintf(buffer, len, "C.EBREAK");
   return snprintf(buffer, len, "C.HINT");
 };
-template <AddressType address_t> void C2_JR_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_JR_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   cpu.jump(cpu.reg(ci.CR.rd) - 2);
   if constexpr (verbose_branches_enabled) {
     printf(">>> RET 0x%lX <-- %s = 0x%lX\n", (long)cpu.pc(), RISCV::regname(ci.CR.rd), (long)cpu.reg(ci.CR.rd));
   }
 };
-template <AddressType address_t> void C2_JALR_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_JALR_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   cpu.reg(REG_RA) = cpu.pc() + 0x2;
   cpu.jump(cpu.reg(ci.CR.rd) - 2);
@@ -394,15 +397,17 @@ template <AddressType address_t> void C2_JALR_handler(CPU<address_t> &cpu, rv32i
            (long)cpu.reg(ci.CR.rd));
   }
 };
-template <AddressType address_t> void C2_MV_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_MV_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   cpu.reg(ci.CR.rd) = cpu.reg(ci.CR.rs2);
 };
-template <AddressType address_t> void C2_ADD_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+template <AddressType address_t> RVINSTR_ATTR void C2_ADD_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
   const rv32c_instruction ci{instr};
   cpu.reg(ci.CR.rd) += cpu.reg(ci.CR.rs2);
 };
-template <AddressType address_t> void C2_EBREAK_handler(CPU<address_t> &cpu, rv32i_instruction) RVINSTR_COLDATTR { cpu.machine().ebreak(); };
+template <AddressType address_t> RVINSTR_COLDATTR void C2_EBREAK_handler(CPU<address_t> &cpu, rv32i_instruction) {
+  cpu.machine().ebreak();
+};
 
 } // namespace riscv
 

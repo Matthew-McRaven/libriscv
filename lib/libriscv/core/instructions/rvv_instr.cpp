@@ -23,38 +23,39 @@ namespace riscv
 		 "VFWADD", "VFWREDUSUM", "VFWSUB", "VFWREDOSUM", "VFWADD.W", "???", "VFWSUB.W", "???", "VFWMUL", "???", "???", "???", "VFWMACC", "VFWNMACC", "VFWMSAC", "VFWNMSAC"},
 		};
 
-  template <AddressType address_t> void VSETVLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VSETVLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
   };
   template <AddressType address_t>
-  int VSETVLI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  RVPRINTR_ATTR int VSETVLI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VSETVLI %s, %s, 0x%X", RISCV::regname(vi.VLI.rd), RISCV::regname(vi.VLI.rs1),
                     vi.VLI.zimm);
   };
 
-  template <AddressType address_t> void VSETIVLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VSETIVLI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
   };
   template <AddressType address_t>
-  int VSETIVLI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  RVPRINTR_ATTR int VSETIVLI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VSETIVLI %s, 0x%X, 0x%X", RISCV::regname(vi.IVLI.rd), vi.IVLI.uimm, vi.IVLI.zimm);
   };
 
-  template <AddressType address_t> void VSETVL_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VSETVL_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
   };
-  template <AddressType address_t> int VSETVL_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  RVPRINTR_ATTR int VSETVL_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VSETVL %s, %s, %s", RISCV::regname(vi.VSETVL.rd), RISCV::regname(vi.VSETVL.rs1),
                     RISCV::regname(vi.VSETVL.rs2));
   };
 
-  template <AddressType address_t> void VLE32_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VLE32_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     const auto addr = cpu.reg(vi.VLS.rs1);
     if (riscv::force_align_memory || addr % VectorLane::size() == 0) {
@@ -64,13 +65,14 @@ namespace riscv
       cpu.trigger_exception(INVALID_ALIGNMENT, addr);
     }
   };
-  template <AddressType address_t> int VLE32_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  RVPRINTR_ATTR int VLE32_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VLE32.V %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
                     RISCV::regname(vi.VLS.rs2));
   };
 
-  template <AddressType address_t> void VSE32_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VSE32_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     const auto addr = cpu.reg(vi.VLS.rs1);
     if (riscv::force_align_memory || addr % VectorLane::size() == 0) {
@@ -80,13 +82,14 @@ namespace riscv
       cpu.trigger_exception(INVALID_ALIGNMENT, addr);
     }
   };
-  template <AddressType address_t> int VSE32_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  template <AddressType address_t>
+  RVPRINTR_ATTR int VSE32_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VSE32.V %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
                     RISCV::regname(vi.VLS.rs2));
   };
 
-  template <AddressType address_t> void VOPI_VV_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VOPI_VV_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     auto &rvv = cpu.registers().rvv();
     switch (vi.OPVV.funct6) {
@@ -125,13 +128,13 @@ namespace riscv
     }
   };
   template <AddressType address_t>
-  int VOPI_VV_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  RVPRINTR_ATTR int VOPI_VV_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "%s %s, %s, %s", VOPNAMES[0][vi.OPVV.funct6], RISCV::vecname(vi.VLS.vd),
                     RISCV::regname(vi.VLS.rs1), RISCV::regname(vi.VLS.rs2));
   };
 
-  template <AddressType address_t> void VOPF_VV_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VOPF_VV_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     auto &rvv = cpu.registers().rvv();
     switch (vi.OPVV.funct6) {
@@ -179,24 +182,24 @@ namespace riscv
     cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
   };
   template <AddressType address_t>
-  int VOPF_VV_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  RVPRINTR_ATTR int VOPF_VV_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "%s.VV %s, %s, %s", VOPNAMES[2][vi.OPVV.funct6], RISCV::vecname(vi.OPVV.vd),
                     RISCV::vecname(vi.OPVV.vs1), RISCV::vecname(vi.OPVV.vs2));
   };
 
-  template <AddressType address_t> void VOPM_VV_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VOPM_VV_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
   };
   template <AddressType address_t>
-  int VOPM_VV_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  RVPRINTR_ATTR int VOPM_VV_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VOPM.VV %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
                     RISCV::regname(vi.VLS.rs2));
   };
 
-  template <AddressType address_t> void VOPI_VI_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VOPI_VI_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     auto &rvv = cpu.registers().rvv();
     const uint32_t scalar = vi.OPVI.imm;
@@ -212,13 +215,13 @@ namespace riscv
     cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
   };
   template <AddressType address_t>
-  int VOPI_VI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  RVPRINTR_ATTR int VOPI_VI_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VOPI.VI %s %s, %s, %s", VOPNAMES[0][vi.OPVI.funct6], RISCV::vecname(vi.VLS.vd),
                     RISCV::regname(vi.VLS.rs1), RISCV::regname(vi.VLS.rs2));
   };
 
-  template <AddressType address_t> void VOPF_VF_handler(CPU<address_t> &cpu, rv32i_instruction instr) RVINSTR_ATTR {
+  template <AddressType address_t> RVINSTR_ATTR void VOPF_VF_handler(CPU<address_t> &cpu, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     auto &rvv = cpu.registers().rvv();
     const float scalar = cpu.registers().getfl(vi.OPVV.vs1).f32[0];
@@ -260,7 +263,7 @@ namespace riscv
     cpu.trigger_exception(UNIMPLEMENTED_INSTRUCTION);
   };
   template <AddressType address_t>
-  int VOPF_VF_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) RVPRINTR_ATTR {
+  RVPRINTR_ATTR int VOPF_VF_printer(char *buffer, size_t len, const CPU<address_t> &, rv32i_instruction instr) {
     const rv32v_instruction vi{instr};
     return snprintf(buffer, len, "VOPF.VF %s, %s, %s", RISCV::vecname(vi.VLS.vd), RISCV::regname(vi.VLS.rs1),
                     RISCV::regname(vi.VLS.rs2));
