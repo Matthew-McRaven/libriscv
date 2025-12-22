@@ -99,9 +99,9 @@ template <AddressType address_type> struct alignas(32) CPU {
 		std::string current_instruction_to_string() const;
 
 		format_t read_next_instruction_slowpath() const RISCV_COLD_PATH();
-		static const instruction_t& decode(format_t);
-		// Convert a RISC-V instruction into a fast bytecode
-		static size_t computed_index_for(format_t bits) noexcept;
+    static const instruction_t &decode(format_t);
+    // Convert a RISC-V instruction into a fast bytecode
+    static size_t computed_index_for(format_t bits) noexcept;
 
 		/// @brief Serializes the current CPU state to a vector
 		/// @param vec The vector to serialize into

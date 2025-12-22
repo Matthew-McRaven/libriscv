@@ -15,9 +15,6 @@ option(RISCV_64I "Enable 64-bit RISC-V" ON)
 
 # Enable Floating-point Control and Status Register emulation
 option(RISCV_FCSR "Enable FCSR emulation" OFF)
-# EXPERIMENTAL enables some high-performance interpreter features that may be
-# unstable.
-option(RISCV_EXPERIMENTAL "Enable experimental features" OFF)
 # MEMORY_TRAPS allows you to trap writes to uncacheable pages in memory. Cached
 # pages can only be trapped once.
 option(RISCV_MEMORY_TRAPS "Enable memory page traps" ON)
@@ -26,19 +23,9 @@ option(RISCV_MEMORY_TRAPS "Enable memory page traps" ON)
 # before.
 option(RISCV_FLAT_RW_ARENA "Enable performant flat read-write arena" ON)
 
-set(THREADED_IS_DEFAULT OFF)
-# Threaded simulation uses computed goto, and is not supported on all
-# compilers/systems.
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}"
-                                                  STREQUAL "GNU")
-  option(RISCV_THREADED "Enable fastest simulation mode" ON)
-else()
-  option(RISCV_THREADED "Enable fastest simulation mode" OFF)
-endif()
-
 # Version information from git tags
 set(RISCV_VERSION_MAJOR 1)
-set(RISCV_VERSION_MINOR 11)
+set(RISCV_VERSION_MINOR 15)
 
 set(SOURCES
     libriscv/debug.cpp
@@ -50,7 +37,6 @@ set(SOURCES
     libriscv/posix/signals.cpp
     libriscv/posix/threads.cpp
     libriscv/posix/socket_calls.cpp
-
     libriscv/core/instructions/rvc_instr.cpp
     libriscv/core/instructions/rvi_instr.cpp
     libriscv/core/instructions/rvf_instr.cpp
@@ -93,11 +79,6 @@ target_include_directories(riscv PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 if(NOT WIN32 OR MINGW_TOOLCHAIN)
   target_compile_options(riscv PRIVATE -Wall -Wextra)
-endif()
-
-if(RISCV_EXPERIMENTAL AND RISCV_ENCOMPASSING_ARENA)
-  target_compile_definitions(
-    riscv PUBLIC RISCV_ENCOMPASSING_ARENA_BITS=${RISCV_ENCOMPASSING_ARENA_BITS})
 endif()
 
 if(RISCV_MULTIPROCESS)

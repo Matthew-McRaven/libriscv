@@ -484,17 +484,16 @@ template <AddressType address_t> bool CPU<address_t>::create_fast_path_function(
 }
 
 // rv32i/rv64i.cpp
-template <AddressType address_t>
-RISCV_INTERNAL const CPU<address_t>::instruction_t &CPU<address_t>::decode(const format_t instruction) {
+template <AddressType address_t> const CPU<address_t>::instruction_t &CPU<address_t>::decode(format_t instruction) {
   return decode_one<address_t>(instruction);
 }
 
-template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(const format_t instruction) {
+template <AddressType address_t> void CPU<address_t>::execute(format_t instruction) {
   auto dec = decode(instruction);
   dec.handler(*this, instruction);
 }
 
-template <AddressType address_t> RISCV_INTERNAL void CPU<address_t>::execute(uint8_t &handler_idx, uint32_t instr) {
+template <AddressType address_t> void CPU<address_t>::execute(uint8_t &handler_idx, uint32_t instr) {
   if (handler_idx == 0 && instr != 0) {
     [[unlikely]];
     handler_idx = DecoderData<address_t>::handler_index_for(decode(instr).handler);
