@@ -17,7 +17,7 @@
 #include <linux/netlink.h>
 #endif
 #else
-#include "../win32/ws2.hpp"
+#include "win32/ws2.hpp"
 WSADATA riscv::ws2::global_winsock_data;
 bool riscv::ws2::winsock_initialized = false;
 using ssize_t = long long int;

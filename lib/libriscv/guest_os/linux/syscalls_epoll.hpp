@@ -4,8 +4,8 @@
 #include <sys/eventfd.h>
 //#define SYSPRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
 
-#include "../common.hpp"
-#include "../machine.hpp"
+#include "../../common.hpp"
+#include "../../machine.hpp"
 #include "./syscalls.hpp"
 
 namespace riscv {

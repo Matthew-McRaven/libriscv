@@ -1,7 +1,7 @@
 //#define SYSPRINT(fmt, ...) printf(fmt, ##__VA_ARGS__)
 
-#include "../..//types.hpp"
 #include "../../machine.hpp"
+#include "../../types.hpp"
 namespace riscv {
 template <AddressType address_t>
 static void syscall_eventfd2(Machine<address_t>& machine)
