@@ -3,10 +3,10 @@
 #include <unordered_map>
 #include <vector>
 #include "../../common.hpp"
+#include "../../isa/instruction_list.hpp"
 #include "../../memory/memory.hpp"
 #include "../../types.hpp"
 #include "../../util/crc32.hpp"
-#include "../instructions/instruction_list.hpp"
 #include "../instructions/safe_instr_loader.hpp"
 #include "./decoded_exec_segment.hpp"
 

@@ -6,7 +6,7 @@
 #include "common.hpp"
 #include "core/cpu.hpp"
 #include "core/decode/decoder_cache_impl.hpp"
-#include "core/instructions/rv32i_instr.hpp"
+#include "isa/rvi.hpp"
 #include "machine.hpp"
 
 namespace riscv

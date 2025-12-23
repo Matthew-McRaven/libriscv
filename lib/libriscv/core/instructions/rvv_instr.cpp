@@ -3,8 +3,8 @@
 #include "../../machine.hpp"
 #include "../../memory/memory_inline.hpp"
 #include "../rvv_registers.hpp"
+#include "./rvv_instr.hpp"
 #include "instr_helpers.hpp"
-#include "rvv.hpp"
 
 namespace riscv
 {

@@ -1,14 +1,14 @@
+#include "../../isa/rvfd.hpp"
+#include "../../isa/rvi.hpp"
 #include "../../machine.hpp"
 #include "../instruction_counter.hpp"
-#include "../instructions/rv32i_instr.hpp"
-#include "../instructions/rvfd.hpp"
 #include "decoder_cache_impl.hpp"
 #include "threaded_bytecodes.hpp"
 #ifdef RISCV_EXT_COMPRESSED
-#include "../instructions/rvc.hpp"
+#include "../../isa/rvc.hpp"
 #endif
 #ifdef RISCV_EXT_VECTOR
-#include "../instructions/rvv.hpp"
+#include "../../isa/rvv.hpp"
 #endif
 
 #define DISPATCH_MODE_SWITCH_BASED

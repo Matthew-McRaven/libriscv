@@ -5,7 +5,7 @@
 #include "../../machine.hpp"
 #include "../../riscvbase.hpp"
 #include "../cpu.hpp"
-#include "./rvc.hpp"
+#include "./rvc_instr.hpp"
 #include "instr_helpers.hpp"
 
 namespace riscv {

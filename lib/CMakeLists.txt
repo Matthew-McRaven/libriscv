@@ -39,7 +39,7 @@ set(SOURCES
     libriscv/posix/socket_calls.cpp
     libriscv/core/instructions/rvc_instr.cpp
     libriscv/core/instructions/rvi_instr.cpp
-    libriscv/core/instructions/rvf_instr.cpp
+    libriscv/core/instructions/rvfd_instr.cpp
     libriscv/core/instructions/rva_instr.cpp
     libriscv/core/instructions/rvv_instr.cpp
     libriscv/machine/machine.cpp

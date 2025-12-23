@@ -3,8 +3,8 @@
 
 #include <cmath>
 #include "../../machine.hpp"
+#include "./rvfd_instr.hpp"
 #include "instr_helpers.hpp"
-#include "rvfd.hpp"
 
 namespace riscv
 {

@@ -14,7 +14,7 @@
 #include <span>
 #endif
 #ifdef RISCV_EXT_ATOMICS
-#include "../core/instructions/rva.hpp"
+#include "../isa/rva.hpp"
 #endif
 
 #ifdef __linux__
