@@ -1,5 +1,5 @@
 #include "../../common.hpp"
-#include "../../isa/instruction_list.hpp"
+#include "../../isa/rv_instruction_list.hpp"
 #include "../../isa/rvfd.hpp"
 #include "../../isa/rvi.hpp"
 #include "../../types.hpp"

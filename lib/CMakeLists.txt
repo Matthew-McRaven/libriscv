@@ -99,7 +99,7 @@ if(${CMAKE_PROJECT_NAME} STREQUAL "libriscv")
           libriscv/guest_datatypes.hpp
           libriscv/instr_helpers.hpp
           libriscv/instruction_counter.hpp
-          libriscv/instructions/instruction_list.hpp
+          libriscv/instructions/rv_instruction_list.hpp
           libriscv/machine.hpp
           libriscv/machine_inline.hpp
           libriscv/machine_vmcall.hpp

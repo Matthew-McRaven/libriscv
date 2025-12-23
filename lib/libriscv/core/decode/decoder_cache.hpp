@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include "../../common.hpp"
-#include "../../isa/instruction_list.hpp"
+#include "../../isa/rv_instruction_list.hpp"
 #include "../../memory/memory.hpp"
 #include "../../types.hpp"
 #include "../../util/crc32.hpp"
