@@ -832,7 +832,7 @@ static void syscall_getrandom(Machine<address_t>& machine)
 	}
 }
 
-#include "epoll.hpp"
+#include "./epoll.hpp"
 
 template<AddressType address_t>
 void Machine<address_t>::setup_minimal_syscalls() {

@@ -1,12 +1,10 @@
-#include "../common.hpp"
-
 /// Linux memory mapping system call emulation
 /// Works on all platforms
 #define LINUX_MAP_ANONYMOUS        0x20
 #define LINUX_MAP_NORESERVE     0x04000
 #define LINUX_MAP_FIXED         0x10
-#include "../common.hpp"
-#include "../machine.hpp"
+#include "../../common.hpp"
+#include "../../machine.hpp"
 #include "./syscalls.hpp"
 namespace riscv {
 template <AddressType address_t> static void add_mman_syscalls() {

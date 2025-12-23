@@ -33,10 +33,11 @@ set(SOURCES
     libriscv/core/cpu.cpp
     libriscv/core/registers.cpp
     libriscv/memory/memory.cpp
-    libriscv/posix/minimal.cpp
-    libriscv/posix/signals.cpp
-    libriscv/posix/threads.cpp
-    libriscv/posix/socket_calls.cpp
+    libriscv/guest_os/minimal.cpp
+    libriscv/guest_os/signals.cpp
+    libriscv/guest_os/threads.cpp
+    libriscv/guest_os/socket_calls.cpp
+    libriscv/guest_os/guest_impl.cpp
     libriscv/core/instructions/rvc_instr.cpp
     libriscv/core/instructions/rvi_instr.cpp
     libriscv/core/instructions/rvfd_instr.cpp
@@ -44,14 +45,6 @@ set(SOURCES
     libriscv/core/instructions/rvv_instr.cpp
     libriscv/machine/machine.cpp
     libriscv/util/crc32c.cpp)
-
-if(MINGW_TOOLCHAIN
-   OR MINGW
-   OR WIN32)
-  list(APPEND SOURCES libriscv/win32/system_calls.cpp)
-elseif(UNIX)
-  list(APPEND SOURCES libriscv/linux/system_calls.cpp)
-endif()
 
 # Generate the settings header RISCV_VERSION_MAJOR and RISCV_VERSION_MINOR are
 # required by libriscv_settings.h.in

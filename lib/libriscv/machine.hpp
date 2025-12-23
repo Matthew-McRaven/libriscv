@@ -1,11 +1,11 @@
 #pragma once
 #include <random>
 #include "core/cpu.hpp"
+#include "guest_os/filedesc.hpp"
+#include "guest_os/signals.hpp"
 #include "libriscv/common.hpp"
 #include "libriscv/util/auxvec.hpp"
 #include "memory/memory.hpp"
-#include "posix/filedesc.hpp"
-#include "posix/signals.hpp"
 #include "riscvbase.hpp"
 #include "threads.hpp"
 #ifdef __cpp_exceptions

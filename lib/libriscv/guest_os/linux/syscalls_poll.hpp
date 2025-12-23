@@ -10,8 +10,8 @@
 #endif
 
 #include <poll.h>
-#include "../machine.hpp"
-#include "../types.hpp"
+#include "../../machine.hpp"
+#include "../../types.hpp"
 
 int poll_with_timeout(struct pollfd *fds, nfds_t nfds, const struct timespec *timeout_ts) {
 #if defined(__APPLE__)

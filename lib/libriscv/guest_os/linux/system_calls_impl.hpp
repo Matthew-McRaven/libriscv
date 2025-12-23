@@ -1,14 +1,14 @@
-#include "../machine.hpp"
+#include "../../machine.hpp"
 
-#include "../common.hpp"
-#include "../threads.hpp"
+#include "../../common.hpp"
+#include "../../threads.hpp"
 
 #include "./syscalls.hpp"
-#include "syscalls_mman.hpp"
-#include "syscalls_poll.hpp"
-#include "syscalls_select.hpp"
+#include "./syscalls_mman.hpp"
+#include "./syscalls_poll.hpp"
+#include "./syscalls_select.hpp"
 #ifdef __linux__
-#include "syscalls_epoll.hpp"
+#include "./syscalls_epoll.hpp"
 #else
 #include "../win32/epoll.hpp"
 #endif

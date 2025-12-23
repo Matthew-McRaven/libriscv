@@ -1,6 +1,6 @@
 #include <sys/select.h>
-#include "../common.hpp"
-#include "../machine.hpp"
+#include "../../common.hpp"
+#include "../../machine.hpp"
 
 namespace riscv {
 template <AddressType address_t>
